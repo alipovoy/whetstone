@@ -1,0 +1,33 @@
+# local specs, plans and notes
+.env/
+/spec*.md
+/plan*.md
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+
+# dependencies and builds
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+.vite/
+
+# python
+__pycache__/
+.venv/
+.pytest_cache/
+
+# secrets and local env
+.env.*
+*.local
+*.pem
+
+# personal data exported from the app
+whetstone-export*.json
+
+# editors and OS
+.DS_Store
+.idea/
+.vscode/
