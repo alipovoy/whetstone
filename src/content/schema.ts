@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-const id = z
+export const id = z
   .string()
   .regex(/^[a-z0-9][a-z0-9-]*$/, 'must use lowercase letters, digits and hyphens only')
 const text = z.string().refine((s) => s.trim().length > 0, 'must not be empty')
@@ -15,17 +15,19 @@ const TopicSchema = z.object({
 
 const ExampleSchema = z.object({ input: text, output: text, explanation: text.optional() })
 
-const WordingSchema = z.object({
+export const WordingSchema = z.object({
   title: text,
   statement: text,
   examples: z.array(ExampleSchema),
   constraints: z.array(text),
 })
 
+export const DifficultySchema = z.enum(['Easy', 'Medium', 'Hard'])
+
 const ProblemSchema = z.object({
   id,
   concept: id,
-  difficulty: z.enum(['Easy', 'Medium', 'Hard']),
+  difficulty: DifficultySchema,
   language: z.literal('python'),
   wordings: z.array(WordingSchema).min(1, 'needs at least one wording'),
   starter_code: text,
@@ -46,6 +48,7 @@ export type TopicFile = z.infer<typeof TopicFileSchema>
 export type Topic = z.infer<typeof TopicSchema>
 export type Problem = z.infer<typeof ProblemSchema>
 export type Wording = z.infer<typeof WordingSchema>
+export type Difficulty = z.infer<typeof DifficultySchema>
 
 export type Validation = { ok: true; file: TopicFile } | { ok: false; errors: string[] }
 

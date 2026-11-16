@@ -112,7 +112,7 @@ export class PyodideRunner {
       // Until the worker reports 'started' it is fetching packages, which does not count
       // against the run's time limit.
       pending.timer = setTimeout(
-        () => this.stopJob(pending, 'Timed out while loading Python packages.'),
+        () => this.stopJob(pending, 'Timed out while loading Python packages.', false),
         this.options.packageTimeoutMs,
       )
       this.pending = pending
@@ -120,11 +120,12 @@ export class PyodideRunner {
     })
   }
 
-  private stopJob(pending: Pending, reason: string): void {
+  // timedOut marks the solution's own time limit; a package download that never ends is not it.
+  private stopJob(pending: Pending, reason: string, timedOut: boolean): void {
     if (this.pending !== pending) return
     this.stopWorker()
     this.ready = null
-    pending.resolve({ error: reason, timedOut: true })
+    pending.resolve(timedOut ? { error: reason, timedOut } : { error: reason })
     this.warmUp()
   }
 
@@ -179,6 +180,7 @@ export class PyodideRunner {
               pending,
               `Time limit exceeded: stopped after ${pending.limitMs / 1000} s. ` +
                 'Check for an infinite loop or an inefficient algorithm.',
+              true,
             ),
           pending.limitMs,
         )

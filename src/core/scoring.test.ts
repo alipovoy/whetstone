@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { codingScore, failureText } from './scoring'
+import { codingScore, failureText, hintCap } from './scoring'
 
 describe('codingScore', () => {
   it.each([
@@ -32,5 +32,16 @@ describe('failureText', () => {
 
   it('shows the whole message for a visible test', () => {
     expect(failureText(message, false)).toBe(message)
+  })
+})
+
+describe('hintCap', () => {
+  it.each([
+    [0, 100],
+    [1, 90],
+    [2, 75],
+    [3, 55],
+  ])('%i hints cap the score at %i', (hints, cap) => {
+    expect(hintCap(hints)).toBe(cap)
   })
 })

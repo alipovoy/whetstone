@@ -202,9 +202,10 @@ describe('PyodideRunner', () => {
     latest().send({ type: 'ready' })
     await settle()
     await vi.advanceTimersByTimeAsync(90_000)
-    expect(await result).toMatchObject({
-      timedOut: true,
+    expect(await result).toEqual({
+      stdout: '',
       error: 'Timed out while loading Python packages.',
+      timedOut: undefined,
     })
   })
 

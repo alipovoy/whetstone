@@ -10,7 +10,7 @@
     "react/react-in-jsx-scope": "off",
     "import/no-unassigned-import": [
       "warn",
-      { "allow": ["**/*.css", "@testing-library/jest-dom/vitest"] }
+      { "allow": ["**/*.css", "@testing-library/jest-dom/vitest", "fake-indexeddb/auto"] }
     ]
   },
   "overrides": [
@@ -22,7 +22,17 @@
           {
             "patterns": [
               {
-                "group": ["@/ui/**", "@/runner/**", "**/ui/**", "**/runner/**", "react", "react-*"],
+                "group": [
+                  "@/ui/**",
+                  "@/runner/**",
+                  "@/storage/**",
+                  "**/ui/**",
+                  "**/runner/**",
+                  "**/storage/**",
+                  "react",
+                  "react-*",
+                  "idb"
+                ],
                 "message": "core and content are pure TypeScript: no UI, runner, DOM or storage."
               }
             ]
