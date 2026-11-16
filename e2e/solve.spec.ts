@@ -17,7 +17,7 @@ test('solve a problem: run the visible tests, then grade to 100', async ({ page 
   const editor = page.getByRole('textbox', { name: 'Solution code' })
   await editor.click()
   await page.keyboard.press('ControlOrMeta+a')
-  // insertText bypasses the editor's auto-indent, which would break pasted Python.
+  // Pasted, not typed: typing would add the editor's auto-indent to the solution's own.
   await page.keyboard.insertText(problem.reference_solution)
 
   await page.getByRole('button', { name: 'Run tests' }).click()
