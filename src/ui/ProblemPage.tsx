@@ -52,10 +52,10 @@ export function ProblemPage({ topic, problem, attempts, runner, onSave, onBusy, 
   const open = !attempt.grade
   const hintsShown = open ? attempt.hints_used : 0
 
-  const change = (update: (a: Attempt) => Attempt) =>
+  const change = (update: (a: Attempt, now: number) => Attempt) =>
     setAttempt((a) => {
       const now = Date.now()
-      return { ...update(openAttempt(a, problem, crypto.randomUUID(), now)), updated_at: now }
+      return { ...update(openAttempt(a, problem, crypto.randomUUID(), now), now), updated_at: now }
     })
 
   useEffect(() => onSave(attempt), [attempt, onSave])
@@ -107,8 +107,8 @@ export function ProblemPage({ topic, problem, attempts, runner, onSave, onBusy, 
         result.error ??
         result.loadError ??
         (result.testsError && failureText(result.testsError, true))
-      change((a) =>
-        gradeAttempt(a, topic, problem, { tests: result.tests, error, loaded: !error }, Date.now()),
+      change((a, now) =>
+        gradeAttempt(a, topic, problem, { tests: result.tests, error, loaded: !error }, now),
       )
     })
 

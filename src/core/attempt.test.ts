@@ -114,7 +114,6 @@ describe('AttemptSchema', () => {
     ['an id that is not a UUID', { id: 'a1' }],
     ['a score that does not follow from its parts', { grade: { ...graded.grade!, score: 90 } }],
     ['hints copied that differ from hints used', { hints_used: 1 }],
-    ['a grade after the last update', { updated_at: 4 }],
   ])('rejects %s', (_, change) => {
     expect(AttemptSchema.safeParse({ ...graded, ...change }).success).toBe(false)
   })

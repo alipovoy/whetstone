@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { TopicFile } from '@/content/schema'
 import type { RunnerStatus, TestResult } from '@/runner/types'
-import { gradeAttempt, startAttempt } from '@/core/attempt'
+import { AttemptSchema, gradeAttempt, startAttempt, type Attempt } from '@/core/attempt'
 import { App, type AppRunner, type AppStorage } from './App'
 
 const problem = (id: string, title: string): TopicFile['problems'][number] => ({
@@ -60,7 +60,7 @@ function fakeRunner(): AppRunner & { test: ReturnType<typeof vi.fn> } {
 }
 
 function renderApp(runner: AppRunner, storage: Partial<AppStorage> = {}) {
-  const put = vi.fn(async () => undefined)
+  const put = vi.fn<(attempt: Attempt) => Promise<void>>(async () => undefined)
   render(
     <App
       topic={topic}
@@ -181,6 +181,16 @@ describe('App', () => {
     expect(within(list).getByRole('button', { name: /First problem/ })).toHaveTextContent(
       'Last score 50',
     )
+  })
+
+  it('saves a grade that reads back, even when the clock moves during grading', async () => {
+    let clock = 1_000
+    const now = vi.spyOn(Date, 'now').mockImplementation(() => (clock += 7))
+    const put = renderApp(fakeRunner())
+    await userEvent.click(screen.getByRole('button', { name: 'Grade' }))
+    await screen.findByRole('region', { name: 'Grade' })
+    now.mockRestore()
+    expect(AttemptSchema.safeParse(put.mock.lastCall![0]).success).toBe(true)
   })
 
   it('resumes the problem worked on last, with its code and hints', () => {

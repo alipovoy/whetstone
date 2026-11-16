@@ -72,13 +72,12 @@ export const AttemptSchema = z
     grade: GradeSchema.optional(),
   })
   .superRefine((a, ctx) => {
+    // Only rules that hold by construction: clock order is not checked, as clocks can step back.
     const issue = (message: string) => ctx.addIssue({ code: 'custom', message })
-    if (a.started_at > a.updated_at) issue('started_at is after updated_at')
     const g = a.grade
     if (!g) return
     if (g.score !== Math.min(g.code_score, g.hint_cap)) issue('score is not the capped code score')
     if (g.asked.hints.length !== a.hints_used) issue('the hints copied differ from hints_used')
-    if (g.at < a.started_at || g.at > a.updated_at) issue('grade.at is outside the attempt')
   })
 
 export type Attempt = z.infer<typeof AttemptSchema>
