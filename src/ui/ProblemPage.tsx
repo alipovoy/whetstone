@@ -52,11 +52,12 @@ export function ProblemPage({ topic, problem, attempts, runner, onSave, onBusy, 
   const open = !attempt.grade
   const hintsShown = open ? attempt.hints_used : 0
 
-  const change = (update: (a: Attempt, now: number) => Attempt) =>
-    setAttempt((a) => {
-      const now = Date.now()
-      return { ...update(openAttempt(a, problem, crypto.randomUUID(), now), now), updated_at: now }
-    })
+  // Id and time are taken outside the updater, which React may run more than once.
+  const change = (update: (a: Attempt, now: number) => Attempt) => {
+    const now = Date.now()
+    const nextId = crypto.randomUUID()
+    setAttempt((a) => ({ ...update(openAttempt(a, problem, nextId, now), now), updated_at: now }))
+  }
 
   useEffect(() => onSave(attempt), [attempt, onSave])
   useEffect(() => onBusy(busy), [busy, onBusy])

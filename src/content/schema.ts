@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const id = z
+const id = z
   .string()
   .regex(/^[a-z0-9][a-z0-9-]*$/, 'must use lowercase letters, digits and hyphens only')
 const text = z.string().refine((s) => s.trim().length > 0, 'must not be empty')
@@ -15,14 +15,14 @@ const TopicSchema = z.object({
 
 const ExampleSchema = z.object({ input: text, output: text, explanation: text.optional() })
 
-export const WordingSchema = z.object({
+const WordingSchema = z.object({
   title: text,
   statement: text,
   examples: z.array(ExampleSchema),
   constraints: z.array(text),
 })
 
-export const DifficultySchema = z.enum(['Easy', 'Medium', 'Hard'])
+const DifficultySchema = z.enum(['Easy', 'Medium', 'Hard'])
 
 const ProblemSchema = z.object({
   id,
