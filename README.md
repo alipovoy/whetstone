@@ -21,6 +21,7 @@ npm run dev                # local server
 npm test                   # unit tests, including the built-in problems run in Pyodide
 npm run test:harness       # Python test harness under CPython
 npm run validate:content   # built-in problems under CPython
+npx playwright install chromium   # once
 npm run build && npm run test:e2e   # browser test against the production build
 ```
 
