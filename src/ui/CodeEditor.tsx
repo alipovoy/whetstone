@@ -1,8 +1,11 @@
+import { indentWithTab } from '@codemirror/commands'
+import { indentUnit } from '@codemirror/language'
 import { python } from '@codemirror/lang-python'
 import { Compartment } from '@codemirror/state'
 import { oneDark } from '@codemirror/theme-one-dark'
+import { keymap } from '@codemirror/view'
 import { basicSetup, EditorView } from 'codemirror'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useDarkMode } from './theme'
 
 interface Props {
@@ -16,6 +19,7 @@ export function CodeEditor({ initialValue, onChange, label }: Props) {
   const [view, setView] = useState<EditorView | null>(null)
   const [theme] = useState(() => new Compartment())
   const dark = useDarkMode()
+  const hintId = useId()
 
   useEffect(() => {
     const editor = new EditorView({
@@ -24,8 +28,11 @@ export function CodeEditor({ initialValue, onChange, label }: Props) {
       extensions: [
         basicSetup,
         python(),
+        indentUnit.of('    '),
+        // Tab indents, so keyboard users leave the editor with Esc, then Tab (CodeMirror's escape hatch).
+        keymap.of([indentWithTab]),
         theme.of([]),
-        EditorView.contentAttributes.of({ 'aria-label': label }),
+        EditorView.contentAttributes.of({ 'aria-label': label, 'aria-describedby': hintId }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) onChange(update.state.doc.toString())
         }),
@@ -41,5 +48,12 @@ export function CodeEditor({ initialValue, onChange, label }: Props) {
     view?.dispatch({ effects: theme.reconfigure(dark ? oneDark : []) })
   }, [view, theme, dark])
 
-  return <div ref={host} className="border rounded" />
+  return (
+    <div>
+      <div ref={host} className="border rounded" />
+      <div id={hintId} className="form-text">
+        Tab indents. Press Esc, then Tab, to leave the editor.
+      </div>
+    </div>
+  )
 }
