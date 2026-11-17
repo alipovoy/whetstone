@@ -71,19 +71,31 @@ function renderApp(runner: AppRunner, storage: Partial<AppStorage> = {}) {
   return put
 }
 
+async function startFirst(runner: AppRunner = fakeRunner()) {
+  const put = renderApp(runner)
+  await userEvent.click(screen.getByRole('button', { name: 'Start First problem' }))
+  return put
+}
+
+const problemRow = (title: string) =>
+  within(screen.getByRole('region', { name: 'Problems' })).getByRole('listitem', { name: title })
+
 describe('App', () => {
-  it('shows the first problem with its statement sanitised, and warms up Python', () => {
+  it('lists the problems, opens one on Start with its statement sanitised, and warms up Python', async () => {
     const runner = fakeRunner()
     renderApp(runner)
+    expect(runner.warmUp).toHaveBeenCalled()
+    expect(problemRow('First problem')).toHaveTextContent('Easy')
+    expect(screen.queryByRole('button', { name: /Resume/ })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Start First problem' }))
     expect(screen.getByRole('heading', { name: /First problem/ })).toBeInTheDocument()
     expect(screen.getByText('x').tagName).toBe('STRONG')
     expect(document.querySelector('[onerror]')).toBeNull()
-    expect(runner.warmUp).toHaveBeenCalled()
   })
 
   it('runs only the visible tests', async () => {
     const runner = fakeRunner()
-    renderApp(runner)
+    await startFirst(runner)
     await userEvent.click(screen.getByRole('button', { name: 'Run tests' }))
     expect(runner.test).toHaveBeenCalledWith(
       'def f(x):\n    pass',
@@ -95,7 +107,7 @@ describe('App', () => {
 
   it('grades all tests, shows the score and only the first line of a hidden failure', async () => {
     const runner = fakeRunner()
-    renderApp(runner)
+    await startFirst(runner)
     await userEvent.click(screen.getByRole('button', { name: 'Grade' }))
     const grade = await screen.findByRole('region', { name: 'Grade' })
     expect(runner.test).toHaveBeenCalledWith(expect.any(String), expect.any(String), [], 12_000)
@@ -116,7 +128,7 @@ describe('App', () => {
       error: 'Time limit exceeded',
       timedOut: true,
     })
-    renderApp(runner)
+    await startFirst(runner)
     await userEvent.click(screen.getByRole('button', { name: 'Grade' }))
     const grade = await screen.findByRole('region', { name: 'Grade' })
     expect(grade).toHaveTextContent('Score: 0 / 100')
@@ -130,7 +142,7 @@ describe('App', () => {
       stdout: '',
       testsError: "ImportError: cannot import name 'f'\n  hidden_tests.py, line 1, in <module>",
     })
-    renderApp(runner)
+    await startFirst(runner)
     await userEvent.click(screen.getByRole('button', { name: 'Grade' }))
     const grade = await screen.findByRole('region', { name: 'Grade' })
     expect(grade).toHaveTextContent("ImportError: cannot import name 'f'")
@@ -138,17 +150,15 @@ describe('App', () => {
   })
 
   it('shows the output of a run', async () => {
-    renderApp(fakeRunner())
+    await startFirst()
     await userEvent.click(screen.getByRole('button', { name: 'Run' }))
     expect(await screen.findByRole('region', { name: 'Output' })).toHaveTextContent('hello')
   })
 
-  it('moves to the next problem and back to the first after the last', async () => {
-    renderApp(fakeRunner())
-    await userEvent.click(screen.getByRole('button', { name: 'Next problem' }))
-    expect(screen.getByRole('heading', { name: /Second problem/ })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Next problem' }))
-    expect(screen.getByRole('heading', { name: /First problem/ })).toBeInTheDocument()
+  it('returns to the problem list from the header', async () => {
+    await startFirst()
+    await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
+    expect(problemRow('Second problem')).toBeInTheDocument()
   })
 
   it('lowers the maximum score with each hint and caps the grade', async () => {
@@ -157,7 +167,7 @@ describe('App', () => {
       ...graded,
       tests: graded.tests.map((t) => ({ ...t, passed: true })),
     })
-    renderApp(runner)
+    await startFirst(runner)
     await userEvent.click(screen.getByRole('button', { name: 'Show hint 1 (max score 90)' }))
     await userEvent.click(screen.getByRole('button', { name: 'Show hint 2 (max score 75)' }))
     expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('Hint 2. 2')
@@ -168,7 +178,7 @@ describe('App', () => {
   })
 
   it('saves the attempt, then shows the reference solution and the last score after a grade', async () => {
-    const put = renderApp(fakeRunner())
+    const put = await startFirst()
     expect(put).toHaveBeenCalledWith(expect.objectContaining({ problem: 'one', hints_used: 0 }))
     expect(screen.queryByText('Reference solution')).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Grade' }))
@@ -177,23 +187,21 @@ describe('App', () => {
       expect.objectContaining({ problem: 'one', grade: expect.objectContaining({ score: 50 }) }),
     )
     expect(screen.getByText('Reference solution')).toBeInTheDocument()
-    const list = screen.getByRole('navigation', { name: 'Problems' })
-    expect(within(list).getByRole('button', { name: /First problem/ })).toHaveTextContent(
-      'Last score 50',
-    )
+    await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
+    expect(problemRow('First problem')).toHaveTextContent('Last score 50')
   })
 
   it('saves a grade that reads back, even when the clock moves during grading', async () => {
     let clock = 1_000
     const now = vi.spyOn(Date, 'now').mockImplementation(() => (clock += 7))
-    const put = renderApp(fakeRunner())
+    const put = await startFirst()
     await userEvent.click(screen.getByRole('button', { name: 'Grade' }))
     await screen.findByRole('region', { name: 'Grade' })
     now.mockRestore()
     expect(AttemptSchema.safeParse(put.mock.lastCall![0]).success).toBe(true)
   })
 
-  it('resumes the problem worked on last, with its code and hints', () => {
+  it('resumes an unfinished attempt with its code and hints, or starts afresh', async () => {
     const open = {
       ...startAttempt(crypto.randomUUID(), 't', topic.problems[1], 'def f(x):\n    return 2', 5),
       hints_used: 1,
@@ -206,16 +214,18 @@ describe('App', () => {
       2,
     )
     renderApp(fakeRunner(), { attempts: [done, open] })
-    expect(screen.getByRole('heading', { name: /Second problem/ })).toBeInTheDocument()
+    expect(problemRow('First problem')).toHaveTextContent('Last score 50')
+    expect(screen.queryByRole('button', { name: 'Resume First problem' })).toBeNull()
+    expect(problemRow('Second problem')).toHaveTextContent('In progress')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Resume Second problem' }))
     expect(screen.getByRole('textbox', { name: 'Solution code' })).toHaveTextContent('return 2')
     expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('Hint 1.')
-    const list = screen.getByRole('navigation', { name: 'Problems' })
-    expect(within(list).getByRole('button', { name: /First problem/ })).toHaveTextContent(
-      'Last score 50',
-    )
-    expect(within(list).getByRole('button', { name: /Second problem/ })).toHaveTextContent(
-      'In progress',
-    )
+
+    await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Start Second problem' }))
+    expect(screen.getByRole('textbox', { name: 'Solution code' })).toHaveTextContent('pass')
+    expect(screen.getByRole('region', { name: 'Hints' })).not.toHaveTextContent('Hint 1.')
   })
 
   it('warns when work cannot be saved', () => {

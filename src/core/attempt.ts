@@ -189,11 +189,3 @@ export function lastGraded(
 ): Attempt | undefined {
   return newest(attempts.filter((a) => a.topic === topic && a.problem === problem && a.grade))
 }
-
-export function resumeProblem(
-  attempts: Attempt[],
-  topic: string,
-  problems: string[],
-): string | undefined {
-  return newest(attempts.filter((a) => a.topic === topic && problems.includes(a.problem)))?.problem
-}

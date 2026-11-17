@@ -8,7 +8,6 @@ import {
   latestAttempt,
   openAttempt,
   remainingMs,
-  resumeProblem,
   startAttempt,
   type Attempt,
   type GradedTest,
@@ -154,11 +153,5 @@ describe('finding attempts', () => {
     expect(latestAttempt(attempts, 't', 'p')?.id).toBe(uuid(2))
     expect(lastGraded(attempts, 't', 'p')?.id).toBe(uuid(1))
     expect(lastGraded(attempts, 't', 'r')).toBeUndefined()
-  })
-
-  it('resumes the problem worked on last, among the problems offered', () => {
-    expect(resumeProblem(attempts, 't', ['p', 'q', 'r'])).toBe('q')
-    expect(resumeProblem(attempts, 't', ['p', 'r'])).toBe('p')
-    expect(resumeProblem(attempts, 't', ['x'])).toBeUndefined()
   })
 })

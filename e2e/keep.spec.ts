@@ -22,8 +22,8 @@ function savedCode(page: Page): Promise<string[]> {
 
 test('start a problem, reload, continue, grade, find it in the list', async ({ page }) => {
   await page.goto('./')
-  const list = page.getByRole('navigation', { name: 'Problems' })
-  await list.getByRole('button', { name: title }).click()
+  const row = page.getByRole('listitem', { name: title })
+  await page.getByRole('button', { name: `Start ${title}` }).click()
   await page.getByRole('button', { name: 'Show hint 1 (max score 90)' }).click()
 
   const editor = page.getByRole('textbox', { name: 'Solution code' })
@@ -33,6 +33,8 @@ test('start a problem, reload, continue, grade, find it in the list', async ({ p
   await expect.poll(() => savedCode(page)).toContain(problem.reference_solution)
 
   await page.reload()
+  await expect(row).toContainText('In progress')
+  await page.getByRole('button', { name: `Resume ${title}` }).click()
   await expect(page.getByRole('heading', { level: 1 })).toContainText(title)
   await expect(page.getByRole('region', { name: 'Hints' })).toContainText(problem.hints[0])
   expect(await editor.innerText()).toBe(problem.reference_solution)
@@ -40,11 +42,10 @@ test('start a problem, reload, continue, grade, find it in the list', async ({ p
   await expect(page.getByText('Python is ready')).toBeVisible({ timeout: 90_000 })
   await page.getByRole('button', { name: 'Grade' }).click()
   await expect(page.getByRole('region', { name: 'Grade' })).toContainText('Score: 90 / 100')
-  await expect(list.getByRole('button', { name: title })).toContainText('Last score 90')
-
-  await page.reload()
-  await expect(list.getByRole('button', { name: title })).toContainText('Last score 90')
-  await expect(page.getByRole('region', { name: 'Grade' })).toContainText('Score: 90 / 100')
   await page.getByText('Reference solution').click()
   await expect(page.locator('details pre')).toHaveText(problem.reference_solution)
+
+  await page.reload()
+  await expect(row).toContainText('Last score 90')
+  await expect(page.getByRole('button', { name: `Resume ${title}` })).toHaveCount(0)
 })

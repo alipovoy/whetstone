@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
-import { Alert, Badge, Col, Container, ListGroup, Navbar, Row } from 'react-bootstrap'
-import { lastGraded, latestAttempt, resumeProblem, type Attempt } from '@/core/attempt'
-import type { TopicFile } from '@/content/schema'
+import { Alert, Badge, Button, Container, ListGroup, Navbar, Stack } from 'react-bootstrap'
+import { lastGraded, latestAttempt, startAttempt, type Attempt } from '@/core/attempt'
+import type { Problem, TopicFile } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
 import type { RunnerStatus } from '@/runner/types'
 import type { AttemptStore } from '@/storage/attempts'
@@ -30,20 +30,10 @@ interface Props {
 }
 
 export function App({ topic, runner, storage }: Props) {
-  const problems = topic.problems
   const [attempts, setAttempts] = useState(storage.attempts)
-  const [current, setCurrent] = useState(
-    () =>
-      resumeProblem(
-        storage.attempts,
-        topic.topic.id,
-        problems.map((p) => p.id),
-      ) ?? problems[0].id,
-  )
+  const [session, setSession] = useState<{ problem: Problem; attempt: Attempt } | null>(null)
   const [busy, setBusy] = useState(false)
   const [saveError, setSaveError] = useState(storage.error)
-  const index = problems.findIndex((p) => p.id === current)
-  const problem = problems[index]
 
   useEffect(() => runner.warmUp(), [runner])
 
@@ -60,11 +50,32 @@ export function App({ topic, runner, storage }: Props) {
     [store],
   )
 
+  const start = (problem: Problem) =>
+    setSession({
+      problem,
+      attempt: startAttempt(
+        crypto.randomUUID(),
+        topic.topic.id,
+        problem,
+        problem.starter_code,
+        Date.now(),
+      ),
+    })
+
   return (
     <>
       <Navbar className="border-bottom mb-3">
         <Container>
-          <Navbar.Brand>Whetstone</Navbar.Brand>
+          <Navbar.Brand
+            href="#"
+            aria-disabled={busy}
+            onClick={(event) => {
+              event.preventDefault()
+              if (!busy) setSession(null)
+            }}
+          >
+            Whetstone
+          </Navbar.Brand>
           <Navbar.Text className="me-auto">{topic.topic.name}</Navbar.Text>
           <RuntimeStatus runner={runner} />
         </Container>
@@ -77,55 +88,81 @@ export function App({ topic, runner, storage }: Props) {
             not loaded.
           </Alert>
         )}
-        <Row className="g-4">
-          <Col md={3} as="nav" aria-label="Problems">
-            <ListGroup>
-              {problems.map((p) => (
-                <ListGroup.Item
-                  key={p.id}
-                  action
-                  active={p.id === current}
-                  disabled={busy}
-                  onClick={() => setCurrent(p.id)}
-                >
-                  <div>{p.wordings[0].title}</div>
-                  <small className="d-flex gap-2">
-                    <span>{p.difficulty}</span>
-                    <ProblemState attempts={attempts} topic={topic.topic.id} problem={p.id} />
-                  </small>
-                </ListGroup.Item>
-              ))}
-            </ListGroup>
-          </Col>
-          <Col md={9}>
-            <ProblemPage
-              key={problem.id}
-              topic={topic.topic}
-              problem={problem}
-              attempts={attempts}
-              runner={runner}
-              onSave={save}
-              onBusy={setBusy}
-              onNext={() => setCurrent(problems[(index + 1) % problems.length].id)}
-            />
-          </Col>
-        </Row>
+        {session ? (
+          <ProblemPage
+            key={session.attempt.id}
+            topic={topic.topic}
+            problem={session.problem}
+            initial={session.attempt}
+            attempts={attempts}
+            runner={runner}
+            onSave={save}
+            onBusy={setBusy}
+          />
+        ) : (
+          <ProblemList
+            topic={topic}
+            attempts={attempts}
+            onStart={start}
+            onResume={(problem, attempt) => setSession({ problem, attempt })}
+          />
+        )}
       </Container>
     </>
   )
 }
 
-interface ProblemStateProps {
+interface ProblemListProps {
+  topic: TopicFile
   attempts: Attempt[]
-  topic: string
-  problem: string
+  onStart: (problem: Problem) => void
+  onResume: (problem: Problem, attempt: Attempt) => void
 }
 
-function ProblemState({ attempts, topic, problem }: ProblemStateProps) {
-  const graded = lastGraded(attempts, topic, problem)?.grade
-  if (graded) return <span className="ms-auto">Last score {graded.score}</span>
-  if (latestAttempt(attempts, topic, problem)) return <span className="ms-auto">In progress</span>
-  return null
+function ProblemList({ topic, attempts, onStart, onResume }: ProblemListProps) {
+  return (
+    <section aria-label="Problems">
+      <h1 className="h3">Problems</h1>
+      <ListGroup as="ul">
+        {topic.problems.map((problem) => {
+          const title = problem.wordings[0].title
+          const latest = latestAttempt(attempts, topic.topic.id, problem.id)
+          const unfinished = latest && !latest.grade ? latest : undefined
+          const graded = lastGraded(attempts, topic.topic.id, problem.id)?.grade
+          return (
+            <ListGroup.Item as="li" key={problem.id} aria-label={title}>
+              <Stack direction="horizontal" gap={2} className="flex-wrap">
+                <span className="fw-semibold">{title}</span>
+                <Badge bg="secondary">{problem.difficulty}</Badge>
+                {graded && <span className="text-body-secondary">Last score {graded.score}</span>}
+                {unfinished && <Badge bg="info">In progress</Badge>}
+                <Stack direction="horizontal" gap={2} className="ms-auto">
+                  {unfinished && (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      aria-label={`Resume ${title}`}
+                      onClick={() => onResume(problem, unfinished)}
+                    >
+                      Resume
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant={unfinished ? 'outline-primary' : 'primary'}
+                    aria-label={`Start ${title}`}
+                    onClick={() => onStart(problem)}
+                  >
+                    Start
+                  </Button>
+                </Stack>
+              </Stack>
+            </ListGroup.Item>
+          )
+        })}
+      </ListGroup>
+    </section>
+  )
 }
 
 function RuntimeStatus({ runner }: { runner: AppRunner }) {

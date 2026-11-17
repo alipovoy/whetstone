@@ -2,6 +2,10 @@ import { expect, test } from '@playwright/test'
 
 test('the editor indents Python by 4 spaces and Tab indents', async ({ page }) => {
   await page.goto('./')
+  await page
+    .getByRole('button', { name: /^Start / })
+    .first()
+    .click()
   const editor = page.getByRole('textbox', { name: 'Solution code' })
   const text = () => editor.innerText()
   await editor.click()

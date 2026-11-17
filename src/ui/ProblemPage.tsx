@@ -4,10 +4,8 @@ import {
   formatClock,
   gradeAttempt,
   lastGraded,
-  latestAttempt,
   openAttempt,
   remainingMs,
-  startAttempt,
   type Attempt,
   type Grade,
 } from '@/core/attempt'
@@ -28,23 +26,19 @@ type Outcome =
 interface Props {
   topic: Topic
   problem: Problem
+  initial: Attempt
   attempts: Attempt[]
   runner: Runner
   onSave: (attempt: Attempt) => void
   onBusy: (busy: boolean) => void
-  onNext: () => void
 }
 
 // Hidden-tab time is not counted; a longer gap between ticks means the page was asleep.
 const TICK_MS = 1000
 const MAX_TICK_MS = 2 * TICK_MS
 
-export function ProblemPage({ topic, problem, attempts, runner, onSave, onBusy, onNext }: Props) {
-  const [attempt, setAttempt] = useState(
-    () =>
-      latestAttempt(attempts, topic.id, problem.id) ??
-      startAttempt(crypto.randomUUID(), topic.id, problem, problem.starter_code, Date.now()),
-  )
+export function ProblemPage({ topic, problem, initial, attempts, runner, onSave, onBusy }: Props) {
+  const [attempt, setAttempt] = useState(initial)
   const [busy, setBusy] = useState(false)
   const [outcome, setOutcome] = useState<Outcome | null>(null)
   const wording = problem.wordings[0]
@@ -168,9 +162,6 @@ export function ProblemPage({ topic, problem, attempts, runner, onSave, onBusy, 
         </Button>
         <Button variant="primary" onClick={grade} disabled={busy}>
           Grade
-        </Button>
-        <Button variant="link" className="ms-auto" onClick={onNext} disabled={busy}>
-          Next problem
         </Button>
       </Stack>
       {busy && <p role="status">Running…</p>}
