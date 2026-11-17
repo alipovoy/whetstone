@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Alert, Badge, Button, Form, ListGroup, Stack } from 'react-bootstrap'
+import { Alert, Badge, Button, Form, ListGroup, Stack, Tab, Tabs } from 'react-bootstrap'
 import {
   PROBLEM_TEMPLATE,
   problemRequest,
@@ -33,9 +33,8 @@ interface Props {
   onBusy: (busy: boolean) => void
 }
 
-// The editor adds new items to a list, or replaces the one being edited.
+// The editor adds new items to its list, or replaces the one being edited.
 interface Editing {
-  list: ItemList
   text: string
   replaces?: { id: string; title: string }
 }
@@ -49,7 +48,6 @@ interface Row {
 }
 
 export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) {
-  const [editing, setEditing] = useState<Editing | null>(null)
   const [checking, setChecking] = useState(false)
   const { file, unreadable } = served(topic)
   const conceptName = (id: string) => topic.concepts.find((c) => c.id === id)?.name ?? ''
@@ -71,33 +69,7 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
     text: itemText(q, topic.concepts),
   }))
   const request = { topic: topic.name, concepts: topic.concepts }
-
-  const items = (list: ItemList, rows: Row[]) => (
-    <Items
-      list={list}
-      rows={rows}
-      unreadable={unreadable[list]}
-      editing={editing}
-      onEdit={setEditing}
-      onDelete={(id) => onChange((t) => deleteItem(t, list, id))}
-      editor={
-        editing?.list === list && (
-          <ItemEditor
-            topic={topic}
-            initial={editing}
-            runner={runner}
-            checking={checking}
-            onChecking={setChecking}
-            onDone={(next) => {
-              onChange(() => next)
-              setEditing(null)
-            }}
-            onCancel={() => setEditing(null)}
-          />
-        )
-      }
-    />
-  )
+  const shared = { topic, runner, checking, onChecking: setChecking, onChange }
 
   return (
     <Stack gap={4}>
@@ -120,25 +92,29 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
         )}
       </section>
 
-      {items('problems', problems)}
-      <section aria-label="Problem examples">
-        <Snippet
-          label="Chat bot request for problems"
-          value={problemRequest({ ...request, existing: problems.map((r) => r.title) })}
-          language="markdown"
-        />
-        <Snippet label="Problem template" value={PROBLEM_TEMPLATE} language="json" />
-      </section>
-
-      {items('questions', questions)}
-      <section aria-label="Question examples">
-        <Snippet
-          label="Chat bot request for questions"
-          value={questionRequest({ ...request, existing: questions.map((r) => r.title) })}
-          language="markdown"
-        />
-        <Snippet label="Question template" value={QUESTION_TEMPLATE} language="json" />
-      </section>
+      {/* Mounted when first shown; an open editor survives switching tabs. */}
+      <Tabs defaultActiveKey="problems" mountOnEnter>
+        <Tab eventKey="problems" title="Problems" disabled={checking}>
+          <Items {...shared} list="problems" rows={problems} unreadable={unreadable.problems}>
+            <Snippet
+              label="Chat bot request for problems"
+              value={problemRequest({ ...request, existing: problems.map((r) => r.title) })}
+              language="markdown"
+            />
+            <Snippet label="Problem template" value={PROBLEM_TEMPLATE} language="json" />
+          </Items>
+        </Tab>
+        <Tab eventKey="questions" title="Questions" disabled={checking}>
+          <Items {...shared} list="questions" rows={questions} unreadable={unreadable.questions}>
+            <Snippet
+              label="Chat bot request for questions"
+              value={questionRequest({ ...request, existing: questions.map((r) => r.title) })}
+              language="markdown"
+            />
+            <Snippet label="Question template" value={QUESTION_TEMPLATE} language="json" />
+          </Items>
+        </Tab>
+      </Tabs>
     </Stack>
   )
 }
@@ -150,17 +126,18 @@ interface ItemsProps {
   list: ItemList
   rows: Row[]
   unreadable: number
-  editing: Editing | null
-  onEdit: (editing: Editing) => void
-  onDelete: (id: string) => void
-  editor: ReactNode
+  topic: TopicRecord
+  runner: Pick<Runner, 'test'>
+  checking: boolean
+  onChecking: (checking: boolean) => void
+  onChange: Props['onChange']
+  children: ReactNode
 }
 
-function Items({ list, rows, unreadable, editing, onEdit, onDelete, editor }: ItemsProps) {
-  const noun = NOUN[list]
+function Items({ list, rows, unreadable, children, onChange, ...editor }: ItemsProps) {
+  const [editing, setEditing] = useState<Editing | null>(null)
   return (
-    <section aria-label={`Topic ${list}`}>
-      <h2 className="h5">{capital(list)}</h2>
+    <section aria-label={`Topic ${list}`} className="pt-3">
       {unreadable > 0 && (
         <Alert variant="warning">
           {unreadable} {list} do not follow the current content rules and are not served.
@@ -179,7 +156,7 @@ function Items({ list, rows, unreadable, editing, onEdit, onDelete, editor }: It
                   variant="outline-primary"
                   aria-label={`Edit ${title}`}
                   disabled={editing !== null}
-                  onClick={() => onEdit({ list, text, replaces: { id, title } })}
+                  onClick={() => setEditing({ text, replaces: { id, title } })}
                 >
                   Edit
                 </Button>
@@ -190,7 +167,8 @@ function Items({ list, rows, unreadable, editing, onEdit, onDelete, editor }: It
                   disabled={editing !== null}
                   onClick={() => {
                     const kept = list === 'problems' ? ' Its past attempts are kept.' : ''
-                    if (confirm(`Delete "${title}"?${kept}`)) onDelete(id)
+                    if (confirm(`Delete "${title}"?${kept}`))
+                      onChange((t) => deleteItem(t, list, id))
                   }}
                 >
                   Delete
@@ -200,17 +178,29 @@ function Items({ list, rows, unreadable, editing, onEdit, onDelete, editor }: It
           </ListGroup.Item>
         ))}
       </ListGroup>
-      {editor ||
-        (editing === null && (
-          <Button variant="primary" onClick={() => onEdit({ list, text: '' })}>
-            New {noun}
-          </Button>
-        ))}
+      {editing ? (
+        <ItemEditor
+          {...editor}
+          list={list}
+          initial={editing}
+          onDone={(next) => {
+            onChange(() => next)
+            setEditing(null)
+          }}
+          onCancel={() => setEditing(null)}
+        />
+      ) : (
+        <Button variant="primary" onClick={() => setEditing({ text: '' })}>
+          New {NOUN[list]}
+        </Button>
+      )}
+      <div className="mt-4">{children}</div>
     </section>
   )
 }
 
 interface EditorProps {
+  list: ItemList
   topic: TopicRecord
   initial: Editing
   runner: Pick<Runner, 'test'>
@@ -221,6 +211,7 @@ interface EditorProps {
 }
 
 function ItemEditor({
+  list,
   topic,
   initial,
   runner,
@@ -232,7 +223,7 @@ function ItemEditor({
   const [text, setText] = useState(initial.text)
   const [error, setError] = useState<string | null>(null)
   const [failed, setFailed] = useState<ItemErrors[]>([])
-  const { list, replaces } = initial
+  const { replaces } = initial
   const noun = NOUN[list]
 
   async function submit() {

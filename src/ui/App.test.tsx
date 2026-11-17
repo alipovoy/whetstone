@@ -405,6 +405,8 @@ describe('Topics', () => {
       explanation: 'Because',
       summary,
     })
+    expect(screen.queryByRole('button', { name: 'New question' })).toBeNull()
+    await userEvent.click(screen.getByRole('tab', { name: 'Questions' }))
     await userEvent.click(screen.getByRole('button', { name: 'New question' }))
     const editor = () =>
       EditorView.findFromDOM(screen.getByRole('textbox', { name: 'Question JSON' }))!
