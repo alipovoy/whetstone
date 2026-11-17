@@ -1,5 +1,6 @@
 import { indentWithTab } from '@codemirror/commands'
 import { indentUnit } from '@codemirror/language'
+import { json } from '@codemirror/lang-json'
 import { python } from '@codemirror/lang-python'
 import { Compartment, EditorState } from '@codemirror/state'
 import { oneDark } from '@codemirror/theme-one-dark'
@@ -13,9 +14,27 @@ interface Props {
   onChange: (value: string) => void
   label: string
   readOnly?: boolean
+  language?: keyof typeof LANGUAGES
 }
 
-export function CodeEditor({ initialValue, onChange, label, readOnly = false }: Props) {
+const LANGUAGES = {
+  python: () => [python(), indentUnit.of('    ')],
+  // Problems are long documents with long strings: wrapped, and scrolled within a fixed height.
+  json: () => [
+    json(),
+    indentUnit.of('  '),
+    EditorView.lineWrapping,
+    EditorView.theme({ '&': { maxHeight: '28rem' }, '.cm-scroller': { overflow: 'auto' } }),
+  ],
+}
+
+export function CodeEditor({
+  initialValue,
+  onChange,
+  label,
+  readOnly = false,
+  language = 'python',
+}: Props) {
   const host = useRef<HTMLDivElement>(null)
   const [view, setView] = useState<EditorView | null>(null)
   const [theme] = useState(() => new Compartment())
@@ -29,8 +48,7 @@ export function CodeEditor({ initialValue, onChange, label, readOnly = false }: 
       doc: initialValue,
       extensions: [
         basicSetup,
-        python(),
-        indentUnit.of('    '),
+        LANGUAGES[language](),
         // Tab indents, so keyboard users leave the editor with Esc, then Tab (CodeMirror's escape hatch).
         keymap.of([indentWithTab]),
         theme.of([]),

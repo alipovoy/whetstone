@@ -1,9 +1,12 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { EditorView } from 'codemirror'
 import { describe, expect, it, vi } from 'vitest'
 import type { TopicFile } from '@/content/schema'
 import type { RunnerStatus, TestResult } from '@/runner/types'
 import { AttemptSchema, gradeAttempt, startAttempt, type Attempt } from '@/core/attempt'
+import { PROBLEM_TEMPLATE } from '@/core/bridge'
+import { problemText, topicFromFile, type TopicRecord } from '@/core/topics'
 import { App, type AppRunner, type AppStorage } from './App'
 
 const problem = (id: string, title: string): TopicFile['problems'][number] => ({
@@ -61,14 +64,23 @@ function fakeRunner(): AppRunner & { test: ReturnType<typeof vi.fn> } {
 
 function renderApp(runner: AppRunner, storage: Partial<AppStorage> = {}) {
   const put = vi.fn<(attempt: Attempt) => Promise<void>>(async () => undefined)
+  const topics = {
+    put: vi.fn<(topic: TopicRecord) => Promise<void>>(async () => undefined),
+    delete: vi.fn<(id: string) => Promise<void>>(async () => undefined),
+  }
   render(
     <App
-      topic={topic}
       runner={runner}
-      storage={{ store: { put }, attempts: [], skipped: 0, ...storage }}
+      storage={{
+        store: { attempts: { put }, topics },
+        attempts: [],
+        topics: [topicFromFile(topic, 0)],
+        skipped: 0,
+        ...storage,
+      }}
     />,
   )
-  return put
+  return Object.assign(put, { topics })
 }
 
 async function startFirst(runner: AppRunner = fakeRunner()) {
@@ -233,6 +245,169 @@ describe('App', () => {
     expect(
       screen.getByText(/Your work is not being saved: IndexedDB is unavailable/),
     ).toBeInTheDocument()
-    expect(screen.getByText(/2 saved attempts could not be read/)).toBeInTheDocument()
+    expect(screen.getByText(/2 saved records could not be read/)).toBeInTheDocument()
+  })
+})
+
+describe('Topics', () => {
+  const allPass: TestResult = {
+    ...graded,
+    tests: graded.tests.map((t) => ({ ...t, passed: true })),
+  }
+  const written = (title: string) => ({
+    ...JSON.parse(problemText(topic.problems[0], topic.topic.concepts)),
+    concept: { name: 'Strings', group: 'Basics' },
+    wordings: [{ ...topic.problems[0].wordings[0], title }],
+  })
+
+  async function openTopic(name: string) {
+    await userEvent.click(screen.getByRole('link', { name: 'Topics' }))
+    await userEvent.click(screen.getByRole('button', { name: `Open ${name}` }))
+  }
+
+  // jsdom cannot type into CodeMirror, so the text goes in through the editor itself.
+  const problemEditor = () =>
+    EditorView.findFromDOM(screen.getByRole('textbox', { name: 'Problem JSON' }))!
+
+  async function submit(text: string, button = 'Add') {
+    const view = problemEditor()
+    act(() => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } }))
+    await userEvent.click(screen.getByRole('button', { name: button }))
+  }
+
+  it('creates a topic, adds checked problems from a chat answer and serves them', async () => {
+    const runner = fakeRunner()
+    runner.test
+      .mockResolvedValueOnce(allPass)
+      .mockResolvedValueOnce(graded)
+      .mockResolvedValueOnce(allPass)
+      .mockResolvedValueOnce(graded)
+    const put = renderApp(runner)
+    await userEvent.click(screen.getByRole('link', { name: 'Topics' }))
+    await userEvent.type(screen.getByRole('textbox', { name: 'New topic name' }), 'Strings')
+    await userEvent.click(screen.getByRole('button', { name: 'Create topic' }))
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Strings')
+
+    await userEvent.click(screen.getByRole('button', { name: 'New problem' }))
+    const answer = JSON.stringify({ problems: [written('Reverse words'), written('Count vowels')] })
+    await submit(`Sure:\n\`\`\`json\n${answer}\n\`\`\``)
+
+    const problems = await screen.findByRole('region', { name: 'Topic problems' })
+    await within(problems).findByRole('listitem', { name: 'Reverse words' })
+    expect(within(problems).getByRole('listitem', { name: 'Count vowels' })).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Problem JSON' })).toBeNull()
+    expect(runner.test).toHaveBeenNthCalledWith(
+      1,
+      topic.problems[0].reference_solution,
+      topic.problems[0].tests,
+      [],
+      12_000,
+    )
+    expect(runner.test).toHaveBeenNthCalledWith(
+      2,
+      topic.problems[0].starter_code,
+      topic.problems[0].tests,
+      [],
+      12_000,
+    )
+    expect(screen.getByRole('region', { name: 'Concepts' })).toHaveTextContent('Strings (Basics)')
+    expect(put.topics.put).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        name: 'Strings',
+        problems: [
+          expect.objectContaining({ concept: 'strings', source: 'user' }),
+          expect.objectContaining({ concept: 'strings', source: 'user' }),
+        ],
+      }),
+    )
+    const copy = vi.fn(async (_text: string) => undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: copy },
+      configurable: true,
+    })
+    await userEvent.click(screen.getByText('Chat bot request'))
+    await userEvent.click(screen.getByText('Problem template'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Copy Chat bot request' }))
+    expect(copy).toHaveBeenLastCalledWith(
+      expect.stringContaining('do not repeat them:\n- Reverse words\n- Count vowels'),
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Copy Problem template' }))
+    expect(copy).toHaveBeenLastCalledWith(PROBLEM_TEMPLATE)
+    expect(screen.getByRole('button', { name: 'Copy Problem template' })).toHaveTextContent(
+      'Copied',
+    )
+
+    await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Start Reverse words' }))
+    expect(screen.getByRole('heading', { name: /Reverse words/ })).toBeInTheDocument()
+  })
+
+  it('adds nothing when one problem fails its check, and says which and why', async () => {
+    const runner = fakeRunner()
+    runner.test
+      .mockResolvedValueOnce(allPass)
+      .mockResolvedValueOnce(graded)
+      .mockResolvedValueOnce(graded)
+      .mockResolvedValueOnce(graded)
+    renderApp(runner)
+    await openTopic('Topic')
+    await userEvent.click(screen.getByRole('button', { name: 'New problem' }))
+    await submit(JSON.stringify([written('Good'), written('Broken')]))
+
+    const editor = screen.getByRole('region', { name: 'New problem' })
+    expect(await within(editor).findByText(/Nothing was added/)).toBeInTheDocument()
+    expect(editor).toHaveTextContent('Problem 2 “Broken”:the reference solution fails test_b')
+    expect(editor).not.toHaveTextContent('Problem 1')
+    const problems = screen.getByRole('region', { name: 'Topic problems' })
+    expect(within(problems).queryByRole('listitem', { name: 'Good' })).toBeNull()
+  })
+
+  it('reports text that is not JSON, and Cancel closes the editor', async () => {
+    renderApp(fakeRunner())
+    await openTopic('Topic')
+    await userEvent.click(screen.getByRole('button', { name: 'New problem' }))
+    await submit('I cannot help with that.')
+    expect(screen.getByText(/Not valid JSON/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('textbox', { name: 'Problem JSON' })).toBeNull()
+  })
+
+  it('edits a served problem in place after the check', async () => {
+    const runner = fakeRunner()
+    runner.test.mockResolvedValueOnce(allPass).mockResolvedValueOnce(graded)
+    renderApp(runner)
+    await openTopic('Topic')
+    await userEvent.click(screen.getByRole('button', { name: 'Edit First problem' }))
+    const text = problemEditor().state.doc.toString()
+    await submit(text.replace('"First problem"', '"Renamed problem"'), 'Save')
+
+    const problems = screen.getByRole('region', { name: 'Topic problems' })
+    await within(problems).findByRole('listitem', { name: 'Renamed problem' })
+    expect(
+      within(problems)
+        .getAllByRole('listitem')
+        .map((li) => li.getAttribute('aria-label')),
+    ).toEqual(['Renamed problem', 'Second problem'])
+  })
+
+  it('renames, disables and deletes a topic', async () => {
+    const put = renderApp(fakeRunner())
+    await openTopic('Topic')
+    const name = screen.getByRole('textbox', { name: 'Topic name' })
+    await userEvent.clear(name)
+    await userEvent.type(name, 'Renamed')
+    await userEvent.click(screen.getByRole('button', { name: 'Rename' }))
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Renamed')
+
+    await userEvent.click(screen.getByRole('switch', { name: 'Enabled' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
+    expect(screen.queryByRole('listitem', { name: 'First problem' })).toBeNull()
+    expect(screen.getByText(/No problems to practise/)).toBeInTheDocument()
+
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    await openTopic('Renamed')
+    await userEvent.click(screen.getByRole('button', { name: 'Delete topic' }))
+    expect(put.topics.delete).toHaveBeenCalledWith('t')
+    expect(screen.getByText('No topics yet.')).toBeInTheDocument()
   })
 })

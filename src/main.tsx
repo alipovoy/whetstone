@@ -3,7 +3,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { builtInTopic } from './content'
 import { createPyodideRunner } from './runner'
-import { AttemptStore } from './storage/attempts'
+import { topicFromFile } from './core/topics'
+import { openDatabase } from './storage/database'
 import { App, type AppStorage } from './ui/App'
 import { followSystemTheme } from './ui/theme'
 
@@ -11,15 +12,22 @@ followSystemTheme()
 
 async function openStorage(): Promise<AppStorage> {
   try {
-    const store = await AttemptStore.open()
-    return { store, ...(await store.all()) }
+    const store = await openDatabase()
+    const [attempts, topics] = await Promise.all([store.attempts.all(), store.topics.all()])
+    return {
+      store,
+      attempts: attempts.records,
+      topics: topics.records,
+      skipped: attempts.skipped + topics.skipped,
+    }
   } catch (error) {
-    return { store: null, attempts: [], skipped: 0, error: String(error) }
+    const topics = [topicFromFile(builtInTopic, Date.now())]
+    return { store: null, attempts: [], topics, skipped: 0, error: String(error) }
   }
 }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App topic={builtInTopic} runner={createPyodideRunner()} storage={await openStorage()} />
+    <App runner={createPyodideRunner()} storage={await openStorage()} />
   </StrictMode>,
 )

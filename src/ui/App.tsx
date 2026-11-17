@@ -1,17 +1,24 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
-import { Alert, Badge, Button, Container, ListGroup, Navbar, Stack } from 'react-bootstrap'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { Alert, Badge, Button, Container, ListGroup, Nav, Navbar, Stack } from 'react-bootstrap'
 import { lastGraded, latestAttempt, startAttempt, type Attempt } from '@/core/attempt'
-import type { Problem, TopicFile } from '@/content/schema'
+import { newTopic, served, type TopicRecord } from '@/core/topics'
+import type { Problem, Topic, TopicFile } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
 import type { RunnerStatus } from '@/runner/types'
-import type { AttemptStore } from '@/storage/attempts'
+import type { Records } from '@/storage/database'
 import { ProblemPage } from './ProblemPage'
+import { TopicPage } from './TopicPage'
+import { TopicsPage } from './TopicsPage'
 
 export type AppRunner = Pick<PyodideRunner, 'run' | 'test' | 'warmUp' | 'status' | 'subscribe'>
 
 export interface AppStorage {
-  store: Pick<AttemptStore, 'put'> | null
+  store: {
+    attempts: Pick<Records<Attempt>, 'put'>
+    topics: Pick<Records<TopicRecord>, 'put' | 'delete'>
+  } | null
   attempts: Attempt[]
+  topics: TopicRecord[]
   skipped: number
   error?: string
 }
@@ -23,60 +30,102 @@ const STATUS: Record<RunnerStatus['state'], { bg: string; label: string }> = {
   failed: { bg: 'danger', label: 'Python stopped' },
 }
 
+type View =
+  | { page: 'problems' }
+  | { page: 'topics' }
+  | { page: 'topic'; id: string }
+  | { page: 'solve'; topic: Topic; problem: Problem; attempt: Attempt }
+
 interface Props {
-  topic: TopicFile
   runner: AppRunner
   storage: AppStorage
 }
 
-export function App({ topic, runner, storage }: Props) {
+export function App({ runner, storage }: Props) {
   const [attempts, setAttempts] = useState(storage.attempts)
-  const [session, setSession] = useState<{ problem: Problem; attempt: Attempt } | null>(null)
+  const [topics, setTopics] = useState(storage.topics)
+  // The latest topics, so a change is computed once, outside a state updater, and then saved.
+  const topicsNow = useRef(storage.topics)
+  const [view, setView] = useState<View>({ page: 'problems' })
   const [busy, setBusy] = useState(false)
   const [saveError, setSaveError] = useState(storage.error)
 
   useEffect(() => runner.warmUp(), [runner])
 
   const { store } = storage
+
   const save = useCallback(
     (attempt: Attempt) => {
       setAttempts((list) => [...list.filter((a) => a.id !== attempt.id), attempt])
-      store
-        ?.put(attempt)
-        .catch((error: unknown) =>
-          setSaveError(error instanceof Error ? error.message : String(error)),
-        )
+      store?.attempts.put(attempt).catch((error: unknown) => setSaveError(message(error)))
     },
     [store],
   )
 
-  const start = (problem: Problem) =>
-    setSession({
+  const setTopicList = (list: TopicRecord[]) => {
+    topicsNow.current = list
+    setTopics(list)
+  }
+  const putTopic = (topic: TopicRecord) => {
+    setTopicList([...topicsNow.current.filter((t) => t.id !== topic.id), topic])
+    store?.topics.put(topic).catch((error: unknown) => setSaveError(message(error)))
+  }
+  const updateTopic = (id: string, change: (topic: TopicRecord) => TopicRecord) => {
+    const current = topicsNow.current.find((t) => t.id === id)
+    if (current) putTopic({ ...change(current), updated_at: Date.now() })
+  }
+  const createTopic = (name: string) => {
+    const topic = newTopic(crypto.randomUUID(), name, Date.now())
+    putTopic(topic)
+    setView({ page: 'topic', id: topic.id })
+  }
+  const deleteTopic = (id: string) => {
+    setTopicList(topicsNow.current.filter((t) => t.id !== id))
+    store?.topics.delete(id).catch((error: unknown) => setSaveError(message(error)))
+    setView({ page: 'topics' })
+  }
+
+  const enabled = useMemo(
+    () =>
+      topics
+        .filter((t) => t.enabled)
+        .toSorted((a, b) => a.created_at - b.created_at)
+        .map((t) => served(t).file),
+    [topics],
+  )
+
+  const start = (topic: Topic, problem: Problem) =>
+    setView({
+      page: 'solve',
+      topic,
       problem,
       attempt: startAttempt(
         crypto.randomUUID(),
-        topic.topic.id,
+        topic.id,
         problem,
         problem.starter_code,
         Date.now(),
       ),
     })
 
+  const go = (next: View) => (event: React.MouseEvent) => {
+    event.preventDefault()
+    if (!busy) setView(next)
+  }
+  const topic = view.page === 'topic' ? topics.find((t) => t.id === view.id) : undefined
+
   return (
     <>
       <Navbar className="border-bottom mb-3">
         <Container>
-          <Navbar.Brand
-            href="#"
-            aria-disabled={busy}
-            onClick={(event) => {
-              event.preventDefault()
-              if (!busy) setSession(null)
-            }}
-          >
+          <Navbar.Brand href="#" aria-disabled={busy} onClick={go({ page: 'problems' })}>
             Whetstone
           </Navbar.Brand>
-          <Navbar.Text className="me-auto">{topic.topic.name}</Navbar.Text>
+          <Nav className="me-auto">
+            <a className="nav-link" href="#" aria-disabled={busy} onClick={go({ page: 'topics' })}>
+              Topics
+            </a>
+          </Nav>
           <RuntimeStatus runner={runner} />
         </Container>
       </Navbar>
@@ -84,27 +133,47 @@ export function App({ topic, runner, storage }: Props) {
         {saveError && <Alert variant="warning">Your work is not being saved: {saveError}</Alert>}
         {storage.skipped > 0 && (
           <Alert variant="info" dismissible>
-            {storage.skipped} saved attempts could not be read by this version of Whetstone and were
+            {storage.skipped} saved records could not be read by this version of Whetstone and were
             not loaded.
           </Alert>
         )}
-        {session ? (
+        {view.page === 'solve' && (
           <ProblemPage
-            key={session.attempt.id}
-            topic={topic.topic}
-            problem={session.problem}
-            initial={session.attempt}
+            key={view.attempt.id}
+            topic={view.topic}
+            problem={view.problem}
+            initial={view.attempt}
             attempts={attempts}
             runner={runner}
             onSave={save}
             onBusy={setBusy}
           />
-        ) : (
+        )}
+        {view.page === 'problems' && (
           <ProblemList
-            topic={topic}
+            topics={enabled}
             attempts={attempts}
             onStart={start}
-            onResume={(problem, attempt) => setSession({ problem, attempt })}
+            onResume={(owner, problem, attempt) =>
+              setView({ page: 'solve', topic: owner, problem, attempt })
+            }
+          />
+        )}
+        {view.page === 'topics' && (
+          <TopicsPage
+            topics={topics}
+            onCreate={createTopic}
+            onOpen={(id) => setView({ page: 'topic', id })}
+          />
+        )}
+        {topic && (
+          <TopicPage
+            key={topic.id}
+            topic={topic}
+            runner={runner}
+            onChange={(change) => updateTopic(topic.id, change)}
+            onDelete={() => deleteTopic(topic.id)}
+            onBusy={setBusy}
           />
         )}
       </Container>
@@ -112,56 +181,88 @@ export function App({ topic, runner, storage }: Props) {
   )
 }
 
-interface ProblemListProps {
-  topic: TopicFile
-  attempts: Attempt[]
-  onStart: (problem: Problem) => void
-  onResume: (problem: Problem, attempt: Attempt) => void
+function message(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
-function ProblemList({ topic, attempts, onStart, onResume }: ProblemListProps) {
+interface ProblemListProps {
+  topics: TopicFile[]
+  attempts: Attempt[]
+  onStart: (topic: Topic, problem: Problem) => void
+  onResume: (topic: Topic, problem: Problem, attempt: Attempt) => void
+}
+
+function ProblemList({ topics, attempts, onStart, onResume }: ProblemListProps) {
+  const shown = topics.filter((t) => t.problems.length > 0)
   return (
     <section aria-label="Problems">
       <h1 className="h3">Problems</h1>
-      <ListGroup as="ul">
-        {topic.problems.map((problem) => {
-          const title = problem.wordings[0].title
-          const latest = latestAttempt(attempts, topic.topic.id, problem.id)
-          const unfinished = latest && !latest.grade ? latest : undefined
-          const graded = lastGraded(attempts, topic.topic.id, problem.id)?.grade
-          return (
-            <ListGroup.Item as="li" key={problem.id} aria-label={title}>
-              <Stack direction="horizontal" gap={2} className="flex-wrap">
-                <span className="fw-semibold">{title}</span>
-                <Badge bg="secondary">{problem.difficulty}</Badge>
-                {graded && <span className="text-body-secondary">Last score {graded.score}</span>}
-                {unfinished && <Badge bg="info">In progress</Badge>}
-                <Stack direction="horizontal" gap={2} className="ms-auto">
-                  {unfinished && (
-                    <Button
-                      size="sm"
-                      variant="primary"
-                      aria-label={`Resume ${title}`}
-                      onClick={() => onResume(problem, unfinished)}
-                    >
-                      Resume
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant={unfinished ? 'outline-primary' : 'primary'}
-                    aria-label={`${unfinished ? 'Start over' : 'Start'} ${title}`}
-                    onClick={() => onStart(problem)}
-                  >
-                    {unfinished ? 'Start over' : 'Start'}
-                  </Button>
-                </Stack>
-              </Stack>
-            </ListGroup.Item>
-          )
-        })}
-      </ListGroup>
+      {shown.length === 0 && (
+        <p>No problems to practise. Add problems to a topic, or enable one, under Topics.</p>
+      )}
+      {shown.map(({ topic, problems }) => (
+        <section key={topic.id} aria-label={topic.name} className="mb-3">
+          <h2 className="h5">{topic.name}</h2>
+          <ListGroup as="ul">
+            {problems.map((problem) => (
+              <ProblemRow
+                key={problem.id}
+                problem={problem}
+                latest={latestAttempt(attempts, topic.id, problem.id)}
+                graded={lastGraded(attempts, topic.id, problem.id)}
+                onStart={() => onStart(topic, problem)}
+                onResume={(attempt) => onResume(topic, problem, attempt)}
+              />
+            ))}
+          </ListGroup>
+        </section>
+      ))}
     </section>
+  )
+}
+
+interface ProblemRowProps {
+  problem: Problem
+  latest?: Attempt
+  graded?: Attempt
+  onStart: () => void
+  onResume: (attempt: Attempt) => void
+}
+
+function ProblemRow({ problem, latest, graded, onStart, onResume }: ProblemRowProps) {
+  const title = problem.wordings[0].title
+  const unfinished = latest && !latest.grade ? latest : undefined
+  return (
+    <ListGroup.Item as="li" aria-label={title}>
+      <Stack direction="horizontal" gap={2} className="flex-wrap">
+        <span className="fw-semibold">{title}</span>
+        <Badge bg="secondary">{problem.difficulty}</Badge>
+        {graded?.grade && (
+          <span className="text-body-secondary">Last score {graded.grade.score}</span>
+        )}
+        {unfinished && <Badge bg="info">In progress</Badge>}
+        <Stack direction="horizontal" gap={2} className="ms-auto">
+          {unfinished && (
+            <Button
+              size="sm"
+              variant="primary"
+              aria-label={`Resume ${title}`}
+              onClick={() => onResume(unfinished)}
+            >
+              Resume
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant={unfinished ? 'outline-primary' : 'primary'}
+            aria-label={`${unfinished ? 'Start over' : 'Start'} ${title}`}
+            onClick={onStart}
+          >
+            {unfinished ? 'Start over' : 'Start'}
+          </Button>
+        </Stack>
+      </Stack>
+    </ListGroup.Item>
   )
 }
 
