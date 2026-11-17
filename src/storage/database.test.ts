@@ -3,6 +3,7 @@ import { openDB } from 'idb'
 import { describe, expect, it, vi } from 'vitest'
 import { builtInTopic } from '@/content'
 import { startAttempt } from '@/core/attempt'
+import { topicFromFile } from '@/core/topics'
 import { openDatabase } from './database'
 
 const problem = builtInTopic.problems[0]
@@ -74,7 +75,7 @@ describe('openDatabase', () => {
   it('closes its connection when a newer version opens the database', async () => {
     const name = freshName()
     const { attempts } = await openDatabase(name)
-    const newer = await openDB(name, 3)
+    const newer = await openDB(name, 4)
     newer.close()
     await expect(attempts.put(startAttempt(ID, 't', problem, '', 1))).rejects.toThrow(
       'updated in another tab',
@@ -89,7 +90,26 @@ describe('openDatabase', () => {
       name: builtInTopic.topic.name,
       enabled: true,
       problems: builtInTopic.problems,
+      questions: builtInTopic.questions,
     })
+  })
+
+  it('adds the built-in questions once to a built-in topic stored without them', async () => {
+    const name = freshName()
+    const { questions: _, ...stored } = topicFromFile(builtInTopic, 1)
+    const mine = { ...builtInTopic.problems[0], id: 'mine', source: 'user' }
+    const old = await openDB(name, 2, {
+      upgrade(db) {
+        db.createObjectStore('attempts', { keyPath: 'id' })
+        db.createObjectStore('topics', { keyPath: 'id' })
+      },
+    })
+    await old.put('topics', { ...stored, problems: [...stored.problems, mine] })
+    old.close()
+
+    const [topic] = (await (await openDatabase(name)).topics.all()).records
+    expect(topic.problems).toContainEqual(mine)
+    expect(topic.questions).toEqual(builtInTopic.questions)
   })
 
   it('adds topics to a database of the previous version and keeps its attempts', async () => {

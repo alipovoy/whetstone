@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import type { Problem } from '@/content/schema'
-import { addProblems, checkErrors, newTopic, problemText, served, type TopicRecord } from './topics'
+import type { Problem, Question } from '@/content/schema'
+import {
+  addProblems,
+  addQuestions,
+  checkErrors,
+  deleteItem,
+  itemText,
+  newTopic,
+  served,
+  TopicRecordSchema,
+  type TopicRecord,
+} from './topics'
 
 const problem: Problem = {
   id: 'p',
@@ -17,14 +27,26 @@ const problem: Problem = {
   source: 'built-in',
 }
 
+const question: Question = {
+  id: 'q1',
+  type: 'single',
+  concept: 'two-pointers',
+  wordings: [{ text: 'Which?', options: ['a', 'b'] }],
+  answers: [1],
+  explanation: 'e',
+  summary: 'Which one',
+  source: 'built-in',
+}
+
 const topic: TopicRecord = {
   ...newTopic('t', 'Topic', 0),
   concepts: [{ id: 'two-pointers', name: 'Two pointers', group: 'Arrays' }],
   problems: [problem],
+  questions: [question],
 }
 
 const authored = (change: object = {}) => ({
-  ...JSON.parse(problemText(problem, topic.concepts)),
+  ...JSON.parse(itemText(problem, topic.concepts)),
   ...change,
 })
 let n = 0
@@ -37,13 +59,61 @@ describe('served', () => {
     const { file, unreadable } = served({ ...topic, problems: [problem, broken, orphan] })
     expect(file.problems.map((p) => p.id)).toEqual(['p'])
     expect(file.topic).toEqual({ id: 't', name: 'Topic', concepts: topic.concepts })
-    expect(unreadable).toBe(2)
+    expect(unreadable).toEqual({ problems: 2, questions: 0 })
+  })
+
+  it('serves the questions that follow the content rules and counts the rest', () => {
+    const wrong = { ...question, id: 'q2', answers: [5] }
+    const { file, unreadable } = served({ ...topic, questions: [question, wrong] })
+    expect(file.questions).toEqual([question])
+    expect(unreadable).toEqual({ problems: 0, questions: 1 })
+  })
+
+  it('reads a topic stored before questions existed', () => {
+    const { questions: _, ...old } = topic
+    expect(TopicRecordSchema.parse(old).questions).toEqual([])
+  })
+})
+
+describe('addQuestions', () => {
+  const authoredQuestion = (change: object = {}) => ({
+    ...JSON.parse(itemText(question, topic.concepts)),
+    ...change,
+  })
+
+  it('adds questions with new ids and the concept found by name', () => {
+    const added = addQuestions(topic, [authoredQuestion({ summary: 'Another' })], () => 'x')
+    expect(added.ok && added.record.questions).toEqual([
+      question,
+      { ...question, id: 'x', summary: 'Another', source: 'user' },
+    ])
+  })
+
+  it('replaces a question in place and adds nothing when one is invalid', () => {
+    const edited = addQuestions(topic, [authoredQuestion({ summary: 'new' })], nextId, 'q1')
+    expect(edited.ok && edited.record.questions).toEqual([{ ...question, summary: 'new' }])
+    expect(
+      addQuestions(topic, [authoredQuestion(), authoredQuestion({ answers: [0, 1] })], nextId),
+    ).toEqual({
+      ok: false,
+      errors: [
+        {
+          item: 2,
+          title: 'Which one',
+          errors: ['a single choice has exactly one answer', 'at least one option must be wrong'],
+        },
+      ],
+    })
+  })
+
+  it('deletes a question', () => {
+    expect(deleteItem(topic, 'questions', 'q1').questions).toEqual([])
   })
 })
 
 describe('addProblems', () => {
   it('writes the concept by name, without the fields the app assigns', () => {
-    const text = JSON.parse(problemText(problem, topic.concepts))
+    const text = JSON.parse(itemText(problem, topic.concepts))
     expect(text).toMatchObject({ concept: { name: 'Two pointers', group: 'Arrays' } })
     expect(text).not.toHaveProperty('id')
     expect(text).not.toHaveProperty('source')
@@ -61,7 +131,7 @@ describe('addProblems', () => {
     )
     expect(added.ok).toBe(true)
     if (!added.ok) return
-    expect(added.problems.map((p) => [p.id, p.concept, p.source])).toEqual([
+    expect(added.added.map((p) => [p.id, p.concept, p.source])).toEqual([
       ['x', 'two-pointers', 'user'],
       ['x', 'hash-maps', 'user'],
       ['x', 'hash-maps', 'user'],

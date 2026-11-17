@@ -44,17 +44,39 @@ export const DraftProblemSchema = ProblemSchema.omit({ id: true, source: true })
   concept: ConceptSchema.omit({ id: true }),
 })
 
+const QuestionWordingSchema = z.object({
+  text,
+  options: z.array(text).min(2, 'needs at least two options'),
+})
+
+export const QuestionSchema = z.object({
+  id,
+  type: z.enum(['single', 'multiple']),
+  concept: id,
+  wordings: z.array(QuestionWordingSchema).min(1, 'needs at least one wording'),
+  // Indexes into the options; every wording lists its options in the same order.
+  answers: z.array(z.number().int().min(0)).min(1, 'needs at least one answer'),
+  explanation: text,
+  summary: text,
+  source: z.enum(['built-in', 'user', 'ai']),
+})
+
+export const DraftQuestionSchema = QuestionSchema.omit({ id: true, source: true }).extend({
+  concept: ConceptSchema.omit({ id: true }),
+})
+
 export const TopicFileSchema = z.object({
   topic: TopicSchema,
   problems: z.array(ProblemSchema),
+  questions: z.array(QuestionSchema),
 })
 
 export type TopicFile = z.infer<typeof TopicFileSchema>
 export type Topic = z.infer<typeof TopicSchema>
 export type Concept = z.infer<typeof ConceptSchema>
 export type Problem = z.infer<typeof ProblemSchema>
-export type DraftProblem = z.infer<typeof DraftProblemSchema>
 export type Wording = z.infer<typeof WordingSchema>
+export type Question = z.infer<typeof QuestionSchema>
 export type Difficulty = z.infer<typeof DifficultySchema>
 
 export type Validation = { ok: true; file: TopicFile } | { ok: false; errors: string[] }
@@ -71,7 +93,7 @@ export function validateTopicFile(input: unknown): Validation {
   return errors.length ? { ok: false, errors } : { ok: true, file: parsed.data }
 }
 
-function crossChecks({ topic, problems }: TopicFile): string[] {
+function crossChecks({ topic, problems, questions }: TopicFile): string[] {
   const errors: string[] = []
   const concepts = new Set(topic.concepts.map((c) => c.id))
   if (concepts.size !== topic.concepts.length) errors.push('topic.concepts: a concept id repeats')
@@ -82,6 +104,31 @@ function crossChecks({ topic, problems }: TopicFile): string[] {
     if (!concepts.has(p.concept)) errors.push(`${p.id}: concept "${p.concept}" is not in the topic`)
     errors.push(...testErrors(p).map((e) => `${p.id}: ${e}`))
   }
+  for (const q of questions) {
+    if (ids.has(q.id)) errors.push(`${q.id}: id repeats`)
+    ids.add(q.id)
+    if (!concepts.has(q.concept)) errors.push(`${q.id}: concept "${q.concept}" is not in the topic`)
+    errors.push(...answerErrors(q).map((e) => `${q.id}: ${e}`))
+  }
+  return errors
+}
+
+export function answerErrors(q: Pick<Question, 'type' | 'wordings' | 'answers'>): string[] {
+  const errors: string[] = []
+  const count = q.wordings[0].options.length
+  if (q.wordings.some((w) => w.options.length !== count)) {
+    errors.push('every wording needs the same number of options')
+  }
+  if (q.wordings.some((w) => new Set(w.options).size !== w.options.length)) {
+    errors.push('an option repeats')
+  }
+  if (new Set(q.answers).size !== q.answers.length) errors.push('an answer repeats')
+  if (q.answers.some((a) => a >= count))
+    errors.push(`an answer is not an option index (0 to ${count - 1})`)
+  if (q.type === 'single' && q.answers.length !== 1)
+    errors.push('a single choice has exactly one answer')
+  // When every option is correct, picking all of them needs no knowledge.
+  if (new Set(q.answers).size >= count) errors.push('at least one option must be wrong')
   return errors
 }
 

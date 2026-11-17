@@ -1,11 +1,11 @@
-import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
+import { openDB, type DBSchema, type IDBPDatabase, type IDBPObjectStore } from 'idb'
 import type { z } from 'zod'
 import { builtInTopic } from '@/content'
 import { AttemptSchema, type Attempt } from '@/core/attempt'
 import { topicFromFile, TopicRecordSchema, type TopicRecord } from '@/core/topics'
 
 export const DATABASE_NAME = 'whetstone'
-const DATABASE_VERSION = 2
+const DATABASE_VERSION = 3
 
 interface Schema extends DBSchema {
   attempts: { key: string; value: unknown }
@@ -28,12 +28,16 @@ export async function openDatabase(name = DATABASE_NAME): Promise<Database> {
   let connection: Connection | undefined
   const db = await openDB<Schema>(name, DATABASE_VERSION, {
     // Each database version adds its stores; later steps append a branch, never edit one.
-    upgrade(database, oldVersion) {
+    upgrade(database, oldVersion, _newVersion, transaction) {
       if (oldVersion < 1) database.createObjectStore('attempts', { keyPath: 'id' })
       if (oldVersion < 2) {
         // Seeded once, with the database: a built-in topic the user deleted stays deleted.
         const topics = database.createObjectStore('topics', { keyPath: 'id' })
         void topics.put(topicFromFile(builtInTopic, Date.now()))
+      }
+      if (oldVersion < 3) {
+        // A failed merge aborts the upgrade, so it runs again on the next open.
+        addBuiltInQuestions(transaction.objectStore('topics')).catch(() => transaction.abort())
       }
     },
     // A newer version of the app opened in another tab: let its upgrade through.
@@ -47,6 +51,19 @@ export async function openDatabase(name = DATABASE_NAME): Promise<Database> {
     attempts: new Records(connection, 'attempts', AttemptSchema),
     topics: new Records(connection, 'topics', TopicRecordSchema),
   }
+}
+
+// The built-in topic stored before questions existed gets them once; a deleted one stays deleted.
+async function addBuiltInQuestions(
+  topics: IDBPObjectStore<Schema, StoreName[], 'topics', 'versionchange'>,
+) {
+  const stored = (await topics.get(builtInTopic.topic.id)) as
+    { questions?: { id: string }[] } | undefined
+  if (!stored) return
+  const questions = stored.questions ?? []
+  const have = new Set(questions.map((q) => q.id))
+  const missing = builtInTopic.questions.filter((q) => !have.has(q.id))
+  if (missing.length) await topics.put({ ...stored, questions: [...questions, ...missing] })
 }
 
 export interface Saved<T> {

@@ -1,14 +1,22 @@
-import { useEffect, useState } from 'react'
-import { Alert, Badge, Button, Form, ListGroup, Stack } from 'react-bootstrap'
-import { chatRequest, PROBLEM_TEMPLATE, readItems } from '@/core/bridge'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Alert, Badge, Button, Form, ListGroup, Stack, Tab, Tabs } from 'react-bootstrap'
+import {
+  PROBLEM_TEMPLATE,
+  problemRequest,
+  QUESTION_TEMPLATE,
+  questionRequest,
+  readItems,
+} from '@/core/bridge'
 import {
   addProblems,
+  addQuestions,
   checkErrors,
-  deleteProblem,
-  problemText,
+  deleteItem,
+  itemText,
   served,
   type CheckRun,
   type ItemErrors,
+  type ItemList,
   type TopicRecord,
 } from '@/core/topics'
 import type { Problem } from '@/content/schema'
@@ -25,15 +33,43 @@ interface Props {
   onBusy: (busy: boolean) => void
 }
 
-// The editor adds new problems, or replaces the one being edited.
-type Editing = { text: string; replaces?: Problem }
+// The editor adds new items to its list, or replaces the one being edited.
+interface Editing {
+  text: string
+  replaces?: { id: string; title: string }
+}
+
+interface Row {
+  id: string
+  title: string
+  badge: string
+  concept: string
+  text: string
+}
 
 export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) {
-  const [editing, setEditing] = useState<Editing | null>(null)
   const [checking, setChecking] = useState(false)
   const { file, unreadable } = served(topic)
+  const conceptName = (id: string) => topic.concepts.find((c) => c.id === id)?.name ?? ''
 
   useEffect(() => onBusy(checking), [checking, onBusy])
+
+  const problems: Row[] = file.problems.map((p) => ({
+    id: p.id,
+    title: p.wordings[0].title,
+    badge: p.difficulty,
+    concept: conceptName(p.concept),
+    text: itemText(p, topic.concepts),
+  }))
+  const questions: Row[] = file.questions.map((q) => ({
+    id: q.id,
+    title: q.summary,
+    badge: q.type === 'single' ? 'Single choice' : 'Multiple choice',
+    concept: conceptName(q.concept),
+    text: itemText(q, topic.concepts),
+  }))
+  const request = { topic: topic.name, concepts: topic.concepts }
+  const shared = { topic, runner, checking, onChecking: setChecking, onChange }
 
   return (
     <Stack gap={4}>
@@ -42,7 +78,9 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
       <section aria-label="Concepts">
         <h2 className="h5">Concepts</h2>
         {topic.concepts.length === 0 ? (
-          <p className="text-body-secondary">None yet: adding a problem adds its concept.</p>
+          <p className="text-body-secondary">
+            None yet: adding a problem or question adds its concept.
+          </p>
         ) : (
           <ul>
             {topic.concepts.map((c) => (
@@ -54,84 +92,115 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
         )}
       </section>
 
-      <section aria-label="Topic problems">
-        <h2 className="h5">Problems</h2>
-        {unreadable > 0 && (
-          <Alert variant="warning">
-            {unreadable} problems do not follow the current content rules and are not served.
-          </Alert>
-        )}
-        <ListGroup as="ul" className="mb-2">
-          {file.problems.map((problem) => {
-            const title = problem.wordings[0].title
-            return (
-              <ListGroup.Item as="li" key={problem.id} aria-label={title}>
-                <Stack direction="horizontal" gap={2} className="flex-wrap">
-                  <span className="fw-semibold">{title}</span>
-                  <Badge bg="secondary">{problem.difficulty}</Badge>
-                  <span className="text-body-secondary">
-                    {topic.concepts.find((c) => c.id === problem.concept)?.name}
-                  </span>
-                  <Stack direction="horizontal" gap={2} className="ms-auto">
-                    <Button
-                      size="sm"
-                      variant="outline-primary"
-                      aria-label={`Edit ${title}`}
-                      disabled={editing !== null}
-                      onClick={() =>
-                        setEditing({
-                          text: problemText(problem, topic.concepts),
-                          replaces: problem,
-                        })
-                      }
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline-danger"
-                      aria-label={`Delete ${title}`}
-                      disabled={editing !== null}
-                      onClick={() => {
-                        if (confirm(`Delete "${title}"? Its past attempts are kept.`)) {
-                          onChange((t) => deleteProblem(t, problem.id))
-                        }
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </Stack>
-                </Stack>
-              </ListGroup.Item>
-            )
-          })}
-        </ListGroup>
-        {editing ? (
-          <ProblemEditor
-            topic={topic}
-            initial={editing}
-            runner={runner}
-            checking={checking}
-            onChecking={setChecking}
-            onDone={(next) => {
-              onChange(() => next)
-              setEditing(null)
-            }}
-            onCancel={() => setEditing(null)}
-          />
-        ) : (
-          <Button variant="primary" onClick={() => setEditing({ text: '' })}>
-            New problem
-          </Button>
-        )}
-      </section>
-
-      <Snippets topic={topic} titles={file.problems.map((p) => p.wordings[0].title)} />
+      {/* Mounted when first shown; an open editor survives switching tabs. */}
+      <Tabs defaultActiveKey="problems" mountOnEnter>
+        <Tab eventKey="problems" title="Problems" disabled={checking}>
+          <Items {...shared} list="problems" rows={problems} unreadable={unreadable.problems}>
+            <Snippet
+              label="Chat bot request for problems"
+              value={problemRequest({ ...request, existing: problems.map((r) => r.title) })}
+              language="markdown"
+            />
+            <Snippet label="Problem template" value={PROBLEM_TEMPLATE} language="json" />
+          </Items>
+        </Tab>
+        <Tab eventKey="questions" title="Questions" disabled={checking}>
+          <Items {...shared} list="questions" rows={questions} unreadable={unreadable.questions}>
+            <Snippet
+              label="Chat bot request for questions"
+              value={questionRequest({ ...request, existing: questions.map((r) => r.title) })}
+              language="markdown"
+            />
+            <Snippet label="Question template" value={QUESTION_TEMPLATE} language="json" />
+          </Items>
+        </Tab>
+      </Tabs>
     </Stack>
   )
 }
 
+const NOUN = { problems: 'problem', questions: 'question' } as const
+const capital = (s: string) => s[0].toUpperCase() + s.slice(1)
+
+interface ItemsProps {
+  list: ItemList
+  rows: Row[]
+  unreadable: number
+  topic: TopicRecord
+  runner: Pick<Runner, 'test'>
+  checking: boolean
+  onChecking: (checking: boolean) => void
+  onChange: Props['onChange']
+  children: ReactNode
+}
+
+function Items({ list, rows, unreadable, children, onChange, ...editor }: ItemsProps) {
+  const [editing, setEditing] = useState<Editing | null>(null)
+  return (
+    <section aria-label={`Topic ${list}`} className="pt-3">
+      {unreadable > 0 && (
+        <Alert variant="warning">
+          {unreadable} {list} do not follow the current content rules and are not served.
+        </Alert>
+      )}
+      <ListGroup as="ul" className="mb-2">
+        {rows.map(({ id, title, badge, concept, text }) => (
+          <ListGroup.Item as="li" key={id} aria-label={title}>
+            <Stack direction="horizontal" gap={2} className="flex-wrap">
+              <span className="fw-semibold">{title}</span>
+              <Badge bg="secondary">{badge}</Badge>
+              <span className="text-body-secondary">{concept}</span>
+              <Stack direction="horizontal" gap={2} className="ms-auto">
+                <Button
+                  size="sm"
+                  variant="outline-primary"
+                  aria-label={`Edit ${title}`}
+                  disabled={editing !== null}
+                  onClick={() => setEditing({ text, replaces: { id, title } })}
+                >
+                  Edit
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline-danger"
+                  aria-label={`Delete ${title}`}
+                  disabled={editing !== null}
+                  onClick={() => {
+                    const kept = list === 'problems' ? ' Its past attempts are kept.' : ''
+                    if (confirm(`Delete "${title}"?${kept}`))
+                      onChange((t) => deleteItem(t, list, id))
+                  }}
+                >
+                  Delete
+                </Button>
+              </Stack>
+            </Stack>
+          </ListGroup.Item>
+        ))}
+      </ListGroup>
+      {editing ? (
+        <ItemEditor
+          {...editor}
+          list={list}
+          initial={editing}
+          onDone={(next) => {
+            onChange(() => next)
+            setEditing(null)
+          }}
+          onCancel={() => setEditing(null)}
+        />
+      ) : (
+        <Button variant="primary" onClick={() => setEditing({ text: '' })}>
+          New {NOUN[list]}
+        </Button>
+      )}
+      <div className="mt-4">{children}</div>
+    </section>
+  )
+}
+
 interface EditorProps {
+  list: ItemList
   topic: TopicRecord
   initial: Editing
   runner: Pick<Runner, 'test'>
@@ -141,7 +210,8 @@ interface EditorProps {
   onCancel: () => void
 }
 
-function ProblemEditor({
+function ItemEditor({
+  list,
   topic,
   initial,
   runner,
@@ -153,19 +223,25 @@ function ProblemEditor({
   const [text, setText] = useState(initial.text)
   const [error, setError] = useState<string | null>(null)
   const [failed, setFailed] = useState<ItemErrors[]>([])
-  const replaces = initial.replaces
+  const { replaces } = initial
+  const noun = NOUN[list]
 
   async function submit() {
     setError(null)
     setFailed([])
-    const read = readItems(text)
+    const read = readItems(text, list)
     if ('error' in read) return setError(read.error)
-    const added = addProblems(topic, read.items, () => crypto.randomUUID(), replaces?.id)
+    const newId = () => crypto.randomUUID()
+    if (list === 'questions') {
+      const added = addQuestions(topic, read.items, newId, replaces?.id)
+      return added.ok ? onDone(added.record) : setFailed(added.errors)
+    }
+    const added = addProblems(topic, read.items, newId, replaces?.id)
     if (!added.ok) return setFailed(added.errors)
     onChecking(true)
     try {
       const found: ItemErrors[] = []
-      for (const [i, problem] of added.problems.entries()) {
+      for (const [i, problem] of added.added.entries()) {
         const errors = await check(runner, problem)
         if (errors.length) found.push({ item: i + 1, title: problem.wordings[0].title, errors })
       }
@@ -179,19 +255,21 @@ function ProblemEditor({
   }
 
   return (
-    <section aria-label={replaces ? `Edit ${replaces.wordings[0].title}` : 'New problem'}>
+    <section aria-label={replaces ? `Edit ${replaces.title}` : `New ${noun}`}>
       <p className="text-body-secondary mb-2">
         {replaces
-          ? 'Edit the problem as JSON.'
-          : 'Paste one problem, a list of problems, or a chat bot answer.'}{' '}
-        Each problem is run in Python first: its reference solution must pass every test and its
-        starter code must fail one. Nothing is added unless every problem passes.
+          ? `Edit the ${noun} as JSON.`
+          : `Paste one ${noun}, a list of ${list}, or a chat bot answer.`}{' '}
+        {list === 'problems'
+          ? 'Each problem is run in Python first: its reference solution must pass every test and its starter code must fail one.'
+          : 'Each question is checked first.'}{' '}
+        Nothing is added unless every {noun} passes.
       </p>
       <div className="mb-2">
         <CodeEditor
           initialValue={initial.text}
           onChange={setText}
-          label="Problem JSON"
+          label={`${capital(noun)} JSON`}
           language="json"
           readOnly={checking}
         />
@@ -202,7 +280,7 @@ function ProblemEditor({
           Nothing was {replaces ? 'saved' : 'added'}.
           {failed.map(({ item, title, errors }) => (
             <div key={item} className="mt-2">
-              Problem {item}
+              {capital(noun)} {item}
               {title && ` “${title}”`}:
               <ul className="mb-0">
                 {errors.map((e) => (
@@ -294,16 +372,6 @@ function Header({ topic, onChange, onDelete, disabled }: HeaderProps) {
         </Button>
       </Stack>
     </div>
-  )
-}
-
-function Snippets({ topic, titles }: { topic: TopicRecord; titles: string[] }) {
-  const request = chatRequest({ topic: topic.name, concepts: topic.concepts, titles })
-  return (
-    <section aria-label="Examples">
-      <Snippet label="Chat bot request" value={request} language="markdown" />
-      <Snippet label="Problem template" value={PROBLEM_TEMPLATE} language="json" />
-    </section>
   )
 }
 

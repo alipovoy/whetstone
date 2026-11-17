@@ -1,13 +1,15 @@
+import type { ItemList } from './topics'
+
 export const MAX_ITEMS = 10
-const REQUESTED = 3
 
 export interface PromptRequest {
   topic: string
   concepts: { name: string; group: string }[]
-  titles: string[]
+  // Titles of the problems, or summaries of the questions, already in the topic.
+  existing: string[]
 }
 
-const EXAMPLE = {
+const PROBLEM = {
   concept: { name: 'Two pointers', group: 'Arrays and strings' },
   difficulty: 'Easy',
   language: 'python',
@@ -34,17 +36,28 @@ const EXAMPLE = {
   summary: 'Two pointers moving inwards over a sorted list.',
 }
 
-export const PROBLEM_TEMPLATE = JSON.stringify(EXAMPLE, null, 2)
+const QUESTION = {
+  concept: { name: 'Two pointers', group: 'Arrays and strings' },
+  type: 'single',
+  wordings: [
+    {
+      text: 'Moving one index from each end of a list towards the middle finds a pair with a given sum. What must be true of the list?',
+      options: ['It is sorted', 'It has no repeated values', 'It holds only positive numbers'],
+    },
+  ],
+  answers: [0],
+  explanation:
+    'Each move relies on order: a sum that is too small needs a larger left value, one that is too large a smaller right value.',
+  summary: 'Precondition of the inward two-pointer pair search',
+}
 
-export function chatRequest({ topic, concepts, titles }: PromptRequest): string {
+export const PROBLEM_TEMPLATE = JSON.stringify(PROBLEM, null, 2)
+export const QUESTION_TEMPLATE = JSON.stringify(QUESTION, null, 2)
+
+export function problemRequest({ topic, concepts, existing }: PromptRequest): string {
   return [
-    `Write ${REQUESTED} new Python coding interview problems for the topic "${topic}", from Easy to Hard.`,
-    '',
-    'Answer with one JSON block and nothing else, shaped like this:',
-    '```json',
-    JSON.stringify({ problems: [EXAMPLE] }, null, 2),
-    '```',
-    '',
+    `Write 3 new Python coding interview problems for the topic "${topic}", from Easy to Hard.`,
+    ...shape('problems', PROBLEM),
     'Rules:',
     '- `concept` names the idea the problem practises; reuse an existing concept when one fits.',
     '- `difficulty` is Easy, Medium or Hard. `statement` is Markdown.',
@@ -53,18 +66,51 @@ export function chatRequest({ topic, concepts, titles }: PromptRequest): string 
     '- The reference solution passes every test; the starter code fails at least one.',
     '- Exactly three hints, from a gentle nudge to nearly the answer.',
     '- Standard library only. Every test finishes in well under a second.',
+    ...context('Problems', concepts, existing),
+  ].join('\n')
+}
+
+export function questionRequest({ topic, concepts, existing }: PromptRequest): string {
+  return [
+    `Write 5 new interview quiz questions for the topic "${topic}", single and multiple choice.`,
+    ...shape('questions', QUESTION),
+    'Rules:',
+    '- `concept` names the idea the question checks; reuse an existing concept when one fits.',
+    '- `type` is `single` (exactly one correct option) or `multiple` (one or more correct options).',
+    '- `answers` lists the indexes of the correct options, counted from 0. At least one option is wrong.',
+    '- Extra `wordings` may ask the same question in other words; they keep the same options in the same order.',
+    '- `text`, `options` and `explanation` are Markdown. The explanation says why each answer is right or wrong.',
+    '- `summary` is a short phrase naming what the question checks.',
+    ...context('Questions', concepts, existing),
+  ].join('\n')
+}
+
+function shape(list: ItemList, example: object): string[] {
+  return [
+    '',
+    'Answer with one JSON block and nothing else, shaped like this:',
+    '```json',
+    JSON.stringify({ [list]: [example] }, null, 2),
+    '```',
+    '',
+  ]
+}
+
+function context(kind: string, concepts: PromptRequest['concepts'], existing: string[]): string[] {
+  return [
     '',
     concepts.length
       ? `Existing concepts: ${concepts.map((c) => `${c.name} (${c.group})`).join('; ')}.`
       : 'The topic has no concepts yet.',
-    ...(titles.length
-      ? ['', 'Problems already in the topic; do not repeat them:', ...titles.map((t) => `- ${t}`)]
-      : ['The topic has no problems yet.']),
-  ].join('\n')
+    ...(existing.length
+      ? ['', `${kind} already in the topic; do not repeat them:`, ...existing.map((t) => `- ${t}`)]
+      : [`The topic has no ${kind.toLowerCase()} yet.`]),
+  ]
 }
 
-// Accepts one problem, a list of them, or {"problems": [...]}, bare or in a fenced block.
-export function readItems(text: string): { items: unknown[] } | { error: string } {
+// Accepts one item, a list of them, or {"problems": [...]} / {"questions": [...]}, bare or in a
+// fenced block.
+export function readItems(text: string, list: ItemList): { items: unknown[] } | { error: string } {
   const fenced = /```(?:json)?\s*\n([\s\S]*?)```/.exec(text)
   let json: unknown
   try {
@@ -72,8 +118,13 @@ export function readItems(text: string): { items: unknown[] } | { error: string 
   } catch (error) {
     return { error: `Not valid JSON: ${(error as Error).message}` }
   }
-  const listed = (json as { problems?: unknown } | null)?.problems
+  const keyed = json as Record<string, unknown> | null
+  const other = list === 'problems' ? 'questions' : 'problems'
+  if (Array.isArray(keyed?.[other]) && !Array.isArray(keyed?.[list])) {
+    return { error: `This holds ${other}; use New ${other.slice(0, -1)}.` }
+  }
+  const listed = keyed?.[list]
   const items = Array.isArray(json) ? json : Array.isArray(listed) ? listed : [json]
-  if (items.length > MAX_ITEMS) return { error: `More than ${MAX_ITEMS} problems at once.` }
+  if (items.length > MAX_ITEMS) return { error: `More than ${MAX_ITEMS} ${list} at once.` }
   return { items }
 }

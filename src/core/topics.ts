@@ -1,10 +1,14 @@
 import { z } from 'zod'
 import {
+  answerErrors,
   DraftProblemSchema,
+  DraftQuestionSchema,
   ProblemSchema,
+  QuestionSchema,
   testErrors,
   type Concept,
   type Problem,
+  type Question,
   type TopicFile,
 } from '@/content/schema'
 
@@ -24,6 +28,8 @@ export const TopicRecordSchema = z.object({
   updated_at: time,
   concepts: z.array(z.object({ id: z.string(), name: z.string(), group: z.string() })),
   problems: z.array(z.looseObject({ id: z.string() })),
+  // Records stored before questions existed have none.
+  questions: z.array(z.looseObject({ id: z.string() })).default([]),
 })
 
 export type TopicRecord = z.infer<typeof TopicRecordSchema>
@@ -38,16 +44,17 @@ export function newTopic(id: string, name: string, now: number): TopicRecord {
     updated_at: now,
     concepts: [],
     problems: [],
+    questions: [],
   }
 }
 
-export function topicFromFile({ topic, problems }: TopicFile, now: number): TopicRecord {
-  return { ...newTopic(topic.id, topic.name, now), concepts: topic.concepts, problems }
+export function topicFromFile({ topic, problems, questions }: TopicFile, now: number): TopicRecord {
+  return { ...newTopic(topic.id, topic.name, now), concepts: topic.concepts, problems, questions }
 }
 
 export interface Served {
   file: TopicFile
-  unreadable: number
+  unreadable: { problems: number; questions: number }
 }
 
 export function served(record: TopicRecord): Served {
@@ -59,14 +66,29 @@ export function served(record: TopicRecord): Served {
       problems.push(parsed.data)
     }
   }
+  const questions: Question[] = []
+  for (const raw of record.questions) {
+    const parsed = QuestionSchema.safeParse(raw)
+    if (parsed.success && concepts.has(parsed.data.concept) && !answerErrors(parsed.data).length) {
+      questions.push(parsed.data)
+    }
+  }
   return {
-    file: { topic: { id: record.id, name: record.name, concepts: record.concepts }, problems },
-    unreadable: record.problems.length - problems.length,
+    file: {
+      topic: { id: record.id, name: record.name, concepts: record.concepts },
+      problems,
+      questions,
+    },
+    unreadable: {
+      problems: record.problems.length - problems.length,
+      questions: record.questions.length - questions.length,
+    },
   }
 }
 
-export function problemText(problem: Problem, concepts: Concept[]): string {
-  const { id: _id, source: _source, concept, ...rest } = problem
+// The authoring shape: without the fields the app assigns, with the concept named.
+export function itemText(item: Problem | Question, concepts: Concept[]): string {
+  const { id: _id, source: _source, concept, ...rest } = item
   const named = concepts.find((c) => c.id === concept)
   return JSON.stringify(
     { concept: { name: named?.name ?? concept, group: named?.group ?? '' }, ...rest },
@@ -75,8 +97,10 @@ export function problemText(problem: Problem, concepts: Concept[]): string {
   )
 }
 
-export function deleteProblem(record: TopicRecord, id: string): TopicRecord {
-  return { ...record, problems: record.problems.filter((p) => p.id !== id) }
+export type ItemList = 'problems' | 'questions'
+
+export function deleteItem(record: TopicRecord, list: ItemList, id: string): TopicRecord {
+  return { ...record, [list]: record[list].filter((item) => item.id !== id) }
 }
 
 export interface ItemErrors {
@@ -85,8 +109,8 @@ export interface ItemErrors {
   errors: string[]
 }
 
-export type Adding =
-  { ok: true; record: TopicRecord; problems: Problem[] } | { ok: false; errors: ItemErrors[] }
+export type Adding<T> =
+  { ok: true; record: TopicRecord; added: T[] } | { ok: false; errors: ItemErrors[] }
 
 // Reads problems written by a person or a chat into the topic. The app assigns ids and source; a
 // concept is found by name or added. With `replaces`, the single item replaces that problem.
@@ -95,61 +119,96 @@ export function addProblems(
   items: unknown[],
   newId: () => string,
   replaces?: string,
-): Adding {
-  if (replaces && items.length !== 1) {
-    return { ok: false, errors: [{ item: 1, errors: ['an edit holds exactly one problem'] }] }
-  }
-  const replaced = record.problems.find((p) => p.id === replaces)
-  const concepts = [...record.concepts]
-  const problems: Problem[] = []
-  const errors: ItemErrors[] = []
-  items.forEach((raw, i) => {
-    const title = titleOf(raw)
-    const read = readProblem(raw, concepts, replaced?.id ?? newId(), replaced?.source)
-    if (read.ok) problems.push(read.problem)
-    else errors.push({ item: i + 1, title, errors: read.errors })
+): Adding<Problem> {
+  return addItems(record, 'problems', items, newId, replaces, (raw, concepts, id, source) => {
+    const parsed = DraftProblemSchema.safeParse(raw)
+    if (!parsed.success) return { ok: false, errors: issues(parsed.error) }
+    const errors = testErrors(parsed.data)
+    if (errors.length) return { ok: false, errors }
+    return finish(ProblemSchema, parsed.data, concepts, id, source)
   })
-  if (errors.length) return { ok: false, errors }
-  const kept = record.problems.filter((p) => p.id !== replaced?.id)
-  const at = replaced ? record.problems.indexOf(replaced) : kept.length
-  kept.splice(at, 0, ...problems)
-  return { ok: true, record: { ...record, concepts, problems: kept }, problems }
 }
 
-type Reading = { ok: true; problem: Problem } | { ok: false; errors: string[] }
+export function addQuestions(
+  record: TopicRecord,
+  items: unknown[],
+  newId: () => string,
+  replaces?: string,
+): Adding<Question> {
+  return addItems(record, 'questions', items, newId, replaces, (raw, concepts, id, source) => {
+    const parsed = DraftQuestionSchema.safeParse(raw)
+    if (!parsed.success) return { ok: false, errors: issues(parsed.error) }
+    const errors = answerErrors(parsed.data)
+    if (errors.length) return { ok: false, errors }
+    return finish(QuestionSchema, parsed.data, concepts, id, source)
+  })
+}
 
-// Adds the problem's concept to `concepts` when it is new.
-function readProblem(raw: unknown, concepts: Concept[], id: string, source: unknown): Reading {
-  const parsed = DraftProblemSchema.safeParse(raw)
-  if (!parsed.success) return { ok: false, errors: issues(parsed.error) }
-  const errors = testErrors(parsed.data)
+type Reading<T> = { ok: true; item: T } | { ok: false; errors: string[] }
+type Reader<T> = (raw: unknown, concepts: Concept[], id: string, source: unknown) => Reading<T>
+
+function addItems<T extends { id: string }>(
+  record: TopicRecord,
+  list: ItemList,
+  items: unknown[],
+  newId: () => string,
+  replaces: string | undefined,
+  read: Reader<T>,
+): Adding<T> {
+  const noun = list === 'problems' ? 'problem' : 'question'
+  if (replaces && items.length !== 1) {
+    return { ok: false, errors: [{ item: 1, errors: [`an edit holds exactly one ${noun}`] }] }
+  }
+  const current = record[list]
+  const replaced = current.find((item) => item.id === replaces)
+  const concepts = [...record.concepts]
+  const added: T[] = []
+  const errors: ItemErrors[] = []
+  items.forEach((raw, i) => {
+    const reading = read(raw, concepts, replaced?.id ?? newId(), replaced?.source)
+    if (reading.ok) added.push(reading.item)
+    else errors.push({ item: i + 1, title: titleOf(raw), errors: reading.errors })
+  })
   if (errors.length) return { ok: false, errors }
+  const kept: { id: string }[] = current.filter((item) => item.id !== replaced?.id)
+  kept.splice(replaced ? current.indexOf(replaced) : kept.length, 0, ...added)
+  return { ok: true, record: { ...record, concepts, [list]: kept }, added }
+}
 
-  const { concept: named, ...rest } = parsed.data
+// Adds the item's concept to `concepts` when it is new, then checks the item as it is stored.
+function finish<T>(
+  schema: z.ZodType<T>,
+  { concept: named, ...rest }: { concept: { name: string; group: string } },
+  concepts: Concept[],
+  id: string,
+  source: unknown,
+): Reading<T> {
   const key = named.name.trim().toLowerCase()
   let concept = concepts.find((c) => c.name.trim().toLowerCase() === key)
   if (!concept) {
     concept = { id: conceptId(named.name, concepts), ...named }
     concepts.push(concept)
   }
-  const problem = ProblemSchema.safeParse({
+  const item = schema.safeParse({
     ...rest,
     id,
     concept: concept.id,
-    source: ProblemSchema.shape.source.safeParse(source).data ?? 'user',
+    source: SourceSchema.safeParse(source).data ?? 'user',
   })
-  return problem.success
-    ? { ok: true, problem: problem.data }
-    : { ok: false, errors: issues(problem.error) }
+  return item.success ? { ok: true, item: item.data } : { ok: false, errors: issues(item.error) }
 }
 
+const SourceSchema = ProblemSchema.shape.source
+
+// A problem's title, or a question's summary, to name it in errors.
 function titleOf(raw: unknown): string | undefined {
-  const title = (raw as { wordings?: { title?: unknown }[] } | null)?.wordings?.[0]?.title
+  const item = raw as { wordings?: { title?: unknown }[]; summary?: unknown } | null
+  const title = item?.wordings?.[0]?.title ?? item?.summary
   return typeof title === 'string' && title.trim() ? title : undefined
 }
 
 function issues(error: z.ZodError): string[] {
-  return error.issues.map((issue) => `${issue.path.join('.') || 'problem'}: ${issue.message}`)
+  return error.issues.map((issue) => `${issue.path.join('.') || 'item'}: ${issue.message}`)
 }
 
 function conceptId(name: string, concepts: Concept[]): string {

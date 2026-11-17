@@ -554,5 +554,879 @@
       "summary": "Merge overlapping ranges after ordering them by their start value",
       "source": "built-in"
     }
+  ],
+  "questions": [
+    {
+      "id": "q-two-pointers-precondition",
+      "type": "single",
+      "concept": "two-pointers",
+      "wordings": [
+        {
+          "text": "You look for two numbers with a given sum by moving one index from the start of a list and one from the end towards each other. What must be true of the list for this to work?",
+          "options": [
+            "It has no repeated values",
+            "It is sorted",
+            "It has an even number of elements",
+            "It holds only positive numbers"
+          ]
+        },
+        {
+          "text": "Which property of a list makes the \"one index from each end, move inwards\" search for a pair with a given sum correct?",
+          "options": [
+            "It has no repeated values",
+            "It is sorted",
+            "It has an even number of elements",
+            "It holds only positive numbers"
+          ]
+        }
+      ],
+      "answers": [
+        1
+      ],
+      "explanation": "The moves rely on order: a larger sum needs a larger left value, a smaller sum a smaller right value. Repeats, odd lengths and negative numbers are all fine.",
+      "summary": "Precondition of the inward two-pointer pair search",
+      "source": "built-in"
+    },
+    {
+      "id": "q-two-pointers-move",
+      "type": "single",
+      "concept": "two-pointers",
+      "wordings": [
+        {
+          "text": "In the inward two-pointer search on an ascending list, the sum of the two current values is smaller than the target. What is the correct next step?",
+          "options": [
+            "Move the left index one step to the right",
+            "Move the right index one step to the left",
+            "Move both indexes one step inwards",
+            "Restart both indexes from the middle"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The sum must grow. The right value is already the largest still available, so the only way to grow is a larger left value. Moving both could skip the answer.",
+      "summary": "Which pointer moves when the pair sum is below the target",
+      "source": "built-in"
+    },
+    {
+      "id": "q-sliding-window-cost",
+      "type": "single",
+      "concept": "sliding-window",
+      "wordings": [
+        {
+          "text": "A sliding window over n elements has a left end and a right end, and neither ever moves backwards. How much work do the two ends do in total?",
+          "options": [
+            "O(n log n)",
+            "O(n²)",
+            "O(n)",
+            "O(1)"
+          ]
+        },
+        {
+          "text": "In a sliding-window algorithm the right end advances in an outer loop and the left end advances in an inner loop, never moving back. What is the total number of moves over n elements?",
+          "options": [
+            "O(n log n)",
+            "O(n²)",
+            "O(n)",
+            "O(1)"
+          ]
+        }
+      ],
+      "answers": [
+        2
+      ],
+      "explanation": "Each end advances at most n times, so together they make at most 2n moves, even though there is a loop inside a loop.",
+      "summary": "Total cost of a window whose two ends only move forward",
+      "source": "built-in"
+    },
+    {
+      "id": "q-sliding-window-fit",
+      "type": "multiple",
+      "concept": "sliding-window",
+      "wordings": [
+        {
+          "text": "Which of these problems are a natural fit for a sliding window?",
+          "options": [
+            "The longest substring without a repeated character",
+            "The longest increasing subsequence, whose elements need not be adjacent",
+            "The largest sum of any k consecutive elements",
+            "Whether a linked list contains a cycle",
+            "The shortest run of consecutive positive numbers with a sum of at least S"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        2,
+        4
+      ],
+      "explanation": "A window needs a contiguous range whose validity changes predictably as it grows or shrinks. A subsequence is not contiguous, and cycle detection uses slow and fast pointers, not a window.",
+      "summary": "Recognising problems that suit a sliding window",
+      "source": "built-in"
+    },
+    {
+      "id": "q-sliding-window-negatives",
+      "type": "single",
+      "concept": "sliding-window",
+      "wordings": [
+        {
+          "text": "For positive numbers, the shortest subarray with a sum of at least S can be found by growing a window and shrinking it while the sum is large enough. Why does this stop working when negative numbers are allowed?",
+          "options": [
+            "Growing the window no longer always raises the sum, and shrinking it no longer always lowers it",
+            "A window cannot hold negative numbers",
+            "The running sum can overflow",
+            "The numbers would have to be sorted first"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The method relies on monotonic behaviour: a longer window has a larger sum. With negative numbers a longer window can have a smaller sum, so the decision to shrink or grow is no longer safe.",
+      "summary": "Why the shrinking window for a minimum-length sum fails with negative numbers",
+      "source": "built-in"
+    },
+    {
+      "id": "q-prefix-sums-range",
+      "type": "single",
+      "concept": "prefix-sums",
+      "wordings": [
+        {
+          "text": "prefix[i] holds the sum of the first i elements of nums, so prefix[0] is 0. Which expression gives the sum of nums[l] through nums[r], both included?",
+          "options": [
+            "prefix[r] - prefix[l]",
+            "prefix[r] - prefix[l - 1]",
+            "prefix[r + 1] - prefix[l + 1]",
+            "prefix[r + 1] - prefix[l]"
+          ]
+        }
+      ],
+      "answers": [
+        3
+      ],
+      "explanation": "prefix[r + 1] covers elements 0..r and prefix[l] covers 0..l-1; the difference is exactly l..r.",
+      "summary": "Range sum formula from a prefix array",
+      "source": "built-in"
+    },
+    {
+      "id": "q-hash-maps-lookup",
+      "type": "single",
+      "concept": "hash-maps",
+      "wordings": [
+        {
+          "text": "What is the average time of looking up a key in a Python dict with n entries?",
+          "options": [
+            "O(log n)",
+            "O(1)",
+            "O(n)",
+            "O(n log n)"
+          ]
+        }
+      ],
+      "answers": [
+        1
+      ],
+      "explanation": "A dict is a hash table: the hash of the key leads almost directly to its slot. Only heavy collisions make it slower.",
+      "summary": "Average cost of a dictionary lookup",
+      "source": "built-in"
+    },
+    {
+      "id": "q-hash-maps-keys",
+      "type": "multiple",
+      "concept": "hash-maps",
+      "wordings": [
+        {
+          "text": "Which of these can be used as a key of a Python dict?",
+          "options": [
+            "A list of integers",
+            "A tuple of integers",
+            "A string",
+            "A set of strings",
+            "A frozenset of strings"
+          ]
+        },
+        {
+          "text": "Which of these objects are hashable, so that they can be stored in a Python set?",
+          "options": [
+            "A list of integers",
+            "A tuple of integers",
+            "A string",
+            "A set of strings",
+            "A frozenset of strings"
+          ]
+        }
+      ],
+      "answers": [
+        1,
+        2,
+        4
+      ],
+      "explanation": "Keys must be hashable, which in practice means immutable. Lists and sets can change, so they are not hashable; tuples of hashable items, strings and frozensets are.",
+      "summary": "Which Python objects are hashable and can be dictionary keys",
+      "source": "built-in"
+    },
+    {
+      "id": "q-hash-maps-worst-case",
+      "type": "single",
+      "concept": "hash-maps",
+      "wordings": [
+        {
+          "text": "What is the worst-case time of a lookup in a hash table with n entries when most keys collide?",
+          "options": [
+            "O(1)",
+            "O(log n)",
+            "O(n²)",
+            "O(n)"
+          ]
+        }
+      ],
+      "answers": [
+        3
+      ],
+      "explanation": "With many collisions a lookup has to check many entries one by one, up to all n. The O(1) figure is an average that assumes hashes spread the keys well.",
+      "summary": "Worst-case lookup in a hash table under heavy collisions",
+      "source": "built-in"
+    },
+    {
+      "id": "q-stacks-order",
+      "type": "single",
+      "concept": "stacks",
+      "wordings": [
+        {
+          "text": "In which order does a stack give back the elements put on it?",
+          "options": [
+            "First in, first out",
+            "Smallest first",
+            "Last in, first out",
+            "In no defined order"
+          ]
+        }
+      ],
+      "answers": [
+        2
+      ],
+      "explanation": "A stack only adds and removes at the top, so the most recent element comes off first.",
+      "summary": "Order in which a stack returns its elements",
+      "source": "built-in"
+    },
+    {
+      "id": "q-stacks-next-greater",
+      "type": "single",
+      "concept": "stacks",
+      "wordings": [
+        {
+          "text": "For every element of a list you need the next element to its right that is larger. Which structure gives all answers in O(n) in total?",
+          "options": [
+            "A min-heap of all the elements",
+            "A stack of the elements still waiting for their answer, which stays in decreasing order",
+            "A queue of the elements in their original order",
+            "A sorted copy of the list"
+          ]
+        }
+      ],
+      "answers": [
+        1
+      ],
+      "explanation": "Each new element answers every smaller element on top of the stack, pops them, and is then pushed. Every element is pushed and popped once, so the total is O(n).",
+      "summary": "Structure for the next greater element of every position in linear time",
+      "source": "built-in"
+    },
+    {
+      "id": "q-queues-deque",
+      "type": "single",
+      "concept": "queues",
+      "wordings": [
+        {
+          "text": "Why is collections.deque preferred over a list for a first-in, first-out queue in Python?",
+          "options": [
+            "A deque always uses less memory than a list",
+            "A list cannot hold elements of different types",
+            "A deque keeps its elements sorted",
+            "list.pop(0) shifts every remaining element and costs O(n); deque.popleft() costs O(1)"
+          ]
+        },
+        {
+          "text": "What makes a list a poor choice for a FIFO queue in Python, compared with collections.deque?",
+          "options": [
+            "A deque always uses less memory than a list",
+            "A list cannot hold elements of different types",
+            "A deque keeps its elements sorted",
+            "list.pop(0) shifts every remaining element and costs O(n); deque.popleft() costs O(1)"
+          ]
+        }
+      ],
+      "answers": [
+        3
+      ],
+      "explanation": "Removing from the front of a list moves all the other elements down. A deque is built for adding and removing at both ends in constant time.",
+      "summary": "Why a deque is used instead of a list for a queue in Python",
+      "source": "built-in"
+    },
+    {
+      "id": "q-queues-window-maximum",
+      "type": "single",
+      "concept": "queues",
+      "wordings": [
+        {
+          "text": "You need the maximum of every window of k consecutive elements, in O(n) in total. Which structure makes this possible?",
+          "options": [
+            "A max-heap that is rebuilt for every window",
+            "A sorted copy of each window",
+            "A deque of positions whose values stay in decreasing order",
+            "A stack of all elements seen so far"
+          ]
+        }
+      ],
+      "answers": [
+        2
+      ],
+      "explanation": "New elements remove smaller ones from the back, and positions that left the window are removed from the front. The front is always the maximum, and every position enters and leaves once.",
+      "summary": "Structure for the maximum of every window of size k in linear time",
+      "source": "built-in"
+    },
+    {
+      "id": "q-binary-search-steps",
+      "type": "single",
+      "concept": "binary-search",
+      "wordings": [
+        {
+          "text": "About how many elements does a binary search look at, at most, in a sorted list of 1,000,000 elements?",
+          "options": [
+            "About 100",
+            "About 20",
+            "About 1,000",
+            "About 500,000"
+          ]
+        },
+        {
+          "text": "A sorted list holds a million elements. Roughly how many comparisons does a binary search need in the worst case?",
+          "options": [
+            "About 100",
+            "About 20",
+            "About 1,000",
+            "About 500,000"
+          ]
+        }
+      ],
+      "answers": [
+        1
+      ],
+      "explanation": "Each step halves the range, and 2 to the power 20 is just over a million.",
+      "summary": "Number of steps of a binary search over a million elements",
+      "source": "built-in"
+    },
+    {
+      "id": "q-binary-search-infinite-loop",
+      "type": "single",
+      "concept": "binary-search",
+      "wordings": [
+        {
+          "text": "A binary search runs `while lo < hi:` with `mid = (lo + hi) // 2`. Which update can make it loop forever?",
+          "options": [
+            "lo = mid",
+            "lo = mid + 1",
+            "hi = mid",
+            "hi = mid - 1"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "When hi is lo + 1, mid equals lo, so `lo = mid` changes nothing. `hi = mid` is safe because mid is always below hi.",
+      "summary": "Which bound update makes a binary search loop forever",
+      "source": "built-in"
+    },
+    {
+      "id": "q-binary-search-applicability",
+      "type": "multiple",
+      "concept": "binary-search",
+      "wordings": [
+        {
+          "text": "In which of these situations can binary search be used?",
+          "options": [
+            "Finding the most frequent value in an unsorted list",
+            "Finding a value in a sorted list",
+            "Finding the smallest capacity that passes a check, when every larger capacity passes too",
+            "Finding a value in an unsorted list",
+            "Finding the smallest element of a rotated sorted list of distinct values"
+          ]
+        }
+      ],
+      "answers": [
+        1,
+        2,
+        4
+      ],
+      "explanation": "Binary search needs a yes/no test that splits the candidates into a \"no\" part followed by a \"yes\" part. Sorted order, a monotonic feasibility check and the rotation point all provide that; an unsorted list does not.",
+      "summary": "Situations in which binary search applies, including search on the answer",
+      "source": "built-in"
+    },
+    {
+      "id": "q-sorting-python-worst-case",
+      "type": "single",
+      "concept": "sorting",
+      "wordings": [
+        {
+          "text": "What is the worst-case time of sorting n elements with Python's built-in sorted()?",
+          "options": [
+            "O(n)",
+            "O(n²)",
+            "O(n log n)",
+            "O(log n)"
+          ]
+        }
+      ],
+      "answers": [
+        2
+      ],
+      "explanation": "Python uses Timsort, a merge-based sort with an O(n log n) worst case. No comparison sort can do better in general.",
+      "summary": "Worst-case running time of the built-in sort",
+      "source": "built-in"
+    },
+    {
+      "id": "q-sorting-stable",
+      "type": "single",
+      "concept": "sorting",
+      "wordings": [
+        {
+          "text": "What does it mean for a sorting algorithm to be stable?",
+          "options": [
+            "It takes the same time on every input",
+            "Elements that compare as equal keep their original relative order",
+            "It needs no memory beyond the input",
+            "It gives the same result on every run"
+          ]
+        }
+      ],
+      "answers": [
+        1
+      ],
+      "explanation": "Stability matters when sorting by one field after another: sorting by name and then stably by age keeps equal ages in name order.",
+      "summary": "Meaning of a stable sort",
+      "source": "built-in"
+    },
+    {
+      "id": "q-sorting-python-facts",
+      "type": "multiple",
+      "concept": "sorting",
+      "wordings": [
+        {
+          "text": "Which statements about sorting in Python are true?",
+          "options": [
+            "list.sort() sorts the list in place and returns None",
+            "The key function is called once for every comparison",
+            "The built-in sort is stable",
+            "A list that is already sorted takes about n comparisons",
+            "The worst case of the built-in sort is quadratic"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        2,
+        3
+      ],
+      "explanation": "The key function is called once per element, and its results are reused. Timsort detects existing runs, so sorted input is handled in linear time; its worst case is O(n log n).",
+      "summary": "Properties of list.sort and sorted in Python",
+      "source": "built-in"
+    },
+    {
+      "id": "q-linked-lists-insert",
+      "type": "single",
+      "concept": "linked-lists",
+      "wordings": [
+        {
+          "text": "You hold a reference to a node of a singly linked list with n nodes. What is the cost of inserting a new node right after it?",
+          "options": [
+            "O(log n)",
+            "O(n)",
+            "O(n log n)",
+            "O(1)"
+          ]
+        }
+      ],
+      "answers": [
+        3
+      ],
+      "explanation": "Only two links change: the new node points to the old successor, and the given node points to the new node. Nothing has to be moved.",
+      "summary": "Cost of inserting after a known node of a singly linked list",
+      "source": "built-in"
+    },
+    {
+      "id": "q-linked-lists-cycle",
+      "type": "single",
+      "concept": "linked-lists",
+      "wordings": [
+        {
+          "text": "One pointer moves one node per step and another moves two. Why does this detect a cycle in a linked list?",
+          "options": [
+            "The fast pointer reaches the end of the list twice",
+            "The slow pointer counts the nodes and notices a repeat",
+            "Once both are inside the cycle, the fast pointer gains one node per step on the slow one, so it must catch up with it",
+            "The values stored in the nodes start to repeat"
+          ]
+        },
+        {
+          "text": "In the slow-and-fast pointer method for finding a cycle in a linked list, what guarantees that the two pointers meet when a cycle exists?",
+          "options": [
+            "The fast pointer reaches the end of the list twice",
+            "The slow pointer counts the nodes and notices a repeat",
+            "Once both are inside the cycle, the fast pointer gains one node per step on the slow one, so it must catch up with it",
+            "The values stored in the nodes start to repeat"
+          ]
+        }
+      ],
+      "answers": [
+        2
+      ],
+      "explanation": "Inside a cycle the gap between the pointers shrinks by one each step until it is zero. Without a cycle the fast pointer simply reaches the end.",
+      "summary": "Why slow and fast pointers must meet inside a cycle",
+      "source": "built-in"
+    },
+    {
+      "id": "q-trees-inorder",
+      "type": "single",
+      "concept": "trees",
+      "wordings": [
+        {
+          "text": "Which traversal of a binary search tree visits the keys in ascending order?",
+          "options": [
+            "In-order",
+            "Pre-order",
+            "Post-order",
+            "Level-order"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "In-order visits the left subtree, then the node, then the right subtree. In a binary search tree everything on the left is smaller and everything on the right is larger.",
+      "summary": "Traversal that lists the keys of a binary search tree in order",
+      "source": "built-in"
+    },
+    {
+      "id": "q-trees-bst-worst-case",
+      "type": "single",
+      "concept": "trees",
+      "wordings": [
+        {
+          "text": "What is the worst-case time of searching a binary search tree with n nodes that is not kept balanced?",
+          "options": [
+            "O(log n)",
+            "O(1)",
+            "O(n log n)",
+            "O(n)"
+          ]
+        },
+        {
+          "text": "Keys are inserted into a plain binary search tree in ascending order. How long does a search take afterwards, in the worst case?",
+          "options": [
+            "O(log n)",
+            "O(1)",
+            "O(n log n)",
+            "O(n)"
+          ]
+        }
+      ],
+      "answers": [
+        3
+      ],
+      "explanation": "Inserting keys in sorted order produces a chain: a tree of height n. Search follows one path from the root, so its cost is the height.",
+      "summary": "Worst-case search time in an unbalanced binary search tree",
+      "source": "built-in"
+    },
+    {
+      "id": "q-trees-depth-first",
+      "type": "multiple",
+      "concept": "trees",
+      "wordings": [
+        {
+          "text": "Which of these traversals of a binary tree are depth-first?",
+          "options": [
+            "Level-order",
+            "Pre-order",
+            "In-order",
+            "Post-order"
+          ]
+        }
+      ],
+      "answers": [
+        1,
+        2,
+        3
+      ],
+      "explanation": "Pre-order, in-order and post-order all go down a branch before coming back; they differ only in when the node itself is visited. Level-order goes across the tree level by level: breadth-first.",
+      "summary": "Telling depth-first traversals from breadth-first",
+      "source": "built-in"
+    },
+    {
+      "id": "q-graphs-shortest-unweighted",
+      "type": "single",
+      "concept": "graphs",
+      "wordings": [
+        {
+          "text": "Which traversal finds a path with the fewest edges between two nodes of an unweighted graph?",
+          "options": [
+            "Depth-first search",
+            "Breadth-first search",
+            "Topological sort",
+            "Binary search"
+          ]
+        }
+      ],
+      "answers": [
+        1
+      ],
+      "explanation": "Breadth-first search reaches nodes in order of their distance from the start, so the first time it reaches the goal it has used the fewest edges.",
+      "summary": "Traversal that finds the path with the fewest edges",
+      "source": "built-in"
+    },
+    {
+      "id": "q-graphs-traversal-cost",
+      "type": "single",
+      "concept": "graphs",
+      "wordings": [
+        {
+          "text": "A graph with V nodes and E edges is stored as adjacency lists. What is the tightest bound on the time of a breadth-first or depth-first search over the whole graph?",
+          "options": [
+            "O(V + E)",
+            "O(V · E)",
+            "O(V²) in every case",
+            "O(E log V)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Every node is taken once and every adjacency list is read once, which adds up to the nodes plus the edges.",
+      "summary": "Cost of a full traversal over an adjacency list",
+      "source": "built-in"
+    },
+    {
+      "id": "q-heaps-min-operations",
+      "type": "single",
+      "concept": "heaps",
+      "wordings": [
+        {
+          "text": "In a binary min-heap with n elements, what do reading the smallest element and removing it cost?",
+          "options": [
+            "O(log n) for both",
+            "O(1) for both",
+            "O(1) to read, O(log n) to remove",
+            "O(n) to read, O(1) to remove"
+          ]
+        }
+      ],
+      "answers": [
+        2
+      ],
+      "explanation": "The smallest element sits at the root. Removing it moves the last element to the root and sinks it down one level at a time, and the heap has about log n levels.",
+      "summary": "Cost of reading and removing the smallest element of a binary heap",
+      "source": "built-in"
+    },
+    {
+      "id": "q-heaps-top-k",
+      "type": "single",
+      "concept": "heaps",
+      "wordings": [
+        {
+          "text": "You find the k largest of n numbers by keeping a min-heap of at most k elements. What is the running time?",
+          "options": [
+            "O(n log n)",
+            "O(n log k)",
+            "O(k log n)",
+            "O(n · k)"
+          ]
+        },
+        {
+          "text": "A stream of n numbers is passed through a min-heap that never holds more than k elements, to keep the k largest. How long does that take?",
+          "options": [
+            "O(n log n)",
+            "O(n log k)",
+            "O(k log n)",
+            "O(n · k)"
+          ]
+        }
+      ],
+      "answers": [
+        1
+      ],
+      "explanation": "Each of the n numbers causes at most one push and one pop on a heap of at most k elements, and each of those costs O(log k).",
+      "summary": "Cost of selecting the k largest values with a heap of size k",
+      "source": "built-in"
+    },
+    {
+      "id": "q-heaps-heapify",
+      "type": "single",
+      "concept": "heaps",
+      "wordings": [
+        {
+          "text": "What does it cost to turn a list of n unordered items into a heap with heapify?",
+          "options": [
+            "O(n)",
+            "O(n log n)",
+            "O(log n)",
+            "O(n²)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Heapify sinks nodes starting from the bottom. Most nodes are near the bottom and move very little, and the total adds up to O(n), which is less than n separate pushes.",
+      "summary": "Cost of building a heap from unordered items",
+      "source": "built-in"
+    },
+    {
+      "id": "q-dp-properties",
+      "type": "single",
+      "concept": "dynamic-programming",
+      "wordings": [
+        {
+          "text": "Which two properties make a problem suitable for dynamic programming?",
+          "options": [
+            "Sorted input and distinct values",
+            "A greedy choice and random access",
+            "Constant memory and a single pass",
+            "Overlapping subproblems and optimal substructure"
+          ]
+        }
+      ],
+      "answers": [
+        3
+      ],
+      "explanation": "The answer must be built from answers to smaller subproblems (optimal substructure), and the same subproblems must come up repeatedly (overlap), so that storing them saves work.",
+      "summary": "The two properties a problem needs for dynamic programming",
+      "source": "built-in"
+    },
+    {
+      "id": "q-dp-stairs",
+      "type": "single",
+      "concept": "dynamic-programming",
+      "wordings": [
+        {
+          "text": "You climb n stairs taking one or two stairs at a time. Which recurrence gives the number of different ways?",
+          "options": [
+            "ways(n) = 2 · ways(n - 1)",
+            "ways(n) = ways(n - 1) + 1",
+            "ways(n) = ways(n - 1) + ways(n - 2)",
+            "ways(n) = ways(n // 2) + 1"
+          ]
+        }
+      ],
+      "answers": [
+        2
+      ],
+      "explanation": "The last move is either one stair, coming from n - 1, or two stairs, coming from n - 2. The two cases do not overlap, so their counts add up.",
+      "summary": "Recurrence for counting ways to climb stairs one or two at a time",
+      "source": "built-in"
+    },
+    {
+      "id": "q-dp-memo-vs-table",
+      "type": "multiple",
+      "concept": "dynamic-programming",
+      "wordings": [
+        {
+          "text": "Which statements about memoisation (top-down) and tabulation (bottom-up) are true?",
+          "options": [
+            "Memoisation needs no extra memory",
+            "Memoisation computes only the subproblems that are actually reached",
+            "Tabulation avoids deep recursion",
+            "Tabulation works only when there is a single parameter",
+            "When every subproblem is needed, both have the same order of running time"
+          ]
+        }
+      ],
+      "answers": [
+        1,
+        2,
+        4
+      ],
+      "explanation": "Both store one result per subproblem. Memoisation follows the recursion and may skip unreachable states; tabulation fills a table in a fixed order with loops, in any number of dimensions.",
+      "summary": "Comparing top-down memoisation with bottom-up tabulation",
+      "source": "built-in"
+    },
+    {
+      "id": "q-complexity-triangular-loop",
+      "type": "single",
+      "concept": "complexity",
+      "wordings": [
+        {
+          "text": "What is the running time of this code?\n\n```python\nfor i in range(n):\n    for j in range(i):\n        total += 1\n```",
+          "options": [
+            "O(n)",
+            "O(n log n)",
+            "O(2ⁿ)",
+            "O(n²)"
+          ]
+        }
+      ],
+      "answers": [
+        3
+      ],
+      "explanation": "The inner loop runs 0 + 1 + … + (n − 1) times, which is n(n − 1)/2: half of n², and constant factors do not change the order.",
+      "summary": "Running time of a loop nested inside another with a dependent bound",
+      "source": "built-in"
+    },
+    {
+      "id": "q-complexity-amortised-append",
+      "type": "single",
+      "concept": "complexity",
+      "wordings": [
+        {
+          "text": "Appending to a Python list takes amortised O(1) time. What does \"amortised\" mean here?",
+          "options": [
+            "Every single append takes exactly the same constant time",
+            "Appending takes O(log n) time",
+            "Most appends are O(1); an occasional one costs O(n) to move the elements, but averaged over many appends the cost per append is constant",
+            "The elements of a list never have to be moved"
+          ]
+        },
+        {
+          "text": "What does it mean that list.append runs in amortised constant time?",
+          "options": [
+            "Every single append takes exactly the same constant time",
+            "Appending takes O(log n) time",
+            "Most appends are O(1); an occasional one costs O(n) to move the elements, but averaged over many appends the cost per append is constant",
+            "The elements of a list never have to be moved"
+          ]
+        }
+      ],
+      "answers": [
+        2
+      ],
+      "explanation": "A list reserves spare room and grows by a proportion when it runs out. The rare expensive growth steps are paid for by the many cheap appends between them.",
+      "summary": "Meaning of amortised constant time for list append",
+      "source": "built-in"
+    },
+    {
+      "id": "q-complexity-list-operations",
+      "type": "multiple",
+      "concept": "complexity",
+      "wordings": [
+        {
+          "text": "Which of these operations take O(n) time on a Python list of n elements?",
+          "options": [
+            "lst.append(x)",
+            "x in lst",
+            "lst[i]",
+            "lst.insert(0, x)",
+            "lst.pop(0)"
+          ]
+        }
+      ],
+      "answers": [
+        1,
+        3,
+        4
+      ],
+      "explanation": "Membership has to compare elements one by one, and inserting or removing at the front shifts all the others. Indexing and appending at the end are constant time.",
+      "summary": "Which list operations take linear time",
+      "source": "built-in"
+    }
   ]
 }
