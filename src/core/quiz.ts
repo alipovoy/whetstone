@@ -21,6 +21,7 @@ const ShownSchema = z.object({
   concept: z.string(),
   concept_name: z.string(),
   type: z.enum(['single', 'multiple']),
+  wording: z.number().int().min(0),
   text: z.string(),
   options: z.array(z.string()),
   answers: indexes,
@@ -96,7 +97,8 @@ export function startQuiz(
 }
 
 function show({ topic, question }: Candidate, random: () => number): Shown {
-  const wording = question.wordings[Math.floor(random() * question.wordings.length)]
+  const index = Math.floor(random() * question.wordings.length)
+  const wording = question.wordings[index]
   // order[shown index] = authored index
   const order = shuffle([...wording.options.keys()], random)
   return {
@@ -106,6 +108,7 @@ function show({ topic, question }: Candidate, random: () => number): Shown {
     concept: question.concept,
     concept_name: topic.concepts.find((c) => c.id === question.concept)?.name ?? question.concept,
     type: question.type,
+    wording: index,
     text: wording.text,
     options: order.map((i) => wording.options[i]),
     answers: order.flatMap((authored, shown) =>
@@ -124,9 +127,14 @@ function shuffle<T>(items: T[], random: () => number): T[] {
   return list
 }
 
+// Closed once submitted or past its deadline, even before the deadline submits it.
+function closed(quiz: Quiz, now: number): boolean {
+  return quiz.result !== undefined || (quiz.deadline !== undefined && now >= quiz.deadline)
+}
+
 // A single choice replaces the pick; a multiple choice toggles it.
 export function choose(quiz: Quiz, index: number, option: number, now: number): Quiz {
-  if (quiz.result) return quiz
+  if (closed(quiz, now)) return quiz
   const current = quiz.picks[index]
   const next =
     quiz.questions[index].type === 'single'
@@ -138,17 +146,19 @@ export function choose(quiz: Quiz, index: number, option: number, now: number): 
 }
 
 export function toggleFlag(quiz: Quiz, index: number, now: number): Quiz {
-  if (quiz.result) return quiz
+  if (closed(quiz, now)) return quiz
   return { ...quiz, updated_at: now, flagged: quiz.flagged.with(index, !quiz.flagged[index]) }
 }
 
+// A quiz reopened after its deadline counts as submitted at the deadline.
 export function submitQuiz(quiz: Quiz, now: number): Quiz {
   if (quiz.result) return quiz
+  const at = Math.min(now, quiz.deadline ?? now)
   const scores = quiz.questions.map((q, i) =>
     choiceScore(quiz.picks[i], q.answers, q.options.length),
   )
   const total = quizScore(quiz.questions.map((q, i) => ({ type: q.type, score: scores[i] })))
-  return { ...quiz, updated_at: now, result: { at: now, scores, score: total } }
+  return { ...quiz, updated_at: now, result: { at, scores, score: total } }
 }
 
 export function timeLeft(quiz: Quiz, now: number): number | undefined {

@@ -61,6 +61,7 @@ describe('startQuiz', () => {
         concept: 'c',
         concept_name: 'Concept',
         type: 'multiple',
+        wording: 1,
         text: 'm1 second',
         options: ['D', 'B', 'C', 'A'],
         answers: [2, 3],
@@ -76,6 +77,14 @@ describe('startQuiz', () => {
     expect(quiz.deadline).toBe(5 + 10 * 60_000)
     expect(timeLeft(quiz, 5 + 60_000)).toBe(9 * 60_000)
     expect(timeLeft(quiz, quiz.deadline! + 1)).toBe(0)
+  })
+
+  it('takes no answer or flag after the deadline, and is submitted at the deadline', () => {
+    const quiz = startQuiz(ID, { topics, types: ['single'], size: 1, minutes: 1 }, 0)
+    const deadline = quiz.deadline!
+    expect(choose(quiz, 0, 0, deadline)).toBe(quiz)
+    expect(toggleFlag(quiz, 0, deadline)).toBe(quiz)
+    expect(submitQuiz(choose(quiz, 0, 0, deadline - 1), deadline * 5).result?.at).toBe(deadline)
   })
 
   it('refuses when nothing matches', () => {
