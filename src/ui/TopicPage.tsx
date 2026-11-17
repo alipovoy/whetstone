@@ -1,23 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Alert, Badge, Button, Card, Form, ListGroup, Stack } from 'react-bootstrap'
-import { bridgePrompt, MAX_ITEMS, readAnswer, type Answer } from '@/core/bridge'
+import { Alert, Badge, Button, Form, ListGroup, Stack } from 'react-bootstrap'
+import { chatRequest, PROBLEM_TEMPLATE, readItems } from '@/core/bridge'
 import {
-  addDrafts,
-  approveDraft,
-  BLANK_DRAFT,
+  addProblems,
   checkErrors,
   deleteProblem,
-  draftText,
-  draftTitle,
-  editDraft,
-  readDraft,
-  rejectDraft,
+  problemText,
   served,
   type CheckRun,
-  type Draft,
+  type ItemErrors,
   type TopicRecord,
 } from '@/core/topics'
-import type { Difficulty } from '@/content/schema'
+import type { Problem } from '@/content/schema'
 import { RUN_LIMIT_MS, type TestResult } from '@/runner/types'
 import type { Runner } from './ProblemPage'
 
@@ -29,54 +23,24 @@ interface Props {
   onBusy: (busy: boolean) => void
 }
 
+// The editor adds new problems, or replaces the one being edited.
+type Editing = { text: string; replaces?: Problem }
+
 export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) {
-  const [checking, setChecking] = useState<string | null>(null)
-  const [errors, setErrors] = useState<Record<string, string[]>>({})
+  const [editing, setEditing] = useState<Editing | null>(null)
+  const [checking, setChecking] = useState(false)
   const { file, unreadable } = served(topic)
 
-  useEffect(() => onBusy(checking !== null), [checking, onBusy])
-
-  const newDraft = (text: string, source: Draft['source'], replaces?: string) =>
-    onChange((t) => addDrafts(t, [{ id: crypto.randomUUID(), text, source, replaces }]))
-
-  async function approve(draft: Draft) {
-    const read = readDraft(topic, draft, crypto.randomUUID())
-    if (!read.ok) {
-      setErrors((e) => ({ ...e, [draft.id]: read.errors }))
-      return
-    }
-    setChecking(draft.id)
-    setErrors((e) => ({ ...e, [draft.id]: [] }))
-    try {
-      const { problem } = read
-      const reference = await runner.test(
-        problem.reference_solution,
-        problem.tests,
-        [],
-        RUN_LIMIT_MS,
-      )
-      // Python failing to start says nothing about the problem.
-      if (reference.error && !reference.timedOut) {
-        setErrors((e) => ({ ...e, [draft.id]: [`Python could not run: ${reference.error}`] }))
-        return
-      }
-      const starter = await runner.test(problem.starter_code, problem.tests, [], RUN_LIMIT_MS)
-      const found = checkErrors(problem, checkRun(reference), checkRun(starter))
-      if (found.length) setErrors((e) => ({ ...e, [draft.id]: found }))
-      else onChange((t) => approveDraft(t, draft.id, read))
-    } finally {
-      setChecking(null)
-    }
-  }
+  useEffect(() => onBusy(checking), [checking, onBusy])
 
   return (
     <Stack gap={4}>
-      <Header topic={topic} onChange={onChange} onDelete={onDelete} disabled={checking !== null} />
+      <Header topic={topic} onChange={onChange} onDelete={onDelete} disabled={checking} />
 
       <section aria-label="Concepts">
         <h2 className="h5">Concepts</h2>
         {topic.concepts.length === 0 ? (
-          <p className="text-body-secondary">None yet: approving a problem adds its concept.</p>
+          <p className="text-body-secondary">None yet: adding a problem adds its concept.</p>
         ) : (
           <ul>
             {topic.concepts.map((c) => (
@@ -98,7 +62,6 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
         <ListGroup as="ul" className="mb-2">
           {file.problems.map((problem) => {
             const title = problem.wordings[0].title
-            const editing = topic.drafts.some((d) => d.replaces === problem.id)
             return (
               <ListGroup.Item as="li" key={problem.id} aria-label={title}>
                 <Stack direction="horizontal" gap={2} className="flex-wrap">
@@ -112,18 +75,21 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
                       size="sm"
                       variant="outline-primary"
                       aria-label={`Edit ${title}`}
-                      disabled={editing || checking !== null}
+                      disabled={editing !== null}
                       onClick={() =>
-                        newDraft(draftText(problem, topic.concepts), 'user', problem.id)
+                        setEditing({
+                          text: problemText(problem, topic.concepts),
+                          replaces: problem,
+                        })
                       }
                     >
-                      {editing ? 'Editing below' : 'Edit'}
+                      Edit
                     </Button>
                     <Button
                       size="sm"
                       variant="outline-danger"
                       aria-label={`Delete ${title}`}
-                      disabled={checking !== null}
+                      disabled={editing !== null}
                       onClick={() => {
                         if (confirm(`Delete "${title}"? Its past attempts are kept.`)) {
                           onChange((t) => deleteProblem(t, problem.id))
@@ -138,42 +104,135 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
             )
           })}
         </ListGroup>
-        <Button variant="outline-primary" onClick={() => newDraft(BLANK_DRAFT, 'user')}>
-          Add problem
-        </Button>
+        {editing ? (
+          <ProblemEditor
+            topic={topic}
+            initial={editing}
+            runner={runner}
+            checking={checking}
+            onChecking={setChecking}
+            onDone={(next) => {
+              onChange(() => next)
+              setEditing(null)
+            }}
+            onCancel={() => setEditing(null)}
+          />
+        ) : (
+          <Button variant="primary" onClick={() => setEditing({ text: '' })}>
+            New problem
+          </Button>
+        )}
       </section>
 
-      <Bridge topic={topic} onDrafts={(texts) => texts.forEach((text) => newDraft(text, 'ai'))} />
-
-      {topic.drafts.length > 0 && (
-        <section aria-label="Drafts">
-          <h2 className="h5">Drafts</h2>
-          <p className="text-body-secondary">
-            Approving a draft runs it in Python: the reference solution must pass every test and the
-            starter code must fail one.
-          </p>
-          <Stack gap={3}>
-            {topic.drafts.map((draft) => (
-              <DraftCard
-                key={draft.id}
-                draft={draft}
-                replaces={file.problems.find((p) => p.id === draft.replaces)?.wordings[0].title}
-                errors={errors[draft.id] ?? []}
-                checking={checking === draft.id}
-                disabled={checking !== null}
-                onSave={(text) => onChange((t) => editDraft(t, draft.id, text))}
-                onApprove={(text) => {
-                  onChange((t) => editDraft(t, draft.id, text))
-                  void approve({ ...draft, text })
-                }}
-                onReject={() => onChange((t) => rejectDraft(t, draft.id))}
-              />
-            ))}
-          </Stack>
-        </section>
-      )}
+      <Snippets topic={topic} titles={file.problems.map((p) => p.wordings[0].title)} />
     </Stack>
   )
+}
+
+interface EditorProps {
+  topic: TopicRecord
+  initial: Editing
+  runner: Pick<Runner, 'test'>
+  checking: boolean
+  onChecking: (checking: boolean) => void
+  onDone: (topic: TopicRecord) => void
+  onCancel: () => void
+}
+
+function ProblemEditor({
+  topic,
+  initial,
+  runner,
+  checking,
+  onChecking,
+  onDone,
+  onCancel,
+}: EditorProps) {
+  const [text, setText] = useState(initial.text)
+  const [error, setError] = useState<string | null>(null)
+  const [failed, setFailed] = useState<ItemErrors[]>([])
+  const replaces = initial.replaces
+
+  async function submit() {
+    setError(null)
+    setFailed([])
+    const read = readItems(text)
+    if ('error' in read) return setError(read.error)
+    const added = addProblems(topic, read.items, () => crypto.randomUUID(), replaces?.id)
+    if (!added.ok) return setFailed(added.errors)
+    onChecking(true)
+    try {
+      const found: ItemErrors[] = []
+      for (const [i, problem] of added.problems.entries()) {
+        const errors = await check(runner, problem)
+        if (errors.length) found.push({ item: i + 1, title: problem.wordings[0].title, errors })
+      }
+      if (found.length) setFailed(found)
+      else onDone(added.record)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      onChecking(false)
+    }
+  }
+
+  return (
+    <section aria-label={replaces ? `Edit ${replaces.wordings[0].title}` : 'New problem'}>
+      <p className="text-body-secondary mb-2">
+        {replaces
+          ? 'Edit the problem as JSON.'
+          : 'Paste one problem, a list of problems, or a chat bot answer.'}{' '}
+        Each problem is run in Python first: its reference solution must pass every test and its
+        starter code must fail one. Nothing is added unless every problem passes.
+      </p>
+      <Form.Control
+        as="textarea"
+        aria-label="Problem JSON"
+        rows={14}
+        spellCheck={false}
+        value={text}
+        readOnly={checking}
+        onChange={(event) => setText(event.target.value)}
+        className="font-monospace small mb-2"
+      />
+      {error && <Alert variant="danger">{error}</Alert>}
+      {failed.length > 0 && (
+        <Alert variant="danger">
+          Nothing was {replaces ? 'saved' : 'added'}.
+          {failed.map(({ item, title, errors }) => (
+            <div key={item} className="mt-2">
+              Problem {item}
+              {title && ` “${title}”`}:
+              <ul className="mb-0">
+                {errors.map((e) => (
+                  <li key={e} style={{ whiteSpace: 'pre-wrap' }}>
+                    {e}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </Alert>
+      )}
+      <Stack direction="horizontal" gap={2}>
+        <Button onClick={() => void submit()} disabled={checking || !text.trim()}>
+          {checking ? 'Checking…' : replaces ? 'Save' : 'Add'}
+        </Button>
+        <Button variant="outline-secondary" onClick={onCancel} disabled={checking}>
+          Cancel
+        </Button>
+      </Stack>
+    </section>
+  )
+}
+
+async function check(runner: Pick<Runner, 'test'>, problem: Problem): Promise<string[]> {
+  const reference = await runner.test(problem.reference_solution, problem.tests, [], RUN_LIMIT_MS)
+  // Python failing to start says nothing about the problem.
+  if (reference.error && !reference.timedOut)
+    throw new Error(`Python could not run: ${reference.error}`)
+  const starter = await runner.test(problem.starter_code, problem.tests, [], RUN_LIMIT_MS)
+  return checkErrors(problem, checkRun(reference), checkRun(starter))
 }
 
 function checkRun(result: TestResult): CheckRun {
@@ -237,171 +296,31 @@ function Header({ topic, onChange, onDelete, disabled }: HeaderProps) {
   )
 }
 
-const DIFFICULTIES: (Difficulty | 'mixed')[] = ['mixed', 'Easy', 'Medium', 'Hard']
-
-function Bridge({ topic, onDrafts }: { topic: TopicRecord; onDrafts: (texts: string[]) => void }) {
-  const [count, setCount] = useState(3)
-  const [difficulty, setDifficulty] = useState<Difficulty | 'mixed'>('mixed')
-  const [answer, setAnswer] = useState('')
-  const [result, setResult] = useState<Answer | null>(null)
-  const prompt = bridgePrompt({
-    topic: topic.name,
-    concepts: topic.concepts,
-    titles: served(topic).file.problems.map((p) => p.wordings[0].title),
-    count,
-    difficulty,
-  })
-
+function Snippets({ topic, titles }: { topic: TopicRecord; titles: string[] }) {
+  const request = chatRequest({ topic: topic.name, concepts: topic.concepts, titles })
   return (
-    <section aria-label="Fill from a chat">
-      <h2 className="h5">Fill from a chat</h2>
-      <p className="text-body-secondary">
-        Copy the prompt into any chat, then paste its answer below. Valid problems become drafts.
-      </p>
-      <Stack direction="horizontal" gap={2} className="mb-2">
-        <Form.Select
-          aria-label="Number of problems"
-          value={count}
-          onChange={(event) => setCount(Number(event.target.value))}
-          className="w-auto"
-        >
-          {Array.from({ length: MAX_ITEMS }, (_, i) => i + 1).map((n) => (
-            <option key={n} value={n}>
-              {n} {n === 1 ? 'problem' : 'problems'}
-            </option>
-          ))}
-        </Form.Select>
-        <Form.Select
-          aria-label="Difficulty"
-          value={difficulty}
-          onChange={(event) => setDifficulty(event.target.value as Difficulty | 'mixed')}
-          className="w-auto"
-        >
-          {DIFFICULTIES.map((d) => (
-            <option key={d} value={d}>
-              {d === 'mixed' ? 'Mixed difficulty' : d}
-            </option>
-          ))}
-        </Form.Select>
-        <Button
-          variant="outline-secondary"
-          onClick={() => void navigator.clipboard.writeText(prompt)}
-        >
-          Copy prompt
-        </Button>
-      </Stack>
-      <Form.Control
-        as="textarea"
-        aria-label="Prompt"
-        readOnly
-        rows={6}
-        value={prompt}
-        className="font-monospace small mb-2"
-      />
-      <Form.Control
-        as="textarea"
-        aria-label="Answer"
-        placeholder="Paste the answer here"
-        rows={6}
-        value={answer}
-        onChange={(event) => setAnswer(event.target.value)}
-        className="font-monospace small mb-2"
-      />
-      <Button
-        disabled={!answer.trim()}
-        onClick={() => {
-          const read = readAnswer(answer)
-          setResult(read)
-          if (read.drafts.length) {
-            onDrafts(read.drafts)
-            setAnswer('')
-          }
-        }}
-      >
-        Read answer
-      </Button>
-      {result && (
-        <Alert
-          variant={result.error || result.rejected.length ? 'warning' : 'success'}
-          className="mt-2"
-        >
-          {result.error ?? `${result.drafts.length} drafts added.`}
-          {result.rejected.map(({ item, errors }) => (
-            <div key={item}>
-              Problem {item} was skipped:
-              <ul className="mb-0">
-                {errors.map((e) => (
-                  <li key={e}>{e}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </Alert>
-      )}
+    <section aria-label="Examples">
+      <Snippet label="Chat bot request" text={request} />
+      <Snippet label="Problem template" text={PROBLEM_TEMPLATE} />
     </section>
   )
 }
 
-interface DraftCardProps {
-  draft: Draft
-  replaces?: string
-  errors: string[]
-  checking: boolean
-  disabled: boolean
-  onSave: (text: string) => void
-  onApprove: (text: string) => void
-  onReject: () => void
-}
-
-function DraftCard(props: DraftCardProps) {
-  const { draft, replaces, errors, checking, disabled, onSave, onApprove, onReject } = props
-  const [text, setText] = useState(draft.text)
-  const title = draftTitle({ ...draft, text })
+function Snippet({ label, text }: { label: string; text: string }) {
   return (
-    <Card as="article" aria-label={`Draft ${title}`}>
-      <Card.Body>
-        <Stack direction="horizontal" gap={2} className="mb-2 flex-wrap">
-          <span className="fw-semibold">{title}</span>
-          <Badge bg="secondary">{draft.source === 'ai' ? 'From a chat' : 'Own'}</Badge>
-          {replaces && <span className="text-body-secondary">Edits “{replaces}”</span>}
-        </Stack>
-        <Form.Control
-          as="textarea"
-          aria-label="Draft JSON"
-          rows={12}
-          spellCheck={false}
-          value={text}
-          readOnly={disabled}
-          onChange={(event) => setText(event.target.value)}
-          className="font-monospace small mb-2"
-        />
-        {errors.length > 0 && (
-          <Alert variant="danger">
-            <ul className="mb-0">
-              {errors.map((e) => (
-                <li key={e} style={{ whiteSpace: 'pre-wrap' }}>
-                  {e}
-                </li>
-              ))}
-            </ul>
-          </Alert>
-        )}
-        <Stack direction="horizontal" gap={2}>
-          <Button onClick={() => onApprove(text)} disabled={disabled}>
-            {checking ? 'Checking…' : 'Approve'}
-          </Button>
-          <Button
-            variant="outline-secondary"
-            onClick={() => onSave(text)}
-            disabled={disabled || text === draft.text}
-          >
-            Save
-          </Button>
-          <Button variant="outline-danger" onClick={onReject} disabled={disabled}>
-            Reject
-          </Button>
-        </Stack>
-      </Card.Body>
-    </Card>
+    <details className="mb-2">
+      <summary>{label}</summary>
+      <Button
+        size="sm"
+        variant="outline-secondary"
+        className="mt-2"
+        onClick={() => void navigator.clipboard.writeText(text)}
+      >
+        Copy
+      </Button>
+      <pre aria-label={label} className="bg-body-tertiary p-2 rounded mt-2 small">
+        {text}
+      </pre>
+    </details>
   )
 }

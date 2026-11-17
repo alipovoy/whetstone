@@ -37,18 +37,19 @@ test('create a topic, fill it from a chat, solve a problem from it', async ({ pa
   await page.getByRole('link', { name: 'Topics' }).click()
   await page.getByRole('textbox', { name: 'New topic name' }).fill('Strings')
   await page.getByRole('button', { name: 'Create topic' }).click()
-  await expect(page.getByRole('textbox', { name: 'Prompt' })).toHaveValue(/topic "Strings"/)
+  await page.getByText('Chat bot request').click()
+  await expect(page.getByLabel('Chat bot request')).toContainText('Write 3 new Python')
 
-  await page.getByRole('textbox', { name: 'Answer' }).fill(answer)
-  await page.getByRole('button', { name: 'Read answer' }).click()
-  const draft = page.getByRole('article', { name: 'Draft Count vowels' })
+  await page.getByRole('button', { name: 'New problem' }).click()
+  await page.getByRole('textbox', { name: 'Problem JSON' }).fill(answer)
   await expect(page.getByText('Python is ready')).toBeVisible({ timeout: 90_000 })
-  await draft.getByRole('button', { name: 'Approve' }).click()
+  await page.getByRole('button', { name: 'Add' }).click()
   await expect(
     page
       .getByRole('region', { name: 'Topic problems' })
       .getByRole('listitem', { name: 'Count vowels' }),
   ).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByLabel('Chat bot request')).toContainText('- Count vowels')
 
   await page.reload()
   await page.getByRole('button', { name: 'Start Count vowels' }).click()

@@ -1,17 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Problem } from '@/content/schema'
-import {
-  approveDraft,
-  checkErrors,
-  draftText,
-  newTopic,
-  readDraft,
-  served,
-  type Draft,
-  type TopicRecord,
-} from './topics'
-
-const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
+import { addProblems, checkErrors, newTopic, problemText, served, type TopicRecord } from './topics'
 
 const problem: Problem = {
   id: 'p',
@@ -34,15 +23,12 @@ const topic: TopicRecord = {
   problems: [problem],
 }
 
-const draft = (text: string, replaces?: string): Draft => ({
-  id: uuid(1),
-  text,
-  source: 'ai',
-  replaces,
+const authored = (change: object = {}) => ({
+  ...JSON.parse(problemText(problem, topic.concepts)),
+  ...change,
 })
-
-const authored = (change: object = {}) =>
-  JSON.stringify({ ...JSON.parse(draftText(problem, topic.concepts)), ...change })
+let n = 0
+const nextId = () => `new-${++n}`
 
 describe('served', () => {
   it('serves the problems that follow the content rules and counts the rest', () => {
@@ -55,72 +41,63 @@ describe('served', () => {
   })
 })
 
-describe('readDraft', () => {
-  it('names the concept in the text and finds it again by name', () => {
-    expect(JSON.parse(draftText(problem, topic.concepts))).toMatchObject({
-      concept: { name: 'Two pointers', group: 'Arrays' },
-    })
-    expect(JSON.parse(draftText(problem, topic.concepts))).not.toHaveProperty('id')
-    const read = readDraft(
+describe('addProblems', () => {
+  it('writes the concept by name, without the fields the app assigns', () => {
+    const text = JSON.parse(problemText(problem, topic.concepts))
+    expect(text).toMatchObject({ concept: { name: 'Two pointers', group: 'Arrays' } })
+    expect(text).not.toHaveProperty('id')
+    expect(text).not.toHaveProperty('source')
+  })
+
+  it('adds problems with new ids, finding a concept by name or adding it once', () => {
+    const added = addProblems(
       topic,
-      draft(authored({ concept: { name: 'two POINTERS', group: 'x' } })),
-      'new',
+      [
+        authored({ concept: { name: 'two POINTERS', group: 'x' }, id: 'p', source: 'built-in' }),
+        authored({ concept: { name: 'Hash maps!', group: 'G' } }),
+        authored({ concept: { name: 'hash maps!', group: 'G' } }),
+      ],
+      () => 'x',
     )
-    expect(read).toEqual({
-      ok: true,
-      problem: { ...problem, id: 'new', source: 'ai' },
-      concept: undefined,
-    })
+    expect(added.ok).toBe(true)
+    if (!added.ok) return
+    expect(added.problems.map((p) => [p.id, p.concept, p.source])).toEqual([
+      ['x', 'two-pointers', 'user'],
+      ['x', 'hash-maps', 'user'],
+      ['x', 'hash-maps', 'user'],
+    ])
+    expect(added.record.problems).toHaveLength(4)
+    expect(added.record.concepts.map((c) => c.id)).toEqual(['two-pointers', 'hash-maps'])
   })
 
-  it('adds an unknown concept with an id made from its name', () => {
-    const read = readDraft(
+  it('replaces a problem in place, keeping its id and source', () => {
+    const other = { ...problem, id: 'q' }
+    const added = addProblems(
+      { ...topic, problems: [problem, other] },
+      [authored({ summary: 'new' })],
+      nextId,
+      'p',
+    )
+    expect(added.ok && added.record.problems).toEqual([{ ...problem, summary: 'new' }, other])
+  })
+
+  it('adds nothing when any problem is invalid, and says which', () => {
+    const added = addProblems(
       topic,
-      draft(authored({ concept: { name: 'Two  pointers!', group: 'G' } })),
-      'n',
+      [authored(), authored({ hints: ['one'] }), authored({ visible_tests: ['test_a', 'test_b'] })],
+      nextId,
     )
-    expect(read).toMatchObject({
-      ok: true,
-      problem: { concept: 'two-pointers-2' },
-      concept: { id: 'two-pointers-2', name: 'Two  pointers!', group: 'G' },
+    expect(added).toEqual({
+      ok: false,
+      errors: [
+        { item: 2, title: 'T', errors: ['hints: needs exactly three hints'] },
+        { item: 3, title: 'T', errors: ['every test is visible; at least one must be hidden'] },
+      ],
     })
   })
 
-  it('keeps the id and source of the problem it replaces, whatever the text says', () => {
-    const read = readDraft(topic, draft(authored({ id: 'other', source: 'user' }), 'p'), 'n')
-    expect(read).toMatchObject({ ok: true, problem: { id: 'p', source: 'built-in' } })
-  })
-
-  it.each([
-    ['broken JSON', '{', /not valid JSON/],
-    ['a missing field', authored({ hints: ['one'] }), /hints: needs exactly three hints/],
-    [
-      'no hidden test',
-      authored({ visible_tests: ['test_a', 'test_b'] }),
-      /at least one must be hidden/,
-    ],
-  ])('rejects %s', (_, text, error) => {
-    const read = readDraft(topic, draft(text), 'n')
-    expect(read.ok).toBe(false)
-    expect(read.ok ? [] : read.errors.join('\n')).toMatch(error)
-  })
-})
-
-describe('approveDraft', () => {
-  it('adds a new problem with its concept and drops the draft', () => {
-    const concept = { id: 'c', name: 'C', group: 'G' }
-    const next = approveDraft({ ...topic, drafts: [draft('')] }, uuid(1), {
-      problem: { ...problem, id: 'q', concept: 'c' },
-      concept,
-    })
-    expect(next.problems.map((p) => p.id)).toEqual(['p', 'q'])
-    expect(next.concepts).toContainEqual(concept)
-    expect(next.drafts).toEqual([])
-  })
-
-  it('replaces a problem in place', () => {
-    const next = approveDraft(topic, uuid(1), { problem: { ...problem, summary: 'new' } })
-    expect(next.problems).toEqual([{ ...problem, summary: 'new' }])
+  it('takes exactly one problem for an edit', () => {
+    expect(addProblems(topic, [authored(), authored()], nextId, 'p').ok).toBe(false)
   })
 })
 

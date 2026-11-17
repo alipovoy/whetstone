@@ -1,13 +1,10 @@
-import { DraftProblemSchema, testErrors, type Difficulty } from '@/content/schema'
-
 export const MAX_ITEMS = 10
+const REQUESTED = 3
 
 export interface PromptRequest {
   topic: string
   concepts: { name: string; group: string }[]
   titles: string[]
-  count: number
-  difficulty: Difficulty | 'mixed'
 }
 
 const EXAMPLE = {
@@ -37,16 +34,11 @@ const EXAMPLE = {
   summary: 'Two pointers moving inwards over a sorted list.',
 }
 
-export function bridgePrompt({
-  topic,
-  concepts,
-  titles,
-  count,
-  difficulty,
-}: PromptRequest): string {
-  const level = difficulty === 'mixed' ? 'a mix of Easy, Medium and Hard' : difficulty
+export const PROBLEM_TEMPLATE = JSON.stringify(EXAMPLE, null, 2)
+
+export function chatRequest({ topic, concepts, titles }: PromptRequest): string {
   return [
-    `Write ${count} new Python coding interview ${count === 1 ? 'problem' : 'problems'} for the topic "${topic}", difficulty ${level}.`,
+    `Write ${REQUESTED} new Python coding interview problems for the topic "${topic}", from Easy to Hard.`,
     '',
     'Answer with one JSON block and nothing else, shaped like this:',
     '```json',
@@ -65,42 +57,23 @@ export function bridgePrompt({
     concepts.length
       ? `Existing concepts: ${concepts.map((c) => `${c.name} (${c.group})`).join('; ')}.`
       : 'The topic has no concepts yet.',
-    titles.length
-      ? `Problems already in the topic, do not repeat them: ${titles.join('; ')}.`
-      : 'The topic has no problems yet.',
+    ...(titles.length
+      ? ['', 'Problems already in the topic; do not repeat them:', ...titles.map((t) => `- ${t}`)]
+      : ['The topic has no problems yet.']),
   ].join('\n')
 }
 
-export interface Answer {
-  // Each valid item, formatted as the text of a draft.
-  drafts: string[]
-  rejected: { item: number; errors: string[] }[]
-  error?: string
-}
-
-export function readAnswer(text: string): Answer {
+// Accepts one problem, a list of them, or {"problems": [...]}, bare or in a fenced block.
+export function readItems(text: string): { items: unknown[] } | { error: string } {
   const fenced = /```(?:json)?\s*\n([\s\S]*?)```/.exec(text)
   let json: unknown
   try {
     json = JSON.parse(fenced ? fenced[1] : text)
-  } catch {
-    return { drafts: [], rejected: [], error: 'The answer holds no readable JSON.' }
+  } catch (error) {
+    return { error: `Not valid JSON: ${(error as Error).message}` }
   }
-  const items = Array.isArray(json) ? json : (json as { problems?: unknown } | null)?.problems
-  if (!Array.isArray(items)) {
-    return { drafts: [], rejected: [], error: 'The answer has no "problems" list.' }
-  }
-  if (items.length > MAX_ITEMS) {
-    return { drafts: [], rejected: [], error: `The answer has more than ${MAX_ITEMS} problems.` }
-  }
-  const answer: Answer = { drafts: [], rejected: [] }
-  items.forEach((raw, i) => {
-    const parsed = DraftProblemSchema.safeParse(raw)
-    const errors = parsed.success
-      ? testErrors(parsed.data)
-      : parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`)
-    if (errors.length || !parsed.success) answer.rejected.push({ item: i + 1, errors })
-    else answer.drafts.push(JSON.stringify(parsed.data, null, 2))
-  })
-  return answer
+  const listed = (json as { problems?: unknown } | null)?.problems
+  const items = Array.isArray(json) ? json : Array.isArray(listed) ? listed : [json]
+  if (items.length > MAX_ITEMS) return { error: `More than ${MAX_ITEMS} problems at once.` }
+  return { items }
 }

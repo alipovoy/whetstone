@@ -1,56 +1,50 @@
 import { describe, expect, it } from 'vitest'
-import { builtInTopic } from '@/content'
-import { bridgePrompt, MAX_ITEMS, readAnswer } from './bridge'
-import { draftText } from './topics'
+import { chatRequest, MAX_ITEMS, PROBLEM_TEMPLATE, readItems } from './bridge'
+import { addProblems, newTopic } from './topics'
 
-const item = JSON.parse(draftText(builtInTopic.problems[0], builtInTopic.topic.concepts))
-
-describe('bridgePrompt', () => {
-  it('asks for the topic, quantity and difficulty, and lists what exists', () => {
-    const prompt = bridgePrompt({
+describe('chatRequest', () => {
+  it('asks for three problems on the topic and lists the existing ones to skip', () => {
+    const request = chatRequest({
       topic: 'Strings',
       concepts: [{ name: 'Hashing', group: 'Maps' }],
-      titles: ['Anagrams'],
-      count: 3,
-      difficulty: 'Hard',
+      titles: ['Anagrams', 'Palindrome'],
     })
-    expect(prompt).toContain(
-      'Write 3 new Python coding interview problems for the topic "Strings", difficulty Hard.',
+    expect(request).toContain(
+      'Write 3 new Python coding interview problems for the topic "Strings"',
     )
-    expect(prompt).toContain('Existing concepts: Hashing (Maps).')
-    expect(prompt).toContain('do not repeat them: Anagrams.')
+    expect(request).toContain('Existing concepts: Hashing (Maps).')
+    expect(request).toContain('do not repeat them:\n- Anagrams\n- Palindrome')
   })
 
-  it('carries an example that is itself a valid answer', () => {
-    const prompt = bridgePrompt({
-      topic: 'T',
-      concepts: [],
-      titles: [],
-      count: 1,
-      difficulty: 'mixed',
-    })
-    expect(readAnswer(prompt)).toMatchObject({ rejected: [], drafts: [expect.any(String)] })
+  it('shows an example answer that is valid, as is the template', () => {
+    const request = chatRequest({ topic: 'T', concepts: [], titles: [] })
+    for (const text of [request, PROBLEM_TEMPLATE]) {
+      const read = readItems(text)
+      expect('items' in read && addProblems(newTopic('t', 'T', 0), read.items, () => 'x').ok).toBe(
+        true,
+      )
+    }
   })
 })
 
-describe('readAnswer', () => {
-  it('reads a fenced block among other text and keeps valid items as drafts', () => {
-    const text = `Here you go:\n\`\`\`json\n${JSON.stringify({ problems: [item, { ...item, hints: [] }] })}\n\`\`\`\nEnjoy`
-    const answer = readAnswer(text)
-    expect(answer.drafts.map((d) => JSON.parse(d))).toEqual([item])
-    expect(answer.rejected).toEqual([{ item: 2, errors: ['hints: needs exactly three hints'] }])
-  })
+describe('readItems', () => {
+  const item = { title: 'x' }
 
-  it('reads a bare list and drops what the app assigns itself', () => {
-    const [draft] = readAnswer(JSON.stringify([{ ...item, id: 'x', source: 'built-in' }])).drafts
-    expect(JSON.parse(draft)).toEqual(item)
+  it.each([
+    ['one problem', JSON.stringify(item)],
+    ['a list', JSON.stringify([item])],
+    [
+      'a chat answer around a fenced block',
+      `Here:\n\`\`\`json\n${JSON.stringify({ problems: [item] })}\n\`\`\`\nDone`,
+    ],
+  ])('reads %s', (_, text) => {
+    expect(readItems(text)).toEqual({ items: [item] })
   })
 
   it.each([
-    ['no JSON', 'Sorry, I cannot.', 'no readable JSON'],
-    ['no list', '{"items": []}', 'no "problems" list'],
-    ['too many items', JSON.stringify(Array(MAX_ITEMS + 1).fill(item)), 'more than'],
+    ['no JSON', 'Sorry, I cannot.', 'Not valid JSON'],
+    ['too many problems', JSON.stringify(Array(MAX_ITEMS + 1).fill(item)), 'More than'],
   ])('refuses %s', (_, text, error) => {
-    expect(readAnswer(text).error).toContain(error)
+    expect(readItems(text)).toEqual({ error: expect.stringContaining(error) })
   })
 })

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { TopicFile } from '@/content/schema'
 import type { RunnerStatus, TestResult } from '@/runner/types'
 import { AttemptSchema, gradeAttempt, startAttempt, type Attempt } from '@/core/attempt'
-import { draftText, topicFromFile, type TopicRecord } from '@/core/topics'
+import { problemText, topicFromFile, type TopicRecord } from '@/core/topics'
 import { App, type AppRunner, type AppStorage } from './App'
 
 const problem = (id: string, title: string): TopicFile['problems'][number] => ({
@@ -252,45 +252,46 @@ describe('Topics', () => {
     ...graded,
     tests: graded.tests.map((t) => ({ ...t, passed: true })),
   }
-  const pasted = (title: string) =>
-    JSON.stringify({
-      problems: [
-        {
-          ...JSON.parse(draftText(topic.problems[0], topic.topic.concepts)),
-          concept: { name: 'Strings', group: 'Basics' },
-          wordings: [{ ...topic.problems[0].wordings[0], title }],
-        },
-      ],
-    })
+  const written = (title: string) => ({
+    ...JSON.parse(problemText(topic.problems[0], topic.topic.concepts)),
+    concept: { name: 'Strings', group: 'Basics' },
+    wordings: [{ ...topic.problems[0].wordings[0], title }],
+  })
 
   async function openTopic(name: string) {
     await userEvent.click(screen.getByRole('link', { name: 'Topics' }))
     await userEvent.click(screen.getByRole('button', { name: `Open ${name}` }))
   }
 
-  async function paste(answer: string) {
-    await userEvent.click(screen.getByRole('textbox', { name: 'Answer' }))
-    await userEvent.paste(answer)
-    await userEvent.click(screen.getByRole('button', { name: 'Read answer' }))
+  async function submit(text: string, button = 'Add') {
+    const field = screen.getByRole('textbox', { name: 'Problem JSON' })
+    await userEvent.clear(field)
+    await userEvent.click(field)
+    await userEvent.paste(text)
+    await userEvent.click(screen.getByRole('button', { name: button }))
   }
 
-  it('creates a topic, fills it from a pasted answer and serves the approved problem', async () => {
+  it('creates a topic, adds checked problems from a chat answer and serves them', async () => {
     const runner = fakeRunner()
-    runner.test.mockResolvedValueOnce(allPass).mockResolvedValueOnce(graded)
+    runner.test
+      .mockResolvedValueOnce(allPass)
+      .mockResolvedValueOnce(graded)
+      .mockResolvedValueOnce(allPass)
+      .mockResolvedValueOnce(graded)
     const put = renderApp(runner)
     await userEvent.click(screen.getByRole('link', { name: 'Topics' }))
     await userEvent.type(screen.getByRole('textbox', { name: 'New topic name' }), 'Strings')
     await userEvent.click(screen.getByRole('button', { name: 'Create topic' }))
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Strings')
-    expect(
-      (screen.getByRole('textbox', { name: 'Prompt' }) as HTMLTextAreaElement).value,
-    ).toContain('for the topic "Strings"')
 
-    await paste(`Sure:\n\`\`\`json\n${pasted('Reverse words')}\n\`\`\``)
-    expect(screen.getByText('1 drafts added.')).toBeInTheDocument()
-    const draft = screen.getByRole('article', { name: 'Draft Reverse words' })
-    await userEvent.click(within(draft).getByRole('button', { name: 'Approve' }))
+    await userEvent.click(screen.getByRole('button', { name: 'New problem' }))
+    const answer = JSON.stringify({ problems: [written('Reverse words'), written('Count vowels')] })
+    await submit(`Sure:\n\`\`\`json\n${answer}\n\`\`\``)
 
+    const problems = await screen.findByRole('region', { name: 'Topic problems' })
+    await within(problems).findByRole('listitem', { name: 'Reverse words' })
+    expect(within(problems).getByRole('listitem', { name: 'Count vowels' })).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: 'Problem JSON' })).toBeNull()
     expect(runner.test).toHaveBeenNthCalledWith(
       1,
       topic.problems[0].reference_solution,
@@ -305,15 +306,18 @@ describe('Topics', () => {
       [],
       12_000,
     )
-    const problems = await screen.findByRole('region', { name: 'Topic problems' })
-    expect(within(problems).getByRole('listitem', { name: 'Reverse words' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Concepts' })).toHaveTextContent('Strings (Basics)')
     expect(put.topics.put).toHaveBeenLastCalledWith(
       expect.objectContaining({
         name: 'Strings',
-        drafts: [],
-        problems: [expect.objectContaining({ concept: 'strings', source: 'ai' })],
+        problems: [
+          expect.objectContaining({ concept: 'strings', source: 'user' }),
+          expect.objectContaining({ concept: 'strings', source: 'user' }),
+        ],
       }),
+    )
+    expect(screen.getByLabelText('Chat bot request')).toHaveTextContent(
+      'do not repeat them: - Reverse words - Count vowels',
     )
 
     await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
@@ -321,49 +325,52 @@ describe('Topics', () => {
     expect(screen.getByRole('heading', { name: /Reverse words/ })).toBeInTheDocument()
   })
 
-  it('keeps a draft whose reference solution fails, with the reason', async () => {
+  it('adds nothing when one problem fails its check, and says which and why', async () => {
     const runner = fakeRunner()
+    runner.test
+      .mockResolvedValueOnce(allPass)
+      .mockResolvedValueOnce(graded)
+      .mockResolvedValueOnce(graded)
+      .mockResolvedValueOnce(graded)
     renderApp(runner)
     await openTopic('Topic')
-    await paste(pasted('Broken'))
-    const draft = screen.getByRole('article', { name: 'Draft Broken' })
-    await userEvent.click(within(draft).getByRole('button', { name: 'Approve' }))
-    expect(
-      await within(draft).findByText('the reference solution fails test_b'),
-    ).toBeInTheDocument()
-    expect(
-      within(screen.getByRole('region', { name: 'Topic problems' })).queryByRole('listitem', {
-        name: 'Broken',
-      }),
-    ).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'New problem' }))
+    await submit(JSON.stringify([written('Good'), written('Broken')]))
+
+    const editor = screen.getByRole('region', { name: 'New problem' })
+    expect(await within(editor).findByText(/Nothing was added/)).toBeInTheDocument()
+    expect(editor).toHaveTextContent('Problem 2 “Broken”:the reference solution fails test_b')
+    expect(editor).not.toHaveTextContent('Problem 1')
+    const problems = screen.getByRole('region', { name: 'Topic problems' })
+    expect(within(problems).queryByRole('listitem', { name: 'Good' })).toBeNull()
   })
 
-  it('reports why a pasted answer gave no drafts', async () => {
+  it('reports text that is not JSON, and Cancel closes the editor', async () => {
     renderApp(fakeRunner())
     await openTopic('Topic')
-    await paste('I cannot help with that.')
-    expect(screen.getByText('The answer holds no readable JSON.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'New problem' }))
+    await submit('I cannot help with that.')
+    expect(screen.getByText(/Not valid JSON/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('textbox', { name: 'Problem JSON' })).toBeNull()
   })
 
-  it('edits a served problem through a draft that replaces it', async () => {
+  it('edits a served problem in place after the check', async () => {
     const runner = fakeRunner()
     runner.test.mockResolvedValueOnce(allPass).mockResolvedValueOnce(graded)
     renderApp(runner)
     await openTopic('Topic')
     await userEvent.click(screen.getByRole('button', { name: 'Edit First problem' }))
-    const draft = screen.getByRole('article', { name: 'Draft First problem' })
-    const json = within(draft).getByRole('textbox', { name: 'Draft JSON' })
-    const text = (json as HTMLTextAreaElement).value.replace('"First problem"', '"Renamed problem"')
-    await userEvent.clear(json)
-    await userEvent.click(json)
-    await userEvent.paste(text)
-    await userEvent.click(within(draft).getByRole('button', { name: 'Approve' }))
+    const field = screen.getByRole('textbox', { name: 'Problem JSON' }) as HTMLTextAreaElement
+    await submit(field.value.replace('"First problem"', '"Renamed problem"'), 'Save')
 
-    const problems = await screen.findByRole('region', { name: 'Topic problems' })
+    const problems = screen.getByRole('region', { name: 'Topic problems' })
     await within(problems).findByRole('listitem', { name: 'Renamed problem' })
-    expect(within(problems).getAllByRole('listitem')).toHaveLength(2)
-    await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
-    expect(problemRow('Renamed problem')).toBeInTheDocument()
+    expect(
+      within(problems)
+        .getAllByRole('listitem')
+        .map((li) => li.getAttribute('aria-label')),
+    ).toEqual(['Renamed problem', 'Second problem'])
   })
 
   it('renames, disables and deletes a topic', async () => {
