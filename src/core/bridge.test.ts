@@ -67,6 +67,11 @@ describe('readItems', () => {
 
   it.each([
     ['no JSON', 'Sorry, I cannot.', 'Not valid JSON'],
+    [
+      'questions in the problem field',
+      JSON.stringify({ questions: [item] }),
+      'This holds questions; use New question.',
+    ],
     ['too many items', JSON.stringify(Array(MAX_ITEMS + 1).fill(item)), 'More than 10 problems'],
   ])('refuses %s', (_, text, error) => {
     expect(readItems(text, 'problems')).toEqual({ error: expect.stringContaining(error) })

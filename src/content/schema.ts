@@ -75,10 +75,8 @@ export type TopicFile = z.infer<typeof TopicFileSchema>
 export type Topic = z.infer<typeof TopicSchema>
 export type Concept = z.infer<typeof ConceptSchema>
 export type Problem = z.infer<typeof ProblemSchema>
-export type DraftProblem = z.infer<typeof DraftProblemSchema>
 export type Wording = z.infer<typeof WordingSchema>
 export type Question = z.infer<typeof QuestionSchema>
-export type DraftQuestion = z.infer<typeof DraftQuestionSchema>
 export type Difficulty = z.infer<typeof DifficultySchema>
 
 export type Validation = { ok: true; file: TopicFile } | { ok: false; errors: string[] }
@@ -115,7 +113,6 @@ function crossChecks({ topic, problems, questions }: TopicFile): string[] {
   return errors
 }
 
-// When every option is correct, picking all of them needs no knowledge.
 export function answerErrors(q: Pick<Question, 'type' | 'wordings' | 'answers'>): string[] {
   const errors: string[] = []
   const count = q.wordings[0].options.length
@@ -130,6 +127,7 @@ export function answerErrors(q: Pick<Question, 'type' | 'wordings' | 'answers'>)
     errors.push(`an answer is not an option index (0 to ${count - 1})`)
   if (q.type === 'single' && q.answers.length !== 1)
     errors.push('a single choice has exactly one answer')
+  // When every option is correct, picking all of them needs no knowledge.
   if (new Set(q.answers).size >= count) errors.push('at least one option must be wrong')
   return errors
 }

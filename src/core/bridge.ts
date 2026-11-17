@@ -72,7 +72,7 @@ export function problemRequest({ topic, concepts, existing }: PromptRequest): st
 
 export function questionRequest({ topic, concepts, existing }: PromptRequest): string {
   return [
-    `Write 5 new interview quiz questions for the topic "${topic}", single and multiple choice, from easy to hard.`,
+    `Write 5 new interview quiz questions for the topic "${topic}", single and multiple choice.`,
     ...shape('questions', QUESTION),
     'Rules:',
     '- `concept` names the idea the question checks; reuse an existing concept when one fits.',
@@ -118,7 +118,12 @@ export function readItems(text: string, list: ItemList): { items: unknown[] } | 
   } catch (error) {
     return { error: `Not valid JSON: ${(error as Error).message}` }
   }
-  const listed = (json as Record<string, unknown> | null)?.[list]
+  const keyed = json as Record<string, unknown> | null
+  const other = list === 'problems' ? 'questions' : 'problems'
+  if (Array.isArray(keyed?.[other]) && !Array.isArray(keyed?.[list])) {
+    return { error: `This holds ${other}; use New ${other.slice(0, -1)}.` }
+  }
+  const listed = keyed?.[list]
   const items = Array.isArray(json) ? json : Array.isArray(listed) ? listed : [json]
   if (items.length > MAX_ITEMS) return { error: `More than ${MAX_ITEMS} ${list} at once.` }
   return { items }
