@@ -174,9 +174,10 @@ describe('App', () => {
     expect(await screen.findByRole('region', { name: 'Output' })).toHaveTextContent('hello')
   })
 
-  it('returns to the problem list from the header', async () => {
+  it('returns to the problem list from Code; the app name is not a link', async () => {
     await startFirst()
-    await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
+    expect(screen.queryByRole('link', { name: 'Whetstone' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('link', { name: 'Code' }))
     expect(problemRow('Second problem')).toBeInTheDocument()
   })
 
@@ -206,7 +207,7 @@ describe('App', () => {
       expect.objectContaining({ problem: 'one', grade: expect.objectContaining({ score: 50 }) }),
     )
     expect(screen.getByText('Reference solution')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Code' }))
     expect(problemRow('First problem')).toHaveTextContent('Last score 50')
   })
 
@@ -241,7 +242,7 @@ describe('App', () => {
     expect(screen.getByRole('textbox', { name: 'Solution code' })).toHaveTextContent('return 2')
     expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('Hint 1.')
 
-    await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Code' }))
     await userEvent.click(screen.getByRole('button', { name: 'Start over Second problem' }))
     expect(screen.getByRole('textbox', { name: 'Solution code' })).toHaveTextContent('pass')
     expect(screen.getByRole('region', { name: 'Hints' })).not.toHaveTextContent('Hint 1.')
@@ -268,7 +269,7 @@ describe('Topics', () => {
   })
 
   async function openTopic(name: string) {
-    await userEvent.click(screen.getByRole('link', { name: 'Topics' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Settings' }))
     await userEvent.click(screen.getByRole('button', { name: `Open ${name}` }))
   }
 
@@ -290,7 +291,7 @@ describe('Topics', () => {
       .mockResolvedValueOnce(allPass)
       .mockResolvedValueOnce(graded)
     const put = renderApp(runner)
-    await userEvent.click(screen.getByRole('link', { name: 'Topics' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Settings' }))
     await userEvent.type(screen.getByRole('textbox', { name: 'New topic name' }), 'Strings')
     await userEvent.click(screen.getByRole('button', { name: 'Create topic' }))
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Strings')
@@ -346,7 +347,7 @@ describe('Topics', () => {
       'Copied',
     )
 
-    await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Code' }))
     await userEvent.click(screen.getByRole('button', { name: 'Start Reverse words' }))
     expect(screen.getByRole('heading', { name: /Reverse words/ })).toBeInTheDocument()
   })
@@ -467,7 +468,7 @@ describe('Topics', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Renamed')
 
     await userEvent.click(screen.getByRole('switch', { name: 'Enabled' }))
-    await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Code' }))
     expect(screen.queryByRole('listitem', { name: 'First problem' })).toBeNull()
     expect(screen.getByText(/No problems to practise/)).toBeInTheDocument()
 
@@ -509,7 +510,7 @@ describe('Topics', () => {
       // Keeps the order of questions and options.
       vi.spyOn(Math, 'random').mockReturnValue(0.99)
       const put = withQuestions()
-      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
+      await userEvent.click(screen.getByRole('link', { name: 'Quiz' }))
       expect(screen.getByText('Only 2 questions match; the quiz will have 2.')).toBeInTheDocument()
       await userEvent.click(screen.getByRole('button', { name: 'Start quiz' }))
 
@@ -538,7 +539,7 @@ describe('Topics', () => {
       expect(second).toHaveTextContent('Why pick-all')
       expect(lastSaved(put).result).toMatchObject({ scores: [100, 50], score: 67 })
 
-      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
+      await userEvent.click(screen.getByRole('link', { name: 'Quiz' }))
       expect(screen.getByRole('region', { name: 'Past quizzes' })).toHaveTextContent(
         'Topic, 2 questions',
       )
@@ -551,13 +552,13 @@ describe('Topics', () => {
         0,
       )
       const put = withQuestions([running])
-      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
+      await userEvent.click(screen.getByRole('link', { name: 'Quiz' }))
       expect(screen.getByText(/Quiz in progress: 0 of 1 answered/)).toBeInTheDocument()
       await userEvent.click(screen.getByRole('button', { name: 'Resume' }))
       expect(screen.getByText('Question 1 of 1')).toBeInTheDocument()
 
       vi.spyOn(window, 'confirm').mockReturnValue(true)
-      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
+      await userEvent.click(screen.getByRole('link', { name: 'Quiz' }))
       await userEvent.click(screen.getByRole('button', { name: 'Start quiz' }))
       expect(put.quizzes.delete).toHaveBeenCalledWith(running.id)
       expect(lastSaved(put).questions).toHaveLength(2)

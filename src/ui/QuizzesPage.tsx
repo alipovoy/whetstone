@@ -101,7 +101,7 @@ function NewQuiz({ topics, onStart }: Pick<Props, 'topics' | 'onStart'>) {
     list.includes(item) ? list.filter((i) => i !== item) : [...list, item]
 
   if (offered.length === 0)
-    return <p>No questions to quiz on. Add questions to a topic, or enable one, under Topics.</p>
+    return <p>No questions to quiz on. Add questions to a topic, or enable one, under Settings.</p>
 
   return (
     <Form

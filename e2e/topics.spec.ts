@@ -39,7 +39,7 @@ test('create a topic, fill it from a chat, solve a problem from it', async ({ pa
     return page.evaluate(() => navigator.clipboard.readText())
   }
   await page.goto('./')
-  await page.getByRole('link', { name: 'Topics' }).click()
+  await page.getByRole('link', { name: 'Settings' }).click()
   await page.getByRole('textbox', { name: 'New topic name' }).fill('Strings')
   await page.getByRole('button', { name: 'Create topic' }).click()
   await page.getByText('Chat bot request for problems').click()

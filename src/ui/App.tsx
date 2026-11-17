@@ -37,7 +37,7 @@ const STATUS: Record<RunnerStatus['state'], { bg: string; label: string }> = {
 
 type View =
   | { page: 'problems' }
-  | { page: 'topics' }
+  | { page: 'settings' }
   | { page: 'topic'; id: string }
   | { page: 'quizzes' }
   | { page: 'quiz'; id: string }
@@ -91,7 +91,7 @@ export function App({ runner, storage }: Props) {
   const deleteTopic = (id: string) => {
     setTopicList(topicsNow.current.filter((t) => t.id !== id))
     store?.topics.delete(id).catch((error: unknown) => setSaveError(message(error)))
-    setView({ page: 'topics' })
+    setView({ page: 'settings' })
   }
 
   const setQuizList = (list: Quiz[]) => {
@@ -167,18 +167,31 @@ export function App({ runner, storage }: Props) {
     <>
       <Navbar className="border-bottom mb-3">
         <Container>
-          <Navbar.Brand href="#" aria-disabled={busy} onClick={go({ page: 'problems' })}>
-            Whetstone
-          </Navbar.Brand>
+          <Navbar.Brand as="span">Whetstone</Navbar.Brand>
           <Nav className="me-auto">
-            <a className="nav-link" href="#" aria-disabled={busy} onClick={go({ page: 'topics' })}>
-              Topics
+            <a
+              className="nav-link"
+              href="#"
+              aria-disabled={busy}
+              onClick={go({ page: 'problems' })}
+            >
+              Code
             </a>
             <a className="nav-link" href="#" aria-disabled={busy} onClick={go({ page: 'quizzes' })}>
-              Quizzes
+              Quiz
             </a>
           </Nav>
           <RuntimeStatus runner={runner} />
+          <Nav>
+            <a
+              className="nav-link"
+              href="#"
+              aria-disabled={busy}
+              onClick={go({ page: 'settings' })}
+            >
+              Settings
+            </a>
+          </Nav>
         </Container>
       </Navbar>
       <Container as="main" className="pb-4">
@@ -211,7 +224,7 @@ export function App({ runner, storage }: Props) {
             }
           />
         )}
-        {view.page === 'topics' && (
+        {view.page === 'settings' && (
           <TopicsPage
             topics={topics}
             onCreate={createTopic}
@@ -262,7 +275,7 @@ function ProblemList({ topics, attempts, onStart, onResume }: ProblemListProps) 
     <section aria-label="Problems">
       <h1 className="h3">Problems</h1>
       {shown.length === 0 && (
-        <p>No problems to practise. Add problems to a topic, or enable one, under Topics.</p>
+        <p>No problems to practise. Add problems to a topic, or enable one, under Settings.</p>
       )}
       {shown.map(({ topic, problems }) => (
         <section key={topic.id} aria-label={topic.name} className="mb-3">
