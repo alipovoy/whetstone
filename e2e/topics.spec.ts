@@ -35,14 +35,14 @@ ${JSON.stringify({
 test('create a topic, fill it from a chat, solve a problem from it', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   const copied = async () => {
-    await page.getByRole('button', { name: 'Copy Chat bot request' }).click()
+    await page.getByRole('button', { name: 'Copy Chat bot request for problems' }).click()
     return page.evaluate(() => navigator.clipboard.readText())
   }
   await page.goto('./')
   await page.getByRole('link', { name: 'Topics' }).click()
   await page.getByRole('textbox', { name: 'New topic name' }).fill('Strings')
   await page.getByRole('button', { name: 'Create topic' }).click()
-  await page.getByText('Chat bot request').click()
+  await page.getByText('Chat bot request for problems').click()
   expect(await copied()).toContain(
     'Write 3 new Python coding interview problems for the topic "Strings"',
   )

@@ -40,7 +40,9 @@ export function TopicsPage({ topics, onCreate, onOpen }: Props) {
             <ListGroup.Item as="li" key={topic.id} aria-label={topic.name}>
               <Stack direction="horizontal" gap={2} className="flex-wrap">
                 <span className="fw-semibold">{topic.name}</span>
-                <span className="text-body-secondary">{topic.problems.length} problems</span>
+                <span className="text-body-secondary">
+                  {topic.problems.length} problems, {topic.questions.length} questions
+                </span>
                 {!topic.enabled && <Badge bg="secondary">Disabled</Badge>}
                 <Button
                   size="sm"
