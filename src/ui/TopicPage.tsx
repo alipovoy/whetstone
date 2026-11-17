@@ -14,6 +14,7 @@ import {
 import type { Problem } from '@/content/schema'
 import { RUN_LIMIT_MS, type TestResult } from '@/runner/types'
 import { CodeBlock } from './CodeBlock'
+import { CodeEditor } from './CodeEditor'
 import type { Runner } from './ProblemPage'
 
 interface Props {
@@ -186,16 +187,15 @@ function ProblemEditor({
         Each problem is run in Python first: its reference solution must pass every test and its
         starter code must fail one. Nothing is added unless every problem passes.
       </p>
-      <Form.Control
-        as="textarea"
-        aria-label="Problem JSON"
-        rows={14}
-        spellCheck={false}
-        value={text}
-        readOnly={checking}
-        onChange={(event) => setText(event.target.value)}
-        className="font-monospace small mb-2"
-      />
+      <div className="mb-2">
+        <CodeEditor
+          initialValue={initial.text}
+          onChange={setText}
+          label="Problem JSON"
+          language="json"
+          readOnly={checking}
+        />
+      </div>
       {error && <Alert variant="danger">{error}</Alert>}
       {failed.length > 0 && (
         <Alert variant="danger">

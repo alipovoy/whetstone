@@ -1,5 +1,6 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { EditorView } from 'codemirror'
 import { describe, expect, it, vi } from 'vitest'
 import type { TopicFile } from '@/content/schema'
 import type { RunnerStatus, TestResult } from '@/runner/types'
@@ -264,11 +265,13 @@ describe('Topics', () => {
     await userEvent.click(screen.getByRole('button', { name: `Open ${name}` }))
   }
 
+  // jsdom cannot type into CodeMirror, so the text goes in through the editor itself.
+  const problemEditor = () =>
+    EditorView.findFromDOM(screen.getByRole('textbox', { name: 'Problem JSON' }))!
+
   async function submit(text: string, button = 'Add') {
-    const field = screen.getByRole('textbox', { name: 'Problem JSON' })
-    await userEvent.clear(field)
-    await userEvent.click(field)
-    await userEvent.paste(text)
+    const view = problemEditor()
+    act(() => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } }))
     await userEvent.click(screen.getByRole('button', { name: button }))
   }
 
@@ -375,8 +378,8 @@ describe('Topics', () => {
     renderApp(runner)
     await openTopic('Topic')
     await userEvent.click(screen.getByRole('button', { name: 'Edit First problem' }))
-    const field = screen.getByRole('textbox', { name: 'Problem JSON' }) as HTMLTextAreaElement
-    await submit(field.value.replace('"First problem"', '"Renamed problem"'), 'Save')
+    const text = problemEditor().state.doc.toString()
+    await submit(text.replace('"First problem"', '"Renamed problem"'), 'Save')
 
     const problems = screen.getByRole('region', { name: 'Topic problems' })
     await within(problems).findByRole('listitem', { name: 'Renamed problem' })
