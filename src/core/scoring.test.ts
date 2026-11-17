@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { codingScore, failureText, hintCap } from './scoring'
+import { choiceScore, codingScore, failureText, hintCap, quizScore } from './scoring'
 
 describe('codingScore', () => {
   it.each([
@@ -43,5 +43,31 @@ describe('hintCap', () => {
     [3, 55],
   ])('%i hints cap the score at %i', (hints, cap) => {
     expect(hintCap(hints)).toBe(cap)
+  })
+})
+
+describe('choiceScore', () => {
+  it.each([
+    [[1], [1], 4, 100],
+    [[0], [1], 4, 0],
+    [[], [1], 4, 0],
+    [[0, 2], [0, 2], 4, 100],
+    [[0], [0, 2], 4, 50],
+    [[0, 1], [0, 2], 4, 0],
+    [[0, 2, 1], [0, 2], 4, 50],
+    [[0, 1, 2, 3], [0, 2], 4, 0],
+  ])('picks %j of answers %j among %i options score %i', (picks, answers, options, expected) => {
+    expect(choiceScore(picks, answers, options)).toBe(expected)
+  })
+})
+
+describe('quizScore', () => {
+  it('weighs a multiple choice twice a single choice', () => {
+    expect(
+      quizScore([
+        { type: 'single', score: 100 },
+        { type: 'multiple', score: 50 },
+      ]),
+    ).toBe(67)
   })
 })

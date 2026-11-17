@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Alert, Badge, Button, Container, ListGroup, Nav, Navbar, Stack } from 'react-bootstrap'
 import { lastGraded, latestAttempt, startAttempt, type Attempt } from '@/core/attempt'
+import { startQuiz, submitQuiz, type Quiz, type QuizSetup } from '@/core/quiz'
 import { newTopic, served, type TopicRecord } from '@/core/topics'
 import type { Problem, Topic, TopicFile } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
 import type { RunnerStatus } from '@/runner/types'
 import type { Records } from '@/storage/database'
 import { ProblemPage } from './ProblemPage'
+import { QuizPage } from './QuizPage'
+import { QuizzesPage } from './QuizzesPage'
 import { TopicPage } from './TopicPage'
 import { TopicsPage } from './TopicsPage'
 
@@ -16,9 +19,11 @@ export interface AppStorage {
   store: {
     attempts: Pick<Records<Attempt>, 'put'>
     topics: Pick<Records<TopicRecord>, 'put' | 'delete'>
+    quizzes: Pick<Records<Quiz>, 'put' | 'delete'>
   } | null
   attempts: Attempt[]
   topics: TopicRecord[]
+  quizzes: Quiz[]
   skipped: number
   error?: string
 }
@@ -34,6 +39,8 @@ type View =
   | { page: 'problems' }
   | { page: 'topics' }
   | { page: 'topic'; id: string }
+  | { page: 'quizzes' }
+  | { page: 'quiz'; id: string }
   | { page: 'solve'; topic: Topic; problem: Problem; attempt: Attempt }
 
 interface Props {
@@ -46,6 +53,8 @@ export function App({ runner, storage }: Props) {
   const [topics, setTopics] = useState(storage.topics)
   // The latest topics, so a change is computed once, outside a state updater, and then saved.
   const topicsNow = useRef(storage.topics)
+  const [quizzes, setQuizzes] = useState(storage.quizzes)
+  const quizzesNow = useRef(storage.quizzes)
   const [view, setView] = useState<View>({ page: 'problems' })
   const [busy, setBusy] = useState(false)
   const [saveError, setSaveError] = useState(storage.error)
@@ -85,6 +94,45 @@ export function App({ runner, storage }: Props) {
     setView({ page: 'topics' })
   }
 
+  const setQuizList = (list: Quiz[]) => {
+    quizzesNow.current = list
+    setQuizzes(list)
+  }
+  const updateQuiz = useCallback(
+    (id: string, change: (quiz: Quiz) => Quiz) => {
+      const current = quizzesNow.current.find((q) => q.id === id)
+      const next = current && change(current)
+      if (!next || next === current) return
+      quizzesNow.current = [...quizzesNow.current.filter((q) => q.id !== id), next]
+      setQuizzes(quizzesNow.current)
+      store?.quizzes.put(next).catch((error: unknown) => setSaveError(message(error)))
+    },
+    [store],
+  )
+  const discardQuiz = (id: string) => {
+    setQuizList(quizzesNow.current.filter((q) => q.id !== id))
+    store?.quizzes.delete(id).catch((error: unknown) => setSaveError(message(error)))
+  }
+  const beginQuiz = (setup: QuizSetup) => {
+    const quiz = startQuiz(crypto.randomUUID(), setup, Date.now())
+    setQuizList([...quizzesNow.current, quiz])
+    store?.quizzes.put(quiz).catch((error: unknown) => setSaveError(message(error)))
+    setView({ page: 'quiz', id: quiz.id })
+  }
+
+  // The countdown runs on the wall clock: the quiz is submitted at its deadline on any page.
+  const running = quizzes.find((q) => !q.result)
+  const deadline = running?.deadline
+  const runningId = running?.id
+  useEffect(() => {
+    if (runningId === undefined || deadline === undefined) return
+    const timer = setTimeout(
+      () => updateQuiz(runningId, (q) => submitQuiz(q, Date.now())),
+      Math.max(0, deadline - Date.now()),
+    )
+    return () => clearTimeout(timer)
+  }, [runningId, deadline, updateQuiz])
+
   const enabled = useMemo(
     () =>
       topics
@@ -113,6 +161,7 @@ export function App({ runner, storage }: Props) {
     if (!busy) setView(next)
   }
   const topic = view.page === 'topic' ? topics.find((t) => t.id === view.id) : undefined
+  const quiz = view.page === 'quiz' ? quizzes.find((q) => q.id === view.id) : undefined
 
   return (
     <>
@@ -124,6 +173,9 @@ export function App({ runner, storage }: Props) {
           <Nav className="me-auto">
             <a className="nav-link" href="#" aria-disabled={busy} onClick={go({ page: 'topics' })}>
               Topics
+            </a>
+            <a className="nav-link" href="#" aria-disabled={busy} onClick={go({ page: 'quizzes' })}>
+              Quizzes
             </a>
           </Nav>
           <RuntimeStatus runner={runner} />
@@ -175,6 +227,18 @@ export function App({ runner, storage }: Props) {
             onDelete={() => deleteTopic(topic.id)}
             onBusy={setBusy}
           />
+        )}
+        {view.page === 'quizzes' && (
+          <QuizzesPage
+            topics={enabled}
+            quizzes={quizzes}
+            onStart={beginQuiz}
+            onOpen={(id) => setView({ page: 'quiz', id })}
+            onDiscard={discardQuiz}
+          />
+        )}
+        {quiz && (
+          <QuizPage key={quiz.id} quiz={quiz} onChange={(change) => updateQuiz(quiz.id, change)} />
         )}
       </Container>
     </>

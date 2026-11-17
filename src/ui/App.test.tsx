@@ -6,6 +6,7 @@ import type { TopicFile } from '@/content/schema'
 import type { RunnerStatus, TestResult } from '@/runner/types'
 import { AttemptSchema, gradeAttempt, startAttempt, type Attempt } from '@/core/attempt'
 import { PROBLEM_TEMPLATE } from '@/core/bridge'
+import { startQuiz, type Quiz } from '@/core/quiz'
 import { itemText, topicFromFile, type TopicRecord } from '@/core/topics'
 import { App, type AppRunner, type AppStorage } from './App'
 
@@ -69,19 +70,24 @@ function renderApp(runner: AppRunner, storage: Partial<AppStorage> = {}) {
     put: vi.fn<(topic: TopicRecord) => Promise<void>>(async () => undefined),
     delete: vi.fn<(id: string) => Promise<void>>(async () => undefined),
   }
+  const quizzes = {
+    put: vi.fn<(quiz: Quiz) => Promise<void>>(async () => undefined),
+    delete: vi.fn<(id: string) => Promise<void>>(async () => undefined),
+  }
   render(
     <App
       runner={runner}
       storage={{
-        store: { attempts: { put }, topics },
+        store: { attempts: { put }, topics, quizzes },
         attempts: [],
         topics: [topicFromFile(topic, 0)],
+        quizzes: [],
         skipped: 0,
         ...storage,
       }}
     />,
   )
-  return Object.assign(put, { topics })
+  return Object.assign(put, { topics, quizzes })
 }
 
 async function startFirst(runner: AppRunner = fakeRunner()) {
@@ -470,5 +476,98 @@ describe('Topics', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete topic' }))
     expect(put.topics.delete).toHaveBeenCalledWith('t')
     expect(screen.getByText('No topics yet.')).toBeInTheDocument()
+  })
+
+  describe('quizzes', () => {
+    const question = (
+      id: string,
+      type: 'single' | 'multiple',
+      options: string[],
+      answers: number[],
+    ): TopicFile['questions'][number] => ({
+      id,
+      type,
+      concept: 'c',
+      wordings: [{ text: `Text of ${id}`, options }],
+      answers,
+      explanation: `Why ${id}`,
+      summary: id,
+      source: 'user',
+    })
+    const quizTopic: TopicFile = {
+      ...topic,
+      questions: [
+        question('pick-one', 'single', ['wrong', 'right'], [1]),
+        question('pick-all', 'multiple', ['a', 'b', 'c', 'd'], [0, 2]),
+      ],
+    }
+    const withQuestions = (quizzes: Quiz[] = []) =>
+      renderApp(fakeRunner(), { topics: [topicFromFile(quizTopic, 0)], quizzes })
+    const lastSaved = (put: ReturnType<typeof renderApp>) => put.quizzes.put.mock.lastCall![0]
+
+    it('takes a quiz: answer, flag, review, submit, read the results', async () => {
+      // Keeps the order of questions and options.
+      vi.spyOn(Math, 'random').mockReturnValue(0.99)
+      const put = withQuestions()
+      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
+      expect(screen.getByText('Only 2 questions match; the quiz will have 2.')).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Start quiz' }))
+
+      expect(screen.getByText('Text of pick-one')).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('radio', { name: 'right' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Flag' }))
+      expect(lastSaved(put)).toMatchObject({ picks: [[1], []], flagged: [true, false] })
+      await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+      await userEvent.click(screen.getByRole('checkbox', { name: 'a' }))
+
+      await userEvent.click(screen.getByRole('button', { name: 'Review and submit' }))
+      const flagged = screen.getByRole('region', { name: 'Flagged' })
+      expect(screen.queryByRole('region', { name: 'Unanswered' })).toBeNull()
+      await userEvent.click(within(flagged).getByRole('button', { name: 'Question 1' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Unflag' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Review and submit' }))
+      expect(
+        screen.getByText('Every question is answered and none is flagged.'),
+      ).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Submit' }))
+
+      // A single choice weighs 1, a multiple choice 2: (100 + 2 × 50) / 3.
+      expect(screen.getByRole('region', { name: 'Quiz result' })).toHaveTextContent('Score 67')
+      const second = screen.getByRole('region', { name: 'Question 2' })
+      expect(second).toHaveTextContent('Score 50')
+      expect(second).toHaveTextContent('Why pick-all')
+      expect(lastSaved(put).result).toMatchObject({ scores: [100, 50], score: 67 })
+
+      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
+      expect(screen.getByRole('region', { name: 'Past quizzes' })).toHaveTextContent(
+        'Topic, 2 questions',
+      )
+    })
+
+    it('resumes a quiz in progress, or discards it to start another', async () => {
+      const running = startQuiz(
+        crypto.randomUUID(),
+        { topics: [quizTopic], types: ['single'], size: 5 },
+        0,
+      )
+      const put = withQuestions([running])
+      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
+      expect(screen.getByText(/Quiz in progress: 0 of 1 answered/)).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Resume' }))
+      expect(screen.getByText('Question 1 of 1')).toBeInTheDocument()
+
+      vi.spyOn(window, 'confirm').mockReturnValue(true)
+      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Start quiz' }))
+      expect(put.quizzes.delete).toHaveBeenCalledWith(running.id)
+      expect(lastSaved(put).questions).toHaveLength(2)
+    })
+
+    it('submits a quiz whose deadline has passed', async () => {
+      const setup = { topics: [quizTopic], types: ['single' as const], size: 5, minutes: 10 }
+      const expired = startQuiz(crypto.randomUUID(), setup, Date.now() - 11 * 60_000)
+      const put = withQuestions([expired])
+      await vi.waitFor(() => expect(lastSaved(put).result).toMatchObject({ score: 0 }))
+    })
   })
 })

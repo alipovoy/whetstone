@@ -177,7 +177,7 @@ export function ProblemPage({ topic, problem, initial, attempts, runner, onSave,
   )
 }
 
-function Countdown({ ms }: { ms: number }) {
+export function Countdown({ ms }: { ms: number }) {
   return ms > 0 ? (
     <Badge bg="light" text="dark" className="border fs-6" title="Time left">
       {formatClock(ms)}

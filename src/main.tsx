@@ -13,16 +13,21 @@ followSystemTheme()
 async function openStorage(): Promise<AppStorage> {
   try {
     const store = await openDatabase()
-    const [attempts, topics] = await Promise.all([store.attempts.all(), store.topics.all()])
+    const [attempts, topics, quizzes] = await Promise.all([
+      store.attempts.all(),
+      store.topics.all(),
+      store.quizzes.all(),
+    ])
     return {
       store,
       attempts: attempts.records,
       topics: topics.records,
-      skipped: attempts.skipped + topics.skipped,
+      quizzes: quizzes.records,
+      skipped: attempts.skipped + topics.skipped + quizzes.skipped,
     }
   } catch (error) {
     const topics = [topicFromFile(builtInTopic, Date.now())]
-    return { store: null, attempts: [], topics, skipped: 0, error: String(error) }
+    return { store: null, attempts: [], topics, quizzes: [], skipped: 0, error: String(error) }
   }
 }
 
