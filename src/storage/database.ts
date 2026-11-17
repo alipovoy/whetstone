@@ -106,8 +106,11 @@ export class Records<T extends Stored> {
   private async write({ id, record }: Change<T>): Promise<void> {
     if (this.connection.stopped) throw new Error(this.connection.stopped)
     const tx = this.connection.db.transaction(this.store, 'readwrite')
-    const stored = this.schema.safeParse(await tx.store.get(id))
-    if (stored.success && stored.data.updated_at !== this.known.get(id)) {
+    const raw = await tx.store.get(id)
+    const stored = this.schema.safeParse(raw)
+    // A record this tab has read but that is gone was deleted by another tab.
+    const deleted = raw === undefined && this.known.has(id)
+    if (deleted || (stored.success && stored.data.updated_at !== this.known.get(id))) {
       this.connection.stopped =
         'This work was changed in another tab. Reload this page to continue from there.'
       throw new Error(this.connection.stopped)

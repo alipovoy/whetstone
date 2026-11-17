@@ -57,6 +57,20 @@ describe('openDatabase', () => {
     expect((await tabB.all()).records[0].code).toBe('from B')
   })
 
+  it('refuses to bring back a record another tab deleted', async () => {
+    const name = freshName()
+    const tabA = (await openDatabase(name)).topics
+    const [topic] = (await tabA.all()).records
+    const tabB = (await openDatabase(name)).topics
+    await tabB.all()
+    await tabB.delete(topic.id)
+
+    await expect(tabA.put({ ...topic, name: 'stale', updated_at: 5 })).rejects.toThrow(
+      'changed in another tab',
+    )
+    expect((await tabB.all()).records).toEqual([])
+  })
+
   it('closes its connection when a newer version opens the database', async () => {
     const name = freshName()
     const { attempts } = await openDatabase(name)

@@ -112,7 +112,7 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
                       size="sm"
                       variant="outline-primary"
                       aria-label={`Edit ${title}`}
-                      disabled={editing}
+                      disabled={editing || checking !== null}
                       onClick={() =>
                         newDraft(draftText(problem, topic.concepts), 'user', problem.id)
                       }
@@ -123,6 +123,7 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
                       size="sm"
                       variant="outline-danger"
                       aria-label={`Delete ${title}`}
+                      disabled={checking !== null}
                       onClick={() => {
                         if (confirm(`Delete "${title}"? Its past attempts are kept.`)) {
                           onChange((t) => deleteProblem(t, problem.id))
