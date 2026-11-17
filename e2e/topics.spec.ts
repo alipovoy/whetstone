@@ -1,0 +1,61 @@
+import { expect, test } from '@playwright/test'
+
+const reference = 'def count_vowels(s):\n    return sum(c in "aeiou" for c in s.lower())\n'
+
+// What a chat might answer to the prompt: prose around one JSON block.
+const answer = `Here is your problem.
+
+\`\`\`json
+${JSON.stringify({
+  problems: [
+    {
+      concept: { name: 'Counting', group: 'Strings' },
+      difficulty: 'Easy',
+      language: 'python',
+      wordings: [
+        {
+          title: 'Count vowels',
+          statement: 'Return how many vowels `s` holds.',
+          examples: [{ input: 's = "Hello"', output: '2' }],
+          constraints: [],
+        },
+      ],
+      starter_code: 'def count_vowels(s):\n    pass\n',
+      reference_solution: reference,
+      tests:
+        'from solution import count_vowels\n\ndef test_example():\n    """Example"""\n    assert count_vowels("Hello") == 2\n\ndef test_upper():\n    """Capitals"""\n    assert count_vowels("AEIOU") == 5\n',
+      visible_tests: ['test_example'],
+      hints: ['Look at each letter', 'Lowercase first', 'Count letters in "aeiou"'],
+      summary: 'Counting characters.',
+    },
+  ],
+})}
+\`\`\``
+
+test('create a topic, fill it from a chat, solve a problem from it', async ({ page }) => {
+  await page.goto('./')
+  await page.getByRole('link', { name: 'Topics' }).click()
+  await page.getByRole('textbox', { name: 'New topic name' }).fill('Strings')
+  await page.getByRole('button', { name: 'Create topic' }).click()
+  await expect(page.getByRole('textbox', { name: 'Prompt' })).toHaveValue(/topic "Strings"/)
+
+  await page.getByRole('textbox', { name: 'Answer' }).fill(answer)
+  await page.getByRole('button', { name: 'Read answer' }).click()
+  const draft = page.getByRole('article', { name: 'Draft Count vowels' })
+  await expect(page.getByText('Python is ready')).toBeVisible({ timeout: 90_000 })
+  await draft.getByRole('button', { name: 'Approve' }).click()
+  await expect(
+    page
+      .getByRole('region', { name: 'Topic problems' })
+      .getByRole('listitem', { name: 'Count vowels' }),
+  ).toBeVisible({ timeout: 30_000 })
+
+  await page.reload()
+  await page.getByRole('button', { name: 'Start Count vowels' }).click()
+  const editor = page.getByRole('textbox', { name: 'Solution code' })
+  await editor.click()
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.keyboard.insertText(reference)
+  await page.getByRole('button', { name: 'Grade' }).click()
+  await expect(page.getByRole('region', { name: 'Grade' })).toContainText('Score: 100 / 100')
+})

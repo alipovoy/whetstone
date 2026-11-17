@@ -5,7 +5,7 @@ const id = z
   .regex(/^[a-z0-9][a-z0-9-]*$/, 'must use lowercase letters, digits and hyphens only')
 const text = z.string().refine((s) => s.trim().length > 0, 'must not be empty')
 
-const ConceptSchema = z.object({ id, name: text, group: text })
+export const ConceptSchema = z.object({ id, name: text, group: text })
 
 const TopicSchema = z.object({
   id,
@@ -24,7 +24,7 @@ const WordingSchema = z.object({
 
 const DifficultySchema = z.enum(['Easy', 'Medium', 'Hard'])
 
-const ProblemSchema = z.object({
+export const ProblemSchema = z.object({
   id,
   concept: id,
   difficulty: DifficultySchema,
@@ -39,6 +39,11 @@ const ProblemSchema = z.object({
   source: z.enum(['built-in', 'user', 'ai']),
 })
 
+// What a person or a chat writes: the app assigns id and source, and the concept is named, not referenced.
+export const DraftProblemSchema = ProblemSchema.omit({ id: true, source: true }).extend({
+  concept: ConceptSchema.omit({ id: true }),
+})
+
 export const TopicFileSchema = z.object({
   topic: TopicSchema,
   problems: z.array(ProblemSchema),
@@ -46,7 +51,9 @@ export const TopicFileSchema = z.object({
 
 export type TopicFile = z.infer<typeof TopicFileSchema>
 export type Topic = z.infer<typeof TopicSchema>
+export type Concept = z.infer<typeof ConceptSchema>
 export type Problem = z.infer<typeof ProblemSchema>
+export type DraftProblem = z.infer<typeof DraftProblemSchema>
 export type Wording = z.infer<typeof WordingSchema>
 export type Difficulty = z.infer<typeof DifficultySchema>
 
@@ -73,13 +80,19 @@ function crossChecks({ topic, problems }: TopicFile): string[] {
     if (ids.has(p.id)) errors.push(`${p.id}: id repeats`)
     ids.add(p.id)
     if (!concepts.has(p.concept)) errors.push(`${p.id}: concept "${p.concept}" is not in the topic`)
-    const defined = testNames(p.tests)
-    for (const name of p.visible_tests) {
-      if (!defined.has(name)) errors.push(`${p.id}: visible test "${name}" is not defined`)
-    }
-    if ([...defined].every((name) => p.visible_tests.includes(name))) {
-      errors.push(`${p.id}: every test is visible; at least one must be hidden`)
-    }
+    errors.push(...testErrors(p).map((e) => `${p.id}: ${e}`))
+  }
+  return errors
+}
+
+export function testErrors(p: Pick<Problem, 'tests' | 'visible_tests'>): string[] {
+  const errors: string[] = []
+  const defined = testNames(p.tests)
+  for (const name of p.visible_tests) {
+    if (!defined.has(name)) errors.push(`visible test "${name}" is not defined`)
+  }
+  if ([...defined].every((name) => p.visible_tests.includes(name))) {
+    errors.push('every test is visible; at least one must be hidden')
   }
   return errors
 }
