@@ -115,8 +115,7 @@ function crossChecks({ topic, problems, questions }: TopicFile): string[] {
   return errors
 }
 
-// A choice is scored as correct picks ÷ correct options − wrong picks ÷ wrong options, so a
-// question needs at least one wrong option.
+// When every option is correct, picking all of them needs no knowledge.
 export function answerErrors(q: Pick<Question, 'type' | 'wordings' | 'answers'>): string[] {
   const errors: string[] = []
   const count = q.wordings[0].options.length

@@ -35,7 +35,10 @@ export async function openDatabase(name = DATABASE_NAME): Promise<Database> {
         const topics = database.createObjectStore('topics', { keyPath: 'id' })
         void topics.put(topicFromFile(builtInTopic, Date.now()))
       }
-      if (oldVersion < 3) void addBuiltInQuestions(transaction.objectStore('topics'))
+      if (oldVersion < 3) {
+        // A failed merge aborts the upgrade, so it runs again on the next open.
+        addBuiltInQuestions(transaction.objectStore('topics')).catch(() => transaction.abort())
+      }
     },
     // A newer version of the app opened in another tab: let its upgrade through.
     blocking() {
