@@ -13,6 +13,7 @@ import {
 } from '@/core/topics'
 import type { Problem } from '@/content/schema'
 import { RUN_LIMIT_MS, type TestResult } from '@/runner/types'
+import { CodeBlock } from './CodeBlock'
 import type { Runner } from './ProblemPage'
 
 interface Props {
@@ -300,27 +301,23 @@ function Snippets({ topic, titles }: { topic: TopicRecord; titles: string[] }) {
   const request = chatRequest({ topic: topic.name, concepts: topic.concepts, titles })
   return (
     <section aria-label="Examples">
-      <Snippet label="Chat bot request" text={request} />
-      <Snippet label="Problem template" text={PROBLEM_TEMPLATE} />
+      <Snippet label="Chat bot request" value={request} language="markdown" />
+      <Snippet label="Problem template" value={PROBLEM_TEMPLATE} language="json" />
     </section>
   )
 }
 
-function Snippet({ label, text }: { label: string; text: string }) {
+function Snippet(props: { label: string; value: string; language: 'json' | 'markdown' }) {
+  const [open, setOpen] = useState(false)
   return (
-    <details className="mb-2">
-      <summary>{label}</summary>
-      <Button
-        size="sm"
-        variant="outline-secondary"
-        className="mt-2"
-        onClick={() => void navigator.clipboard.writeText(text)}
-      >
-        Copy
-      </Button>
-      <pre aria-label={label} className="bg-body-tertiary p-2 rounded mt-2 small">
-        {text}
-      </pre>
+    <details className="mb-2" onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary>{props.label}</summary>
+      {/* Mounted when shown: the editor measures its lines when it is created. */}
+      {open && (
+        <div className="mt-2">
+          <CodeBlock {...props} />
+        </div>
+      )}
     </details>
   )
 }

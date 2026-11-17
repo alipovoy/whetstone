@@ -32,13 +32,20 @@ ${JSON.stringify({
 })}
 \`\`\``
 
-test('create a topic, fill it from a chat, solve a problem from it', async ({ page }) => {
+test('create a topic, fill it from a chat, solve a problem from it', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  const copied = async () => {
+    await page.getByRole('button', { name: 'Copy Chat bot request' }).click()
+    return page.evaluate(() => navigator.clipboard.readText())
+  }
   await page.goto('./')
   await page.getByRole('link', { name: 'Topics' }).click()
   await page.getByRole('textbox', { name: 'New topic name' }).fill('Strings')
   await page.getByRole('button', { name: 'Create topic' }).click()
   await page.getByText('Chat bot request').click()
-  await expect(page.getByLabel('Chat bot request')).toContainText('Write 3 new Python')
+  expect(await copied()).toContain(
+    'Write 3 new Python coding interview problems for the topic "Strings"',
+  )
 
   await page.getByRole('button', { name: 'New problem' }).click()
   await page.getByRole('textbox', { name: 'Problem JSON' }).fill(answer)
@@ -49,7 +56,7 @@ test('create a topic, fill it from a chat, solve a problem from it', async ({ pa
       .getByRole('region', { name: 'Topic problems' })
       .getByRole('listitem', { name: 'Count vowels' }),
   ).toBeVisible({ timeout: 30_000 })
-  await expect(page.getByLabel('Chat bot request')).toContainText('- Count vowels')
+  expect(await copied()).toContain('do not repeat them:\n- Count vowels')
 
   await page.reload()
   await page.getByRole('button', { name: 'Start Count vowels' }).click()

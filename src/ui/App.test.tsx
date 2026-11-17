@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { TopicFile } from '@/content/schema'
 import type { RunnerStatus, TestResult } from '@/runner/types'
 import { AttemptSchema, gradeAttempt, startAttempt, type Attempt } from '@/core/attempt'
+import { PROBLEM_TEMPLATE } from '@/core/bridge'
 import { problemText, topicFromFile, type TopicRecord } from '@/core/topics'
 import { App, type AppRunner, type AppStorage } from './App'
 
@@ -316,8 +317,21 @@ describe('Topics', () => {
         ],
       }),
     )
-    expect(screen.getByLabelText('Chat bot request')).toHaveTextContent(
-      'do not repeat them: - Reverse words - Count vowels',
+    const copy = vi.fn(async (_text: string) => undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: copy },
+      configurable: true,
+    })
+    await userEvent.click(screen.getByText('Chat bot request'))
+    await userEvent.click(screen.getByText('Problem template'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Copy Chat bot request' }))
+    expect(copy).toHaveBeenLastCalledWith(
+      expect.stringContaining('do not repeat them:\n- Reverse words\n- Count vowels'),
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Copy Problem template' }))
+    expect(copy).toHaveBeenLastCalledWith(PROBLEM_TEMPLATE)
+    expect(screen.getByRole('button', { name: 'Copy Problem template' })).toHaveTextContent(
+      'Copied',
     )
 
     await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
