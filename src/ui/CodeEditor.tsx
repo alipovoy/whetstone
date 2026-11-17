@@ -1,7 +1,7 @@
 import { indentWithTab } from '@codemirror/commands'
 import { indentUnit } from '@codemirror/language'
 import { python } from '@codemirror/lang-python'
-import { Compartment } from '@codemirror/state'
+import { Compartment, EditorState } from '@codemirror/state'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { keymap } from '@codemirror/view'
 import { basicSetup, EditorView } from 'codemirror'
@@ -12,12 +12,14 @@ interface Props {
   initialValue: string
   onChange: (value: string) => void
   label: string
+  readOnly?: boolean
 }
 
-export function CodeEditor({ initialValue, onChange, label }: Props) {
+export function CodeEditor({ initialValue, onChange, label, readOnly = false }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const [view, setView] = useState<EditorView | null>(null)
   const [theme] = useState(() => new Compartment())
+  const [editable] = useState(() => new Compartment())
   const dark = useDarkMode()
   const hintId = useId()
 
@@ -32,6 +34,7 @@ export function CodeEditor({ initialValue, onChange, label }: Props) {
         // Tab indents, so keyboard users leave the editor with Esc, then Tab (CodeMirror's escape hatch).
         keymap.of([indentWithTab]),
         theme.of([]),
+        editable.of([]),
         EditorView.contentAttributes.of({ 'aria-label': label, 'aria-describedby': hintId }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) onChange(update.state.doc.toString())
@@ -47,6 +50,10 @@ export function CodeEditor({ initialValue, onChange, label }: Props) {
   useEffect(() => {
     view?.dispatch({ effects: theme.reconfigure(dark ? oneDark : []) })
   }, [view, theme, dark])
+
+  useEffect(() => {
+    view?.dispatch({ effects: editable.reconfigure(EditorState.readOnly.of(readOnly)) })
+  }, [view, editable, readOnly])
 
   return (
     <div>

@@ -18,3 +18,11 @@ export function codingScore({ passed, total, loaded }: TestOutcome): number {
 export function failureText(message: string, hidden: boolean): string {
   return hidden ? message.split('\n', 1)[0] : message
 }
+
+const HINT_CAPS = [100, 90, 75, 55]
+
+export const MAX_HINTS = HINT_CAPS.length - 1
+
+export function hintCap(hintsUsed: number): number {
+  return HINT_CAPS[Math.min(hintsUsed, MAX_HINTS)]
+}
