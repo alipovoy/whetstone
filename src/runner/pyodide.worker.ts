@@ -19,6 +19,7 @@ let ready: Promise<Harness> | null = null
 async function init(harness: string): Promise<Harness> {
   scope.postMessage({ type: 'phase', text: 'starting the Python runtime' })
   const py = await loadPyodide({ indexURL })
+  lockDown()
   scope.postMessage({ type: 'phase', text: 'loading the test runner' })
   py.runPython(harness)
   return { py, runCode: py.globals.get('run_code'), runTests: py.globals.get('run_tests') }
@@ -50,6 +51,43 @@ scope.onmessage = async (event) => {
     scope.postMessage({ type: 'result', id: message.id, json })
   } catch (error) {
     scope.postMessage({ type: 'result', id: message.id, error: describe(error) })
+  }
+}
+
+// Code pasted from a chat runs here, and Python reaches the worker's globals through `import js`.
+// So once Pyodide is loaded the worker drops the site's storage and every way out except fetching
+// packages from the pinned CDN. Removed from the prototypes too, where the originals live.
+const REMOVED = [
+  'indexedDB',
+  'caches',
+  'XMLHttpRequest',
+  'WebSocket',
+  'WebTransport',
+  'EventSource',
+  'BroadcastChannel',
+  'Worker',
+  'SharedWorker',
+  'importScripts',
+  'fetch',
+]
+
+function lockDown() {
+  const fetchPackage = fetch.bind(self)
+  for (const name of REMOVED) remove(self, name)
+  remove(StorageManager.prototype, 'getDirectory')
+  Object.defineProperty(self, 'fetch', {
+    value: (input: RequestInfo | URL, options?: RequestInit) => {
+      const request = new Request(input, options)
+      return request.url.startsWith(indexURL)
+        ? fetchPackage(request)
+        : Promise.reject(new TypeError(`Network access is blocked: ${request.url}`))
+    },
+  })
+}
+
+function remove(target: object, name: string) {
+  for (let o: object | null = target; o; o = Object.getPrototypeOf(o)) {
+    if (Object.hasOwn(o, name)) delete (o as Record<string, unknown>)[name]
   }
 }
 
