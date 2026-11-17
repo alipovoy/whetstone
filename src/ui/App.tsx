@@ -150,10 +150,10 @@ function ProblemList({ topic, attempts, onStart, onResume }: ProblemListProps) {
                   <Button
                     size="sm"
                     variant={unfinished ? 'outline-primary' : 'primary'}
-                    aria-label={`Start ${title}`}
+                    aria-label={`${unfinished ? 'Start over' : 'Start'} ${title}`}
                     onClick={() => onStart(problem)}
                   >
-                    Start
+                    {unfinished ? 'Start over' : 'Start'}
                   </Button>
                 </Stack>
               </Stack>

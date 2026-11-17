@@ -223,7 +223,7 @@ describe('App', () => {
     expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('Hint 1.')
 
     await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Start Second problem' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Start over Second problem' }))
     expect(screen.getByRole('textbox', { name: 'Solution code' })).toHaveTextContent('pass')
     expect(screen.getByRole('region', { name: 'Hints' })).not.toHaveTextContent('Hint 1.')
   })
