@@ -214,13 +214,31 @@ describe('quizReport', () => {
       correct: 1,
       partly: 1,
       wrong: 1,
-      used_ms: 90_000,
-      limit_ms: 180_000,
+      time: { used_ms: 90_000, limit_ms: 180_000 },
     })
     // Concept c: 100 for the single choice and 50 for the double-weighted multiple: (100 + 2 × 50) / 3.
     expect(report.concepts).toEqual([
-      { topic_name: 'T3', concept_name: 'Other', questions: 1, score: 0 },
-      { topic_name: 'T3', concept_name: 'Concept', questions: 2, score: 67 },
+      {
+        topic: 't3',
+        concept: 'd',
+        topic_name: 'T3',
+        concept_name: 'Other',
+        questions: 1,
+        score: 0,
+      },
+      {
+        topic: 't3',
+        concept: 'c',
+        topic_name: 'T3',
+        concept_name: 'Concept',
+        questions: 2,
+        score: 67,
+      },
     ])
+  })
+
+  it('leaves out the time of an untimed quiz', () => {
+    const quiz = submitQuiz(startQuiz(ID, setup({}), 0), 86_400_000)
+    expect(quizReport(quiz)?.time).toBeUndefined()
   })
 })

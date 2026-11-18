@@ -879,7 +879,9 @@ describe('Topics', () => {
       expect(lastSaved(put).result).toMatchObject({ scores: [100, 50], score: 67 })
       const report = screen.getByRole('region', { name: 'Quiz result' })
       expect(report).toHaveTextContent('1 correct, 1 partly correct, 0 wrong or not answered')
-      expect(report).toHaveTextContent(/Time used\s*0:0\d of 4:00/)
+      expect(screen.getByRole('heading', { name: 'Quiz result' })).toHaveFocus()
+      expect(report).toHaveTextContent(/Time used\s*\d+:\d\d of 4:00/)
+      expect(report).toHaveTextContent('Topic, 2 questions,')
       expect(screen.getByRole('region', { name: 'Score by concept' })).toHaveTextContent(
         'CTopic, 2 questions67',
       )
@@ -980,6 +982,22 @@ describe('Topics', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Start quiz' }))
       expect(put.quizzes.delete).toHaveBeenCalledWith(running.id)
       expect(lastSaved(put).questions).toHaveLength(2)
+    })
+
+    it('reports a quiz stored before questions had a difficulty, untimed', async () => {
+      const quiz = startQuiz(crypto.randomUUID(), quizOf(['single']), 0)
+      const old = submitQuiz(
+        { ...quiz, questions: quiz.questions.map(({ difficulty: _difficulty, ...q }) => q) },
+        60_000,
+      )
+      withQuestions([old])
+      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
+      await userEvent.click(screen.getByRole('button', { name: /^Open quiz/ }))
+      const report = screen.getByRole('region', { name: 'Quiz result' })
+      expect(report).toHaveTextContent('Time usedNo time limit')
+      expect(report).toHaveTextContent('0 correct, 0 partly correct, 1 wrong or not answered')
+      await userEvent.click(screen.getByRole('switch', { name: 'Not fully correct only' }))
+      expect(screen.getByRole('region', { name: 'Question 1' })).toBeInTheDocument()
     })
 
     it('closes the submit dialog when time runs out and shows the result', async () => {

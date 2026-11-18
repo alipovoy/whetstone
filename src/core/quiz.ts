@@ -235,6 +235,8 @@ export function timeLeft(quiz: Quiz, now: number): number | undefined {
 }
 
 export interface ConceptScore {
+  topic: string
+  concept: string
   topic_name: string
   concept_name: string
   questions: number
@@ -245,10 +247,15 @@ export interface QuizReport {
   correct: number
   partly: number
   wrong: number
-  used_ms: number
-  limit_ms?: number
-  // Weakest first.
+  // Only for a timed quiz: an untimed one may have been left open for days.
+  time?: { used_ms: number; limit_ms: number }
   concepts: ConceptScore[]
+}
+
+export type AnswerGrade = 'correct' | 'partly' | 'wrong'
+
+export function answerGrade(points: number): AnswerGrade {
+  return points === 100 ? 'correct' : points > 0 ? 'partly' : 'wrong'
 }
 
 export function quizReport(quiz: Quiz): QuizReport | undefined {
@@ -264,14 +271,18 @@ export function quizReport(quiz: Quiz): QuizReport | undefined {
     group.scores.push({ type: shown.type, score: result.scores[i] })
     groups.set(key, group)
   })
+  const counts = { correct: 0, partly: 0, wrong: 0 }
+  for (const points of result.scores) counts[answerGrade(points)]++
   return {
-    correct: result.scores.filter((s) => s === 100).length,
-    partly: result.scores.filter((s) => s > 0 && s < 100).length,
-    wrong: result.scores.filter((s) => s === 0).length,
-    used_ms: result.at - quiz.started_at,
-    limit_ms: quiz.deadline === undefined ? undefined : quiz.deadline - quiz.started_at,
+    ...counts,
+    time:
+      quiz.deadline === undefined
+        ? undefined
+        : { used_ms: result.at - quiz.started_at, limit_ms: quiz.deadline - quiz.started_at },
     concepts: [...groups.values()]
       .map(({ shown, scores }) => ({
+        topic: shown.topic,
+        concept: shown.concept,
         topic_name: shown.topic_name,
         concept_name: shown.concept_name,
         questions: scores.length,

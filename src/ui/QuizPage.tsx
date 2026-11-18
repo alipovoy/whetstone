@@ -3,6 +3,7 @@ import { formatClock } from '@/core/attempt'
 import { Button, Form, Modal } from 'react-bootstrap'
 import {
   choose,
+  answerGrade,
   quizReport,
   submitQuiz,
   timeLeft,
@@ -253,6 +254,10 @@ function Results({ quiz }: { quiz: Quiz }) {
   const result = quiz.result!
   const report = quizReport(quiz)!
   const [onlyMissed, setOnlyMissed] = useState(false)
+  // Submitting from the panel below the question leaves the page scrolled down; the result
+  // starts at its heading, which screen readers then announce.
+  const heading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => heading.current?.focus(), [])
   const switchId = useId()
   const topics = [...new Set(quiz.questions.map((q) => q.topic_name))].join(', ')
   const shown = quiz.questions.flatMap((q, i) =>
@@ -263,9 +268,12 @@ function Results({ quiz }: { quiz: Quiz }) {
     <section className="ws-report" aria-label="Quiz result">
       <div className="ws-panel ws-report-head">
         <div>
-          <h1 className="h3">Quiz result</h1>
+          <h1 className="h3" ref={heading} tabIndex={-1}>
+            Quiz result
+          </h1>
           <p className="text-body-secondary mb-0">
-            {topics}, {new Date(quiz.started_at).toLocaleString()}
+            {topics}, {quiz.questions.length} questions,{' '}
+            {new Date(quiz.started_at).toLocaleString()}
           </p>
         </div>
         <p className="ws-report-score">
@@ -283,10 +291,9 @@ function Results({ quiz }: { quiz: Quiz }) {
           <div>
             <dt>Time used</dt>
             <dd>
-              {formatClock(report.used_ms)}
-              {report.limit_ms === undefined
-                ? ', no time limit'
-                : ` of ${formatClock(report.limit_ms)}`}
+              {report.time
+                ? `${formatClock(report.time.used_ms)} of ${formatClock(report.time.limit_ms)}`
+                : 'No time limit'}
             </dd>
           </div>
         </dl>
@@ -298,14 +305,14 @@ function Results({ quiz }: { quiz: Quiz }) {
         <h2 className="h5">Score by concept</h2>
         <ul>
           {report.concepts.map((c) => (
-            <li key={`${c.topic_name}/${c.concept_name}`}>
+            <li key={`${c.topic}/${c.concept}`}>
               <span className="ws-concept-name">
                 {c.concept_name}
                 <small>
                   {c.topic_name}, {c.questions === 1 ? '1 question' : `${c.questions} questions`}
                 </small>
               </span>
-              <span className="ws-bar" data-band={band(c.score)} aria-hidden="true">
+              <span className="ws-meter" data-band={band(c.score)} aria-hidden="true">
                 <i style={{ width: `${c.score}%` }} />
               </span>
               <strong className="ws-concept-score">{c.score}</strong>
@@ -355,7 +362,7 @@ function Answer({ index, shown, picks, score }: AnswerProps) {
         <span className="text-body-secondary">
           {shown.topic_name}, {shown.concept_name}
         </span>
-        <span className="ws-answer-score" data-band={band(score)}>
+        <span className="ws-answer-score" data-grade={answerGrade(score)}>
           Score {score}
         </span>
       </div>
