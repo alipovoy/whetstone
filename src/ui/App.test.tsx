@@ -407,8 +407,9 @@ describe('App', () => {
     expect(screen.queryByRole('region', { name: 'Problem' })).toBeNull()
     expect(screen.queryByRole('separator')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Collapse Code' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Expand Problem' })).toHaveFocus()
     expect(JSON.parse(localStorage.getItem('whetstone.panes')!)).toEqual({
-      split: 75,
+      leftPercent: 75,
       collapsed: 'left',
     })
 
@@ -417,11 +418,21 @@ describe('App', () => {
     expect(screen.queryByRole('region', { name: 'Problem' })).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Expand Problem' }))
     expect(screen.getByRole('region', { name: 'Problem' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Collapse Problem' })).toHaveFocus()
     expect(screen.getByRole('separator')).toHaveAttribute('aria-valuenow', '75')
   })
 
+  it('keeps the editor while its pane is collapsed', async () => {
+    await startFirst()
+    const editor = screen.getByRole('textbox', { name: 'Solution code' })
+    await userEvent.click(screen.getByRole('button', { name: 'Collapse Code' }))
+    expect(screen.queryByRole('textbox', { name: 'Solution code' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Expand Code' }))
+    expect(screen.getByRole('textbox', { name: 'Solution code' })).toBe(editor)
+  })
+
   it('ignores a damaged pane layout', () => {
-    localStorage.setItem('whetstone.panes', '{"split": "wide", "collapsed": "both"')
+    localStorage.setItem('whetstone.panes', '{"leftPercent": "wide", "collapsed": "both"}')
     renderApp(fakeRunner(), {}, { page: 'solve', topic: 't', problem: 'one' })
     expect(screen.getByRole('separator')).toHaveAttribute('aria-valuenow', '50')
     expect(screen.getByRole('region', { name: 'Problem' })).toBeInTheDocument()

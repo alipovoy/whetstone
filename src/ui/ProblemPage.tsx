@@ -11,7 +11,7 @@ import {
 } from '@/core/attempt'
 import { problemStatus } from '@/core/problems'
 import { failureText, hintCap, MAX_HINTS } from '@/core/scoring'
-import type { Problem, Topic } from '@/content/schema'
+import { conceptName, type Problem, type Topic } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
 import { RUN_LIMIT_MS, type RunnerStatus, type RunResult, type TestResult } from '@/runner/types'
 import { CodeEditor } from './CodeEditor'
@@ -38,7 +38,6 @@ interface Props {
   runner: Runner
   onSave: (attempt: Attempt) => void
   onBusy: (busy: boolean) => void
-  // The list to return to, with its filter.
   back: Route
 }
 
@@ -129,8 +128,8 @@ export function ProblemPage({
       )
     })
 
-  const concept = topic.concepts.find((c) => c.id === problem.concept)?.name ?? problem.concept
-  const status = problemStatus(attempt, attempt.grade && attempt)
+  const concept = conceptName(topic, problem.concept)
+  const status = problemStatus(attempt, attempt)
 
   const statement = (
     <div className="ws-statement">
@@ -242,7 +241,7 @@ interface HintsProps {
 
 function Hints({ hints, onMore, nextCap, disabled }: HintsProps) {
   return (
-    <section aria-label="Hints">
+    <section aria-label="Hints" aria-live="polite">
       {hints.map((hint, i) => (
         <p key={i} className="ws-hint">
           <strong>Hint {i + 1}.</strong> {hint}

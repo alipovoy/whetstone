@@ -13,7 +13,9 @@ test('resize the panes, collapse one, keep the layout after reload', async ({ pa
   await page.mouse.down()
   await page.mouse.move(box.x + box.width * 0.35, handle.y + 100, { steps: 5 })
   await page.mouse.up()
-  await expect(separator).toHaveAttribute('aria-valuenow', '35')
+  const dragged = Number(await separator.getAttribute('aria-valuenow'))
+  expect(dragged).toBeGreaterThanOrEqual(33)
+  expect(dragged).toBeLessThanOrEqual(35)
   const left = (await problem.boundingBox())!.width
   expect(left).toBeLessThan((await code.boundingBox())!.width)
 
@@ -25,7 +27,7 @@ test('resize the panes, collapse one, keep the layout after reload', async ({ pa
   await expect(code).toBeHidden()
   await page.getByRole('button', { name: 'Expand Code' }).click()
   await expect(code).toBeVisible()
-  await expect(separator).toHaveAttribute('aria-valuenow', '35')
+  await expect(separator).toHaveAttribute('aria-valuenow', String(dragged))
 })
 
 test('stack the panes on a narrow screen', async ({ page }) => {

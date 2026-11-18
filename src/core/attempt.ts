@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { Difficulty, Problem, Topic } from '@/content/schema'
+import { conceptName, type Difficulty, type Problem, type Topic } from '@/content/schema'
 import { codingScore, hintCap } from './scoring'
 
 // Bumped when the stored shape changes; records of another version are skipped, not migrated.
@@ -140,7 +140,7 @@ export function gradeAttempt(
       asked: {
         topic_name: topic.name,
         concept: problem.concept,
-        concept_name: topic.concepts.find((c) => c.id === problem.concept)?.name ?? problem.concept,
+        concept_name: conceptName(topic, problem.concept),
         language: problem.language,
         difficulty: problem.difficulty,
         wording: problem.wordings[attempt.wording] ?? problem.wordings[0],

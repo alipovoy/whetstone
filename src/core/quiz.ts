@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { Question, TopicFile } from '@/content/schema'
+import { conceptName, type Question, type TopicFile } from '@/content/schema'
 import { choiceScore, quizScore } from './scoring'
 
 // Bumped when the stored shape changes; records of another version are skipped, not migrated.
@@ -106,7 +106,7 @@ function show({ topic, question }: Candidate, random: () => number): Shown {
     topic_name: topic.name,
     question: question.id,
     concept: question.concept,
-    concept_name: topic.concepts.find((c) => c.id === question.concept)?.name ?? question.concept,
+    concept_name: conceptName(topic, question.concept),
     type: question.type,
     wording: index,
     text: wording.text,
