@@ -3,6 +3,7 @@ import { openDB } from 'idb'
 import { describe, expect, it, vi } from 'vitest'
 import { builtInTopic } from '@/content'
 import { startAttempt } from '@/core/attempt'
+import { startQuiz } from '@/core/quiz'
 import { topicFromFile } from '@/core/topics'
 import { openDatabase } from './database'
 
@@ -75,7 +76,7 @@ describe('openDatabase', () => {
   it('closes its connection when a newer version opens the database', async () => {
     const name = freshName()
     const { attempts } = await openDatabase(name)
-    const newer = await openDB(name, 4)
+    const newer = await openDB(name, 5)
     newer.close()
     await expect(attempts.put(startAttempt(ID, 't', problem, '', 1))).rejects.toThrow(
       'updated in another tab',
@@ -123,6 +124,21 @@ describe('openDatabase', () => {
     const db = await openDatabase(name)
     expect((await db.attempts.all()).records[0].code).toBe('kept')
     expect((await db.topics.all()).records.map((t) => t.id)).toEqual([builtInTopic.topic.id])
+  })
+
+  it('keeps quizzes, added to a database of the previous version', async () => {
+    const name = freshName()
+    const old = await openDB(name, 3, {
+      upgrade(db) {
+        db.createObjectStore('attempts', { keyPath: 'id' })
+        db.createObjectStore('topics', { keyPath: 'id' })
+      },
+    })
+    old.close()
+    const quiz = startQuiz(ID, { topics: [builtInTopic], types: ['single'], size: 5 }, 1)
+    await (await openDatabase(name)).quizzes.put(quiz)
+
+    expect((await (await openDatabase(name)).quizzes.all()).records).toEqual([quiz])
   })
 
   it('does not bring back a deleted built-in topic', async () => {

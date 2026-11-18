@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Badge, Button, Container, ListGroup, Nav, Navbar, Stack } from 'react-bootstrap'
 import { lastGraded, latestAttempt, startAttempt, type Attempt } from '@/core/attempt'
+import { startQuiz, submitQuiz, type Quiz, type QuizSetup } from '@/core/quiz'
 import { newTopic, served, type TopicRecord } from '@/core/topics'
 import type { Problem, Topic, TopicFile } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
-import type { RunnerStatus } from '@/runner/types'
 import type { Records } from '@/storage/database'
 import { ProblemPage } from './ProblemPage'
+import { QuizPage } from './QuizPage'
+import { QuizzesPage } from './QuizzesPage'
 import { TopicPage } from './TopicPage'
 import { TopicsPage } from './TopicsPage'
 
@@ -16,25 +18,35 @@ export interface AppStorage {
   store: {
     attempts: Pick<Records<Attempt>, 'put'>
     topics: Pick<Records<TopicRecord>, 'put' | 'delete'>
+    quizzes: Pick<Records<Quiz>, 'put' | 'delete'>
   } | null
   attempts: Attempt[]
   topics: TopicRecord[]
+  quizzes: Quiz[]
   skipped: number
   error?: string
 }
 
-const STATUS: Record<RunnerStatus['state'], { bg: string; label: string }> = {
-  idle: { bg: 'secondary', label: 'Python not loaded' },
-  loading: { bg: 'warning', label: 'Preparing Python' },
-  ready: { bg: 'success', label: 'Python is ready' },
-  failed: { bg: 'danger', label: 'Python stopped' },
-}
-
 type View =
   | { page: 'problems' }
-  | { page: 'topics' }
+  | { page: 'settings' }
   | { page: 'topic'; id: string }
+  | { page: 'quizzes' }
+  | { page: 'quiz'; id: string }
   | { page: 'solve'; topic: Topic; problem: Problem; attempt: Attempt }
+
+const EQUAL = { flex: '1 1 0' }
+
+type Section = 'problems' | 'quizzes' | 'settings'
+
+const SECTION: Record<View['page'], Section> = {
+  problems: 'problems',
+  solve: 'problems',
+  quizzes: 'quizzes',
+  quiz: 'quizzes',
+  settings: 'settings',
+  topic: 'settings',
+}
 
 interface Props {
   runner: AppRunner
@@ -46,6 +58,8 @@ export function App({ runner, storage }: Props) {
   const [topics, setTopics] = useState(storage.topics)
   // The latest topics, so a change is computed once, outside a state updater, and then saved.
   const topicsNow = useRef(storage.topics)
+  const [quizzes, setQuizzes] = useState(storage.quizzes)
+  const quizzesNow = useRef(storage.quizzes)
   const [view, setView] = useState<View>({ page: 'problems' })
   const [busy, setBusy] = useState(false)
   const [saveError, setSaveError] = useState(storage.error)
@@ -82,8 +96,50 @@ export function App({ runner, storage }: Props) {
   const deleteTopic = (id: string) => {
     setTopicList(topicsNow.current.filter((t) => t.id !== id))
     store?.topics.delete(id).catch((error: unknown) => setSaveError(message(error)))
-    setView({ page: 'topics' })
+    setView({ page: 'settings' })
   }
+
+  const setQuizList = (list: Quiz[]) => {
+    quizzesNow.current = list
+    setQuizzes(list)
+  }
+  const updateQuiz = useCallback(
+    (id: string, change: (quiz: Quiz) => Quiz) => {
+      const current = quizzesNow.current.find((q) => q.id === id)
+      const next = current && change(current)
+      if (!next || next === current) return
+      quizzesNow.current = [...quizzesNow.current.filter((q) => q.id !== id), next]
+      setQuizzes(quizzesNow.current)
+      store?.quizzes.put(next).catch((error: unknown) => setSaveError(message(error)))
+    },
+    [store],
+  )
+  const discardQuiz = (id: string) => {
+    setQuizList(quizzesNow.current.filter((q) => q.id !== id))
+    store?.quizzes.delete(id).catch((error: unknown) => setSaveError(message(error)))
+  }
+  const beginQuiz = (setup: QuizSetup) => {
+    const quiz = startQuiz(crypto.randomUUID(), setup, Date.now())
+    setQuizList([...quizzesNow.current, quiz])
+    store?.quizzes.put(quiz).catch((error: unknown) => setSaveError(message(error)))
+    setView({ page: 'quiz', id: quiz.id })
+  }
+
+  // The countdown runs on the wall clock: a quiz is submitted at its deadline on any page.
+  // Another tab may have started a second quiz, so the earliest deadline goes first.
+  const timed = quizzes
+    .filter((q) => !q.result && q.deadline !== undefined)
+    .toSorted((a, b) => (a.deadline ?? 0) - (b.deadline ?? 0))[0]
+  const deadline = timed?.deadline
+  const timedId = timed?.id
+  useEffect(() => {
+    if (timedId === undefined || deadline === undefined) return
+    const timer = setTimeout(
+      () => updateQuiz(timedId, (q) => submitQuiz(q, Date.now())),
+      Math.max(0, deadline - Date.now()),
+    )
+    return () => clearTimeout(timer)
+  }, [timedId, deadline, updateQuiz])
 
   const enabled = useMemo(
     () =>
@@ -112,21 +168,37 @@ export function App({ runner, storage }: Props) {
     event.preventDefault()
     if (!busy) setView(next)
   }
+  const section = SECTION[view.page]
+  const menuLink = (label: string, page: Section) => (
+    <a
+      className={page === section ? 'nav-link active' : 'nav-link'}
+      href="#"
+      aria-current={page === section ? 'page' : undefined}
+      aria-disabled={busy}
+      onClick={go({ page })}
+    >
+      {label}
+    </a>
+  )
   const topic = view.page === 'topic' ? topics.find((t) => t.id === view.id) : undefined
+  const quiz = view.page === 'quiz' ? quizzes.find((q) => q.id === view.id) : undefined
 
   return (
     <>
       <Navbar className="border-bottom mb-3">
         <Container>
-          <Navbar.Brand href="#" aria-disabled={busy} onClick={go({ page: 'problems' })}>
+          {/* Equal sides keep Code and Quiz in the centre; me-0 lets the name fit half a phone screen.
+              Not flex-fill: its !important basis is auto, so the sides would follow their text. */}
+          <Navbar.Brand as="span" className="me-0" style={EQUAL}>
             Whetstone
           </Navbar.Brand>
-          <Nav className="me-auto">
-            <a className="nav-link" href="#" aria-disabled={busy} onClick={go({ page: 'topics' })}>
-              Topics
-            </a>
+          <Nav>
+            {menuLink('Code', 'problems')}
+            {menuLink('Quiz', 'quizzes')}
           </Nav>
-          <RuntimeStatus runner={runner} />
+          <Nav className="justify-content-end" style={EQUAL}>
+            {menuLink('Settings', 'settings')}
+          </Nav>
         </Container>
       </Navbar>
       <Container as="main" className="pb-4">
@@ -159,7 +231,7 @@ export function App({ runner, storage }: Props) {
             }
           />
         )}
-        {view.page === 'topics' && (
+        {view.page === 'settings' && (
           <TopicsPage
             topics={topics}
             onCreate={createTopic}
@@ -175,6 +247,18 @@ export function App({ runner, storage }: Props) {
             onDelete={() => deleteTopic(topic.id)}
             onBusy={setBusy}
           />
+        )}
+        {view.page === 'quizzes' && (
+          <QuizzesPage
+            topics={enabled}
+            quizzes={quizzes}
+            onStart={beginQuiz}
+            onOpen={(id) => setView({ page: 'quiz', id })}
+            onDiscard={discardQuiz}
+          />
+        )}
+        {quiz && (
+          <QuizPage key={quiz.id} quiz={quiz} onChange={(change) => updateQuiz(quiz.id, change)} />
         )}
       </Container>
     </>
@@ -198,7 +282,7 @@ function ProblemList({ topics, attempts, onStart, onResume }: ProblemListProps) 
     <section aria-label="Problems">
       <h1 className="h3">Problems</h1>
       {shown.length === 0 && (
-        <p>No problems to practise. Add problems to a topic, or enable one, under Topics.</p>
+        <p>No problems to practise. Add problems to a topic, or enable one, under Settings.</p>
       )}
       {shown.map(({ topic, problems }) => (
         <section key={topic.id} aria-label={topic.name} className="mb-3">
@@ -263,16 +347,5 @@ function ProblemRow({ problem, latest, graded, onStart, onResume }: ProblemRowPr
         </Stack>
       </Stack>
     </ListGroup.Item>
-  )
-}
-
-function RuntimeStatus({ runner }: { runner: AppRunner }) {
-  const status = useSyncExternalStore(runner.subscribe, runner.status)
-  const { bg, label } = STATUS[status.state]
-  const detail = status.detail && status.state !== 'ready' ? `${label}: ${status.detail}` : label
-  return (
-    <Badge bg={bg} text={bg === 'warning' ? 'dark' : undefined} role="status" title={detail}>
-      {label}
-    </Badge>
   )
 }

@@ -2,17 +2,19 @@ import { openDB, type DBSchema, type IDBPDatabase, type IDBPObjectStore } from '
 import type { z } from 'zod'
 import { builtInTopic } from '@/content'
 import { AttemptSchema, type Attempt } from '@/core/attempt'
+import { QuizSchema, type Quiz } from '@/core/quiz'
 import { topicFromFile, TopicRecordSchema, type TopicRecord } from '@/core/topics'
 
 export const DATABASE_NAME = 'whetstone'
-const DATABASE_VERSION = 3
+const DATABASE_VERSION = 4
 
 interface Schema extends DBSchema {
   attempts: { key: string; value: unknown }
   topics: { key: string; value: unknown }
+  quizzes: { key: string; value: unknown }
 }
 
-type StoreName = 'attempts' | 'topics'
+type StoreName = 'attempts' | 'topics' | 'quizzes'
 
 interface Connection {
   db: IDBPDatabase<Schema>
@@ -22,6 +24,7 @@ interface Connection {
 export interface Database {
   attempts: Records<Attempt>
   topics: Records<TopicRecord>
+  quizzes: Records<Quiz>
 }
 
 export async function openDatabase(name = DATABASE_NAME): Promise<Database> {
@@ -39,6 +42,7 @@ export async function openDatabase(name = DATABASE_NAME): Promise<Database> {
         // A failed merge aborts the upgrade, so it runs again on the next open.
         addBuiltInQuestions(transaction.objectStore('topics')).catch(() => transaction.abort())
       }
+      if (oldVersion < 4) database.createObjectStore('quizzes', { keyPath: 'id' })
     },
     // A newer version of the app opened in another tab: let its upgrade through.
     blocking() {
@@ -50,6 +54,7 @@ export async function openDatabase(name = DATABASE_NAME): Promise<Database> {
   return {
     attempts: new Records(connection, 'attempts', AttemptSchema),
     topics: new Records(connection, 'topics', TopicRecordSchema),
+    quizzes: new Records(connection, 'quizzes', QuizSchema),
   }
 }
 
