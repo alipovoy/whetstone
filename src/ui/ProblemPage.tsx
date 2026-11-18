@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { Alert, Badge, Button, ListGroup, Stack } from 'react-bootstrap'
+import { Alert, Badge, Button, ListGroup } from 'react-bootstrap'
 import {
   gradeAttempt,
   lastGraded,
@@ -9,13 +9,18 @@ import {
   type Attempt,
   type Grade,
 } from '@/core/attempt'
+import { problemStatus } from '@/core/problems'
 import { failureText, hintCap, MAX_HINTS } from '@/core/scoring'
 import type { Problem, Topic } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
 import { RUN_LIMIT_MS, type RunnerStatus, type RunResult, type TestResult } from '@/runner/types'
 import { CodeEditor } from './CodeEditor'
 import { Countdown } from './Countdown'
+import { Link } from './Link'
 import { Markdown } from './Markdown'
+import { StatusPill, TestMarks } from './progress'
+import type { Route } from './route'
+import { SplitView } from './SplitView'
 
 export type Runner = Pick<PyodideRunner, 'run' | 'test' | 'status' | 'subscribe'>
 
@@ -33,13 +38,24 @@ interface Props {
   runner: Runner
   onSave: (attempt: Attempt) => void
   onBusy: (busy: boolean) => void
+  // The list to return to, with its filter.
+  back: Route
 }
 
 // Hidden-tab time is not counted; a longer gap between ticks means the page was asleep.
 const TICK_MS = 1000
 const MAX_TICK_MS = 2 * TICK_MS
 
-export function ProblemPage({ topic, problem, initial, attempts, runner, onSave, onBusy }: Props) {
+export function ProblemPage({
+  topic,
+  problem,
+  initial,
+  attempts,
+  runner,
+  onSave,
+  onBusy,
+  back,
+}: Props) {
   const [attempt, setAttempt] = useState(
     () =>
       initial ??
@@ -113,36 +129,36 @@ export function ProblemPage({ topic, problem, initial, attempts, runner, onSave,
       )
     })
 
-  return (
-    <Stack gap={3}>
-      <div>
-        <Stack direction="horizontal" gap={2} className="align-items-start">
-          <h1 className="h3 me-auto">
-            {wording.title} <Badge bg="secondary">{problem.difficulty}</Badge>
-          </h1>
-          {open && <Countdown ms={remainingMs(attempt)} />}
-        </Stack>
-        <Markdown source={wording.statement} />
-        {wording.examples.map((example, i) => (
-          <div key={i}>
-            <h2 className="h6">Example {i + 1}</h2>
-            <pre className="bg-body-tertiary p-2 rounded mb-1">
-              {`Input: ${example.input}\nOutput: ${example.output}`}
-            </pre>
-            {example.explanation && <p className="small">{example.explanation}</p>}
-          </div>
-        ))}
-        {wording.constraints.length > 0 && (
-          <>
-            <h2 className="h6">Constraints</h2>
-            <ul className="small">
-              {wording.constraints.map((c) => (
-                <li key={c}>{c}</li>
-              ))}
-            </ul>
-          </>
-        )}
-      </div>
+  const concept = topic.concepts.find((c) => c.id === problem.concept)?.name ?? problem.concept
+  const status = problemStatus(attempt, attempt.grade && attempt)
+
+  const statement = (
+    <div className="ws-statement">
+      <h1 className="h3">{wording.title}</h1>
+      <p className="ws-statement-meta">
+        <span className="ws-difficulty" data-level={problem.difficulty}>
+          {problem.difficulty}
+        </span>
+        {concept}, {topic.name}
+      </p>
+      <Markdown source={wording.statement} />
+      {wording.examples.map((example, i) => (
+        <div key={i}>
+          <h2 className="h6">Example {i + 1}</h2>
+          <pre className="ws-example">{`Input: ${example.input}\nOutput: ${example.output}`}</pre>
+          {example.explanation && <p className="small">{example.explanation}</p>}
+        </div>
+      ))}
+      {wording.constraints.length > 0 && (
+        <>
+          <h2 className="h6">Constraints</h2>
+          <ul className="small">
+            {wording.constraints.map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ul>
+        </>
+      )}
       <Hints
         hints={problem.hints.slice(0, hintsShown)}
         onMore={
@@ -153,13 +169,33 @@ export function ProblemPage({ topic, problem, initial, attempts, runner, onSave,
         nextCap={hintCap(hintsShown + 1)}
         disabled={busy}
       />
+      {last && (
+        <details className="ws-reference">
+          <summary>Reference solution</summary>
+          <pre>{problem.reference_solution}</pre>
+        </details>
+      )}
+    </div>
+  )
+
+  const editor = (
+    <div className="ws-code">
+      <div className="ws-code-bar">
+        <StatusPill status={status} />
+        {open && <span className="ws-cap">Max score {hintCap(hintsShown)}</span>}
+        {open && <Countdown ms={remainingMs(attempt)} />}
+        <span className="ms-auto">
+          <RuntimeStatus runner={runner} />
+        </span>
+      </div>
       <CodeEditor
+        className="ws-code-editor"
         initialValue={attempt.code}
         onChange={(code) => change((a) => ({ ...a, code }))}
         label="Solution code"
         readOnly={busy}
       />
-      <Stack direction="horizontal" gap={2}>
+      <div className="ws-code-actions">
         <Button variant="outline-secondary" onClick={run} disabled={busy}>
           Run
         </Button>
@@ -169,20 +205,31 @@ export function ProblemPage({ topic, problem, initial, attempts, runner, onSave,
         <Button variant="primary" onClick={grade} disabled={busy}>
           Grade
         </Button>
-        <span className="ms-auto">
-          <RuntimeStatus runner={runner} />
-        </span>
-      </Stack>
-      {busy && <p role="status">Running…</p>}
-      {outcome && <OutcomeView outcome={outcome} visible={problem.visible_tests} />}
-      {last?.grade && <GradeView grade={last.grade} />}
-      {last && (
-        <details>
-          <summary>Reference solution</summary>
-          <pre className="bg-body-tertiary p-2 rounded mt-2">{problem.reference_solution}</pre>
-        </details>
+        {busy && (
+          <span role="status" className="text-body-secondary">
+            Running…
+          </span>
+        )}
+        {!open && (
+          <Link className="btn btn-outline-secondary ms-auto" to={back} held={busy}>
+            Back to problems
+          </Link>
+        )}
+      </div>
+      {(outcome || last?.grade) && (
+        <div className="ws-results">
+          {outcome && <OutcomeView outcome={outcome} visible={problem.visible_tests} />}
+          {last?.grade && <GradeView grade={last.grade} />}
+        </div>
       )}
-    </Stack>
+    </div>
+  )
+
+  return (
+    <SplitView
+      left={{ label: 'Problem', content: statement }}
+      right={{ label: 'Code', content: editor }}
+    />
   )
 }
 
@@ -197,12 +244,12 @@ function Hints({ hints, onMore, nextCap, disabled }: HintsProps) {
   return (
     <section aria-label="Hints">
       {hints.map((hint, i) => (
-        <Alert key={i} variant="info" className="py-2 mb-2">
+        <p key={i} className="ws-hint">
           <strong>Hint {i + 1}.</strong> {hint}
-        </Alert>
+        </p>
       ))}
       {onMore && (
-        <Button variant="outline-info" size="sm" onClick={onMore} disabled={disabled}>
+        <Button variant="outline-secondary" size="sm" onClick={onMore} disabled={disabled}>
           Show hint {hints.length + 1} (max score {nextCap})
         </Button>
       )}
@@ -251,7 +298,10 @@ function OutcomeView({ outcome, visible }: { outcome: Outcome; visible: string[]
 function GradeView({ grade }: { grade: Grade }) {
   return (
     <section aria-label="Grade">
-      <h2 className="h4">Score: {grade.score} / 100</h2>
+      <div className="ws-grade-head">
+        <h2 className="h4">Score: {grade.score} / 100</h2>
+        <TestMarks grade={grade} />
+      </div>
       {grade.hint_cap < grade.code_score && (
         <p className="text-body-secondary">
           Tests earned {grade.code_score}; hints capped the score at {grade.hint_cap}.

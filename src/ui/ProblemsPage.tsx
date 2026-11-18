@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Button, Form } from 'react-bootstrap'
 import { DIFFICULTIES, type Problem, type Topic, type TopicFile } from '@/content/schema'
-import type { Attempt, Grade } from '@/core/attempt'
+import type { Attempt } from '@/core/attempt'
 import {
   applicableFilter,
   filterProblems,
@@ -15,13 +15,7 @@ import {
 } from '@/core/problems'
 import { Icon } from './icons'
 import { Link } from './Link'
-
-const STATUS_LABEL: Record<ProblemStatus, string> = {
-  new: 'New',
-  'in-progress': 'In progress',
-  solved: 'Solved',
-  'needs-work': 'Needs work',
-}
+import { STATUS_LABEL, StatusPill, TestMarks } from './progress'
 
 const STATUS_OPTION: Record<ProblemStatus, string> = {
   ...STATUS_LABEL,
@@ -270,9 +264,7 @@ function ProblemRow({ entry, onStart, onResume }: ProblemRowProps) {
           </>
         )}
       </span>
-      <span className="ws-status" data-status={status}>
-        {STATUS_LABEL[status]}
-      </span>
+      <StatusPill status={status} />
       <div className="ws-problem-actions">
         {unfinished && (
           <Button size="sm" aria-label={`Resume ${title}`} onClick={onResume}>
@@ -289,20 +281,5 @@ function ProblemRow({ entry, onStart, onResume }: ProblemRowProps) {
         </Button>
       </div>
     </li>
-  )
-}
-
-function TestMarks({ grade }: { grade?: Grade }) {
-  if (!grade) return <span className="ws-marks" />
-  if (grade.tests.length === 0)
-    return <span className="ws-marks text-body-secondary">No tests ran</span>
-  const passed = grade.tests.filter((t) => t.passed).length
-  const label = `${passed} of ${grade.tests.length} tests passed`
-  return (
-    <span className="ws-marks" role="img" aria-label={label} title={label}>
-      {grade.tests.map((t, i) => (
-        <i key={i} data-passed={t.passed} />
-      ))}
-    </span>
   )
 }

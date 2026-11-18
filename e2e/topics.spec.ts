@@ -65,6 +65,8 @@ test('create a topic, fill it from a chat, solve a problem from it', async ({ pa
   await editor.click()
   await page.keyboard.press('ControlOrMeta+a')
   await page.keyboard.insertText(reference)
+  // The completion list may open over the buttons below the editor.
+  await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Grade' }).click()
   await expect(page.getByRole('region', { name: 'Grade' })).toContainText('Score: 100 / 100')
 })

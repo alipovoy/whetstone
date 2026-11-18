@@ -130,6 +130,8 @@ const problemRow = (title: string) =>
   within(screen.getByRole('region', { name: 'Problems' })).getByRole('listitem', { name: title })
 
 describe('App', () => {
+  afterEach(() => localStorage.removeItem('whetstone.panes'))
+
   it('lists the problems, opens one on Start with its statement sanitised, and warms up Python', async () => {
     const runner = fakeRunner()
     renderApp(runner)
@@ -389,6 +391,54 @@ describe('App', () => {
         .map((o) => o.textContent),
     ).toEqual(['All areas', 'H'])
     expect(problemRow('Third problem')).toBeInTheDocument()
+  })
+
+  it('collapses either pane but not both, resizes them, and keeps the layout', async () => {
+    await startFirst()
+    const separator = screen.getByRole('separator', { name: 'Resize panes' })
+    expect(separator).toHaveAttribute('aria-valuenow', '50')
+    separator.focus()
+    await userEvent.keyboard('{ArrowRight}{ArrowRight}')
+    expect(separator).toHaveAttribute('aria-valuenow', '60')
+    await userEvent.keyboard('{End}{ArrowRight}')
+    expect(separator).toHaveAttribute('aria-valuenow', '75')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Collapse Problem' }))
+    expect(screen.queryByRole('region', { name: 'Problem' })).toBeNull()
+    expect(screen.queryByRole('separator')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Collapse Code' })).toBeNull()
+    expect(JSON.parse(localStorage.getItem('whetstone.panes')!)).toEqual({
+      split: 75,
+      collapsed: 'left',
+    })
+
+    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Resume First problem' }))
+    expect(screen.queryByRole('region', { name: 'Problem' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Expand Problem' }))
+    expect(screen.getByRole('region', { name: 'Problem' })).toBeInTheDocument()
+    expect(screen.getByRole('separator')).toHaveAttribute('aria-valuenow', '75')
+  })
+
+  it('ignores a damaged pane layout', () => {
+    localStorage.setItem('whetstone.panes', '{"split": "wide", "collapsed": "both"')
+    renderApp(fakeRunner(), {}, { page: 'solve', topic: 't', problem: 'one' })
+    expect(screen.getByRole('separator')).toHaveAttribute('aria-valuenow', '50')
+    expect(screen.getByRole('region', { name: 'Problem' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Code' })).toBeInTheDocument()
+  })
+
+  it('returns to the list as it was filtered once graded', async () => {
+    renderApp(fakeRunner(), {}, { page: 'problems', filter: { status: 'new' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Start First problem' }))
+    expect(screen.queryByRole('link', { name: 'Back to problems' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Grade' }))
+    const grade = await screen.findByRole('region', { name: 'Grade' })
+    expect(within(grade).getByRole('img')).toHaveAccessibleName('1 of 2 tests passed')
+    expect(screen.getByRole('region', { name: 'Code' })).toHaveTextContent('Needs work')
+    await userEvent.click(screen.getByRole('link', { name: 'Back to problems' }))
+    expect(window.location.hash).toBe('#/coding?status=new')
+    expect(screen.queryByRole('listitem', { name: 'First problem' })).toBeNull()
   })
 
   it('warns when work cannot be saved', () => {

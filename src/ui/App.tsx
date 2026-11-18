@@ -15,7 +15,7 @@ import { QuizzesPage } from './QuizzesPage'
 import { TopicPage } from './TopicPage'
 import { TopicsPage } from './TopicsPage'
 import { Link } from './Link'
-import { navigate, replaceRoute, sectionOf, useRoute, type Route } from './route'
+import { href, navigate, replaceRoute, sectionOf, useRoute, type Route } from './route'
 import { AppearancePage, ReportPage } from './SectionPages'
 
 export type AppRunner = Pick<PyodideRunner, 'run' | 'test' | 'warmUp' | 'status' | 'subscribe'>
@@ -147,6 +147,10 @@ export function App({ runner, storage }: Props) {
   const target =
     route.page === 'solve' ? owner?.problems.find((p) => p.id === route.problem) : undefined
 
+  // The list as last filtered, for the way back from a problem.
+  const [list, setList] = useState<Route>({ page: 'problems' })
+  if (route.page === 'problems' && href(route) !== href(list)) setList(route)
+
   const section = sectionOf(route)
   const topic = route.page === 'topic' ? topics.find((t) => t.id === route.id) : undefined
   const quiz = route.page === 'quiz' ? quizzes.find((q) => q.id === route.id) : undefined
@@ -198,9 +202,9 @@ export function App({ runner, storage }: Props) {
             onResume={resume}
           />
         )}
-        {route.page === 'solve' && (
-          <div className="ws-page">
-            {owner && target ? (
+        {route.page === 'solve' &&
+          (owner && target ? (
+            <div className="ws-solve">
               <ProblemPage
                 key={`${owner.topic.id}/${target.id}`}
                 topic={owner.topic}
@@ -210,12 +214,14 @@ export function App({ runner, storage }: Props) {
                 runner={runner}
                 onSave={save}
                 onBusy={setBusy}
+                back={list}
               />
-            ) : (
-              <Missing what="This problem" back={{ page: 'problems' }} />
-            )}
-          </div>
-        )}
+            </div>
+          ) : (
+            <div className="ws-page">
+              <Missing what="This problem" back={list} />
+            </div>
+          ))}
         {route.page === 'problems' && (
           <div className="ws-page">
             <ProblemsPage
