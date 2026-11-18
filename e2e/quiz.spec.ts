@@ -118,7 +118,10 @@ test('show the quiz status below the question on a narrow screen', async ({ page
   const panel = page.getByRole('complementary', { name: 'Quiz status' })
   await panel.getByRole('button', { name: /^Question 3,/ }).click()
   await expect(page.getByRole('heading', { name: 'Question 3 of 10' })).toBeInViewport()
+  // The jump scrolls smoothly, so the heading settles below the top bar after a moment.
   const bar = (await page.getByRole('banner').boundingBox())!
-  const heading = (await page.getByRole('heading', { name: 'Question 3 of 10' }).boundingBox())!
-  expect(heading.y).toBeGreaterThanOrEqual(bar.y + bar.height)
+  const heading = page.getByRole('heading', { name: 'Question 3 of 10' })
+  await expect
+    .poll(async () => (await heading.boundingBox())!.y)
+    .toBeGreaterThanOrEqual(bar.y + bar.height)
 })
