@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 test('the editor indents Python by 4 spaces and Tab indents', async ({ page }) => {
-  await page.goto('./')
+  await page.goto('./#/coding')
   await page
     .getByRole('button', { name: /^Start / })
     .first()

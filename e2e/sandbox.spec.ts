@@ -9,7 +9,7 @@ print("packages load")
 `
 
 test('Python in the worker cannot reach stored data or the network', async ({ page }) => {
-  await page.goto('./')
+  await page.goto('./#/coding')
   await page
     .getByRole('button', { name: /^Start / })
     .first()
