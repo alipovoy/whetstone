@@ -142,7 +142,10 @@ const problemRow = (title: string) =>
   within(screen.getByRole('region', { name: 'Problems' })).getByRole('listitem', { name: title })
 
 describe('App', () => {
-  afterEach(() => localStorage.removeItem('whetstone.panes'))
+  afterEach(() => {
+    localStorage.removeItem('whetstone.panes')
+    localStorage.removeItem('whetstone.results')
+  })
 
   it('lists the problems, opens one on Start with its statement sanitised, and warms up Python', async () => {
     const runner = fakeRunner()
@@ -218,6 +221,40 @@ describe('App', () => {
     await startFirst()
     await userEvent.click(screen.getByRole('button', { name: 'Run' }))
     expect(await screen.findByRole('region', { name: 'Output' })).toHaveTextContent('hello')
+  })
+
+  it('collapses the results, remembers it, and opens them for the next result', async () => {
+    await startFirst()
+    await userEvent.click(screen.getByRole('button', { name: 'Run tests' }))
+    const toggle = await screen.findByRole('button', { name: /^Results/ })
+    expect(toggle).toHaveTextContent('Tests 1 of 2 passed')
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+
+    await userEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('region', { name: 'Test results' })).toBeNull()
+    expect(localStorage.getItem('whetstone.results')).toBe('collapsed')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Grade' }))
+    await screen.findByRole('region', { name: 'Grade' })
+    expect(screen.getByRole('button', { name: /^Results/ })).toHaveTextContent('Score 50')
+    expect(localStorage.getItem('whetstone.results')).toBe('collapsed')
+  })
+
+  it('opens a problem with the results collapsed when last left so', () => {
+    localStorage.setItem('whetstone.results', 'collapsed')
+    const done = gradeAttempt(
+      startAttempt(crypto.randomUUID(), 't', topic.problems[0], '', 1),
+      topic.topic,
+      topic.problems[0],
+      { tests: graded.tests, loaded: true },
+      2,
+    )
+    renderApp(fakeRunner(), { attempts: [done] }, { page: 'solve', topic: 't', problem: 'one' })
+    const toggle = screen.getByRole('button', { name: /^Results/ })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(toggle).toHaveTextContent('Score 50')
+    expect(screen.queryByRole('region', { name: 'Grade' })).toBeNull()
   })
 
   it('returns to the problem list from the menu, and Home from the logo', async () => {

@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useId, useState, useSyncExternalStore } from 'react'
 import { Alert, Badge, Button, ListGroup } from 'react-bootstrap'
 import {
   gradeAttempt,
@@ -16,6 +16,7 @@ import type { PyodideRunner } from '@/runner/pyodide'
 import { RUN_LIMIT_MS, type RunnerStatus, type RunResult, type TestResult } from '@/runner/types'
 import { CodeEditor } from './CodeEditor'
 import { Countdown } from './Countdown'
+import { Icon } from './icons'
 import { Link } from './Link'
 import { Markdown } from './Markdown'
 import { StatusPill, TestMarks } from './progress'
@@ -45,6 +46,29 @@ interface Props {
 const TICK_MS = 1000
 const MAX_TICK_MS = 2 * TICK_MS
 
+const RESULTS_KEY = 'whetstone.results'
+
+// A display preference of this browser, like the pane layout, so it lives in localStorage. Only
+// the toggle saves it: a new result opens the panel for this problem alone.
+function useResultsShown() {
+  const [shown, setShown] = useState(() => {
+    try {
+      return localStorage.getItem(RESULTS_KEY) !== 'collapsed'
+    } catch {
+      return true
+    }
+  })
+  const toggle = () => {
+    try {
+      localStorage.setItem(RESULTS_KEY, shown ? 'collapsed' : 'shown')
+    } catch {
+      // Without storage the choice holds until reload.
+    }
+    setShown(!shown)
+  }
+  return { shown, toggle, show: () => setShown(true) }
+}
+
 export function ProblemPage({
   topic,
   problem,
@@ -62,6 +86,8 @@ export function ProblemPage({
   )
   const [busy, setBusy] = useState(false)
   const [outcome, setOutcome] = useState<Outcome | null>(null)
+  const results = useResultsShown()
+  const resultsId = useId()
   const wording = problem.wordings[0]
   const last = lastGraded(attempts, topic.id, problem.id)
   const open = !attempt.grade
@@ -97,6 +123,7 @@ export function ProblemPage({
       await job()
     } finally {
       setBusy(false)
+      results.show()
     }
   }
 
@@ -119,10 +146,7 @@ export function ProblemPage({
         setOutcome({ kind: 'failed', error: result.error })
         return
       }
-      const error =
-        result.error ??
-        result.loadError ??
-        (result.testsError && failureText(result.testsError, true))
+      const error = testsProblem(result)
       change((a, now) =>
         gradeAttempt(a, topic, problem, { tests: result.tests, error, loaded: !error }, now),
       )
@@ -217,8 +241,25 @@ export function ProblemPage({
       </div>
       {(outcome || last?.grade) && (
         <div className="ws-results">
-          {outcome && <OutcomeView outcome={outcome} visible={problem.visible_tests} />}
-          {last?.grade && <GradeView grade={last.grade} />}
+          <button
+            type="button"
+            className="ws-results-head"
+            aria-expanded={results.shown}
+            aria-controls={resultsId}
+            onClick={results.toggle}
+          >
+            <Icon name={results.shown ? 'chevron-down' : 'chevron-up'} />
+            <span className="ws-results-title">Results</span>
+            <span className="ws-results-summary">
+              {[outcome && outcomeSummary(outcome), last?.grade && `Score ${last.grade.score}`]
+                .filter(Boolean)
+                .join(', ')}
+            </span>
+          </button>
+          <div id={resultsId} className="ws-results-body" hidden={!results.shown}>
+            {outcome && <OutcomeView outcome={outcome} visible={problem.visible_tests} />}
+            {last?.grade && <GradeView grade={last.grade} />}
+          </div>
         </div>
       )}
     </div>
@@ -256,6 +297,25 @@ function Hints({ hints, onMore, nextCap, disabled }: HintsProps) {
   )
 }
 
+function testsProblem(result: TestResult): string | undefined {
+  return (
+    result.error ?? result.loadError ?? (result.testsError && failureText(result.testsError, true))
+  )
+}
+
+const passedCount = (tests: TestResult['tests']) => tests.filter((t) => t.passed).length
+
+function outcomeSummary(outcome: Outcome): string {
+  if (outcome.kind === 'failed') return 'Grading could not start'
+  if (outcome.kind === 'run') {
+    const { stdout, error } = outcome.result
+    return error ? 'Run failed' : stdout ? 'Output' : 'No output'
+  }
+  const { result } = outcome
+  if (testsProblem(result)) return 'Tests could not run'
+  return `Tests ${passedCount(result.tests)} of ${result.tests.length} passed`
+}
+
 function OutcomeView({ outcome, visible }: { outcome: Outcome; visible: string[] }) {
   if (outcome.kind === 'failed') {
     return (
@@ -280,8 +340,7 @@ function OutcomeView({ outcome, visible }: { outcome: Outcome; visible: string[]
   }
 
   const { result } = outcome
-  const problemText =
-    result.error ?? result.loadError ?? (result.testsError && failureText(result.testsError, true))
+  const problemText = testsProblem(result)
   return (
     <section aria-label="Test results">
       {problemText && (
@@ -317,7 +376,7 @@ function GradeView({ grade }: { grade: Grade }) {
 }
 
 function TestList({ tests, visible }: { tests: TestResult['tests']; visible: string[] }) {
-  const passed = tests.filter((t) => t.passed).length
+  const passed = passedCount(tests)
   return (
     <>
       <p>
