@@ -13,6 +13,7 @@ import {
 } from '@/core/quiz'
 import { Markdown } from './Markdown'
 import { Countdown } from './Countdown'
+import { formatWhen } from './format'
 import { Icon } from './icons'
 import { Link } from './Link'
 
@@ -272,8 +273,7 @@ function Results({ quiz }: { quiz: Quiz }) {
             Quiz result
           </h1>
           <p className="text-body-secondary mb-0">
-            {topics}, {quiz.questions.length} questions,{' '}
-            {new Date(quiz.started_at).toLocaleString()}
+            {topics}, {quiz.questions.length} questions, {formatWhen(quiz.started_at)}
           </p>
         </div>
         <p className="ws-report-score">

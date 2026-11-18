@@ -360,6 +360,14 @@ function GradeView({ grade }: { grade: Grade }) {
         <h2 className="h4">Score: {grade.score} / 100</h2>
         <TestMarks grade={grade} />
       </div>
+      <GradeDetails grade={grade} />
+    </section>
+  )
+}
+
+export function GradeDetails({ grade }: { grade: Grade }) {
+  return (
+    <>
       {grade.hint_cap < grade.code_score && (
         <p className="text-body-secondary">
           Tests earned {grade.code_score}; hints capped the score at {grade.hint_cap}.
@@ -371,7 +379,7 @@ function GradeView({ grade }: { grade: Grade }) {
         </Alert>
       )}
       {!grade.error && <TestList tests={grade.tests} visible={grade.asked.visible_tests} />}
-    </section>
+    </>
   )
 }
 

@@ -9,12 +9,13 @@ export type Route =
   | { page: 'solve'; topic: string; problem: string }
   | { page: 'quizzes' }
   | { page: 'quiz'; id: string }
-  | { page: 'reports'; section: ReportSection }
+  | { page: 'reports'; section: 'coding'; filter?: ProblemFilter }
+  | { page: 'reports'; section: 'quizzes' }
+  | { page: 'attempt'; id: string }
   | { page: 'appearance' }
   | { page: 'topics' }
   | { page: 'topic'; id: string }
 
-export type ReportSection = 'coding' | 'quizzes'
 export type Section = 'home' | 'coding' | 'quizzes' | 'reports' | 'settings'
 
 export function parseRoute(hash: string): Route {
@@ -38,15 +39,15 @@ export function parseRoute(hash: string): Route {
     case 'coding':
       if (second && third) return { page: 'solve', topic: second, problem: third }
       if (second) return { page: 'home' }
-      return withFilter(new URLSearchParams(query))
+      return withFilter({ page: 'problems' }, query)
     case 'quizzes':
       if (third) return { page: 'home' }
       return second ? { page: 'quiz', id: second } : { page: 'quizzes' }
     case 'reports':
+      if (second === 'coding' && third) return { page: 'attempt', id: third }
       if (third) return { page: 'home' }
-      return second === 'quizzes'
-        ? { page: 'reports', section: 'quizzes' }
-        : { page: 'reports', section: 'coding' }
+      if (second === 'quizzes') return { page: 'reports', section: 'quizzes' }
+      return withFilter({ page: 'reports', section: 'coding' }, query)
     case 'settings':
       if (second === 'topics') return third ? { page: 'topic', id: third } : { page: 'topics' }
       return third ? { page: 'home' } : { page: 'appearance' }
@@ -69,7 +70,11 @@ export function href(route: Route): string {
     case 'quiz':
       return path('quizzes', route.id)
     case 'reports':
-      return path('reports', route.section)
+      return route.section === 'coding'
+        ? path('reports', 'coding') + filterQuery(route.filter)
+        : path('reports', 'quizzes')
+    case 'attempt':
+      return path('reports', 'coding', route.id)
     case 'appearance':
       return path('settings', 'appearance')
     case 'topics':
@@ -82,7 +87,8 @@ export function href(route: Route): string {
 const TEXT_FILTERS = ['search', 'topic', 'area'] as const
 const FILTER_KEYS = [...TEXT_FILTERS, 'difficulty', 'status'] as const
 
-function withFilter(params: URLSearchParams): Route {
+function withFilter<R extends Route & { filter?: ProblemFilter }>(route: R, query: string): R {
+  const params = new URLSearchParams(query)
   const filter: ProblemFilter = {}
   for (const key of TEXT_FILTERS) {
     const value = params.get(key)
@@ -92,7 +98,7 @@ function withFilter(params: URLSearchParams): Route {
   if (difficulty) filter.difficulty = difficulty
   const status = PROBLEM_STATUSES.find((s) => s === params.get('status'))
   if (status) filter.status = status
-  return Object.keys(filter).length ? { page: 'problems', filter } : { page: 'problems' }
+  return Object.keys(filter).length ? { ...route, filter } : route
 }
 
 function filterQuery(filter: ProblemFilter = {}): string {
@@ -116,6 +122,7 @@ export function sectionOf(route: Route): Section {
     case 'quiz':
       return 'quizzes'
     case 'reports':
+    case 'attempt':
       return 'reports'
     case 'appearance':
     case 'topics':

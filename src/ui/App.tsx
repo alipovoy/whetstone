@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Alert } from 'react-bootstrap'
-import { latestAttempt, startAttempt, type Attempt } from '@/core/attempt'
+import { latestAttempt, startAttempt, type Attempt, type Grade } from '@/core/attempt'
 import { startQuiz, submitQuiz, type Quiz, type QuizSetup } from '@/core/quiz'
 import { newTopic, served, type TopicRecord } from '@/core/topics'
 import type { Problem, Topic } from '@/content/schema'
@@ -16,7 +16,8 @@ import { TopicPage } from './TopicPage'
 import { TopicsPage } from './TopicsPage'
 import { Link } from './Link'
 import { href, navigate, replaceRoute, sectionOf, useRoute, type Route } from './route'
-import { AppearancePage, ReportPage } from './SectionPages'
+import { AttemptReport, CodingReport, QuizReport } from './ReportsPages'
+import { AppearancePage } from './SectionPages'
 
 export type AppRunner = Pick<PyodideRunner, 'run' | 'test' | 'warmUp' | 'status' | 'subscribe'>
 
@@ -161,10 +162,24 @@ export function App({ runner, storage }: Props) {
   // The list as last filtered, for the way back from a problem.
   const [list, setList] = useState<Route>({ page: 'problems' })
   if (route.page === 'problems' && href(route) !== href(list)) setList(route)
+  // The same for the graded attempts.
+  const [history, setHistory] = useState<Route>({ page: 'reports', section: 'coding' })
+  if (route.page === 'reports' && route.section === 'coding' && href(route) !== href(history))
+    setHistory(route)
 
   const section = sectionOf(route)
   const topic = route.page === 'topic' ? topics.find((t) => t.id === route.id) : undefined
   const quiz = route.page === 'quiz' ? quizzes.find((q) => q.id === route.id) : undefined
+  const graded =
+    route.page === 'attempt'
+      ? attempts.find((a): a is Attempt & { grade: Grade } => a.id === route.id && !!a.grade)
+      : undefined
+  const servedProblem = (attempt: Attempt): Route | undefined =>
+    enabled.some(
+      (f) => f.topic.id === attempt.topic && f.problems.some((p) => p.id === attempt.problem),
+    )
+      ? { page: 'solve', topic: attempt.topic, problem: attempt.problem }
+      : undefined
 
   const settings = (children: ReactNode) => (
     <div className="ws-page">
@@ -270,24 +285,51 @@ export function App({ runner, storage }: Props) {
             )}
           </div>
         )}
-        {route.page === 'reports' && (
+        {(route.page === 'reports' || route.page === 'attempt') && (
           <div className="ws-page">
             <SideMenuPage
               label="Reports"
               items={[
                 {
                   label: 'Coding problems',
-                  to: { page: 'reports', section: 'coding' },
-                  current: route.section === 'coding',
+                  to: history,
+                  current: route.page === 'attempt' || route.section === 'coding',
                 },
                 {
                   label: 'Quizzes',
                   to: { page: 'reports', section: 'quizzes' },
-                  current: route.section === 'quizzes',
+                  current: route.page === 'reports' && route.section === 'quizzes',
                 },
               ]}
             >
-              <ReportPage section={route.section} />
+              {route.page === 'reports' && route.section === 'coding' && (
+                <CodingReport
+                  topics={topics}
+                  attempts={attempts}
+                  filter={route.filter ?? {}}
+                  onFilter={(filter) =>
+                    replaceRoute({ page: 'reports', section: 'coding', filter })
+                  }
+                />
+              )}
+              {route.page === 'reports' && route.section === 'quizzes' && (
+                <QuizReport quizzes={quizzes} />
+              )}
+              {route.page === 'attempt' &&
+                (graded ? (
+                  <AttemptReport
+                    key={graded.id}
+                    attempt={graded}
+                    problem={servedProblem(graded)}
+                    back={history}
+                  />
+                ) : (
+                  <Missing
+                    what="This attempt"
+                    back={history}
+                    why="Only graded attempts are kept in the report."
+                  />
+                ))}
             </SideMenuPage>
           </div>
         )}
@@ -320,11 +362,17 @@ export function App({ runner, storage }: Props) {
   )
 }
 
-function Missing({ what, back }: { what: string; back: Route }) {
+interface MissingProps {
+  what: string
+  back: Route
+  why?: string
+}
+
+function Missing({ what, back, why = 'It was deleted, or its topic is disabled.' }: MissingProps) {
   return (
     <div className="ws-panel ws-empty">
       <h1 className="h4">{what} is not available</h1>
-      <p className="text-body-secondary">It was deleted, or its topic is disabled.</p>
+      <p className="text-body-secondary">{why}</p>
       <Link className="btn btn-primary" to={back}>
         Go back
       </Link>

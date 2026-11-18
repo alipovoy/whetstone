@@ -1,5 +1,5 @@
 import type { Grade } from '@/core/attempt'
-import type { ProblemStatus } from '@/core/problems'
+import { SOLVED_SCORE, type ProblemStatus } from '@/core/problems'
 
 export const STATUS_LABEL: Record<ProblemStatus, string> = {
   new: 'New',
@@ -7,6 +7,15 @@ export const STATUS_LABEL: Record<ProblemStatus, string> = {
   solved: 'Solved',
   'needs-work': 'Needs work',
 }
+
+const STATUS_OPTION: Record<ProblemStatus, string> = {
+  ...STATUS_LABEL,
+  solved: `Solved (score ${SOLVED_SCORE} or more)`,
+  'needs-work': `Needs work (score under ${SOLVED_SCORE})`,
+}
+
+export const statusOptions = (statuses: readonly ProblemStatus[]) =>
+  statuses.map((value) => ({ value, label: STATUS_OPTION[value] }))
 
 export function StatusPill({ status }: { status: ProblemStatus }) {
   return (

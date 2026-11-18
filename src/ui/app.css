@@ -592,6 +592,7 @@ a[aria-disabled='true'] {
 
 /* Coding problems */
 .ws-filters {
+  container: filters / inline-size;
   display: grid;
   gap: 1rem;
   padding: 1.1rem 1.25rem;
@@ -628,6 +629,7 @@ a[aria-disabled='true'] {
   font-variant-numeric: tabular-nums;
 }
 .ws-problems {
+  container: rows / inline-size;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -723,6 +725,34 @@ a[aria-disabled='true'] {
   display: flex;
   justify-content: flex-end;
   gap: 0.4rem;
+}
+
+/* Reports */
+.ws-report-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+.ws-history-facts {
+  display: grid;
+  justify-items: end;
+  color: var(--ws-muted);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.ws-past-quiz {
+  grid-template-columns: minmax(0, 1fr) 2.5rem;
+}
+.ws-attempt-part {
+  padding: 1.25rem 1.75rem;
+}
+.ws-attempt-code {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--ws-radius);
+  background: var(--ws-sunken);
+  font-size: 0.875rem;
 }
 
 /* Problem page: two panes filling the window */
@@ -1527,7 +1557,8 @@ a[aria-disabled='true'] {
   font-weight: 400;
 }
 
-@media (max-width: 1100px) {
+/* The panel's own width decides, so the filters fit beside a side menu too. */
+@container filters (max-width: 64rem) {
   .ws-filter-fields {
     grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   }
@@ -1651,13 +1682,22 @@ a[aria-disabled='true'] {
   .ws-hero h1 {
     font-size: 1.95rem;
   }
+}
+
+/* The list's own width decides, so rows fit beside a side menu too. */
+@container rows (max-width: 52rem) {
   .ws-problem {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem 1rem;
   }
-  .ws-problem-name {
+  .ws-problem-name,
+  .ws-history-facts {
     flex-basis: 100%;
+  }
+  .ws-history-facts {
+    justify-items: start;
+    text-align: left;
   }
   .ws-problem-actions {
     margin-left: auto;
