@@ -35,6 +35,19 @@ type View =
   | { page: 'quiz'; id: string }
   | { page: 'solve'; topic: Topic; problem: Problem; attempt: Attempt }
 
+const EQUAL = { flex: '1 1 0' }
+
+type Section = 'problems' | 'quizzes' | 'settings'
+
+const SECTION: Record<View['page'], Section> = {
+  problems: 'problems',
+  solve: 'problems',
+  quizzes: 'quizzes',
+  quiz: 'quizzes',
+  settings: 'settings',
+  topic: 'settings',
+}
+
 interface Props {
   runner: AppRunner
   storage: AppStorage
@@ -112,18 +125,21 @@ export function App({ runner, storage }: Props) {
     setView({ page: 'quiz', id: quiz.id })
   }
 
-  // The countdown runs on the wall clock: the quiz is submitted at its deadline on any page.
-  const running = quizzes.find((q) => !q.result)
-  const deadline = running?.deadline
-  const runningId = running?.id
+  // The countdown runs on the wall clock: a quiz is submitted at its deadline on any page.
+  // Another tab may have started a second quiz, so the earliest deadline goes first.
+  const timed = quizzes
+    .filter((q) => !q.result && q.deadline !== undefined)
+    .toSorted((a, b) => (a.deadline ?? 0) - (b.deadline ?? 0))[0]
+  const deadline = timed?.deadline
+  const timedId = timed?.id
   useEffect(() => {
-    if (runningId === undefined || deadline === undefined) return
+    if (timedId === undefined || deadline === undefined) return
     const timer = setTimeout(
-      () => updateQuiz(runningId, (q) => submitQuiz(q, Date.now())),
+      () => updateQuiz(timedId, (q) => submitQuiz(q, Date.now())),
       Math.max(0, deadline - Date.now()),
     )
     return () => clearTimeout(timer)
-  }, [runningId, deadline, updateQuiz])
+  }, [timedId, deadline, updateQuiz])
 
   const enabled = useMemo(
     () =>
@@ -152,6 +168,18 @@ export function App({ runner, storage }: Props) {
     event.preventDefault()
     if (!busy) setView(next)
   }
+  const section = SECTION[view.page]
+  const menuLink = (label: string, page: Section) => (
+    <a
+      className={page === section ? 'nav-link active' : 'nav-link'}
+      href="#"
+      aria-current={page === section ? 'page' : undefined}
+      aria-disabled={busy}
+      onClick={go({ page })}
+    >
+      {label}
+    </a>
+  )
   const topic = view.page === 'topic' ? topics.find((t) => t.id === view.id) : undefined
   const quiz = view.page === 'quiz' ? quizzes.find((q) => q.id === view.id) : undefined
 
@@ -159,32 +187,17 @@ export function App({ runner, storage }: Props) {
     <>
       <Navbar className="border-bottom mb-3">
         <Container>
-          {/* Equal sides keep Code and Quiz in the centre. */}
-          <Navbar.Brand as="span" className="flex-fill" style={{ flexBasis: 0 }}>
+          {/* Equal sides keep Code and Quiz in the centre; me-0 lets the name fit half a phone screen.
+              Not flex-fill: its !important basis is auto, so the sides would follow their text. */}
+          <Navbar.Brand as="span" className="me-0" style={EQUAL}>
             Whetstone
           </Navbar.Brand>
           <Nav>
-            <a
-              className="nav-link"
-              href="#"
-              aria-disabled={busy}
-              onClick={go({ page: 'problems' })}
-            >
-              Code
-            </a>
-            <a className="nav-link" href="#" aria-disabled={busy} onClick={go({ page: 'quizzes' })}>
-              Quiz
-            </a>
+            {menuLink('Code', 'problems')}
+            {menuLink('Quiz', 'quizzes')}
           </Nav>
-          <Nav className="flex-fill justify-content-end" style={{ flexBasis: 0 }}>
-            <a
-              className="nav-link"
-              href="#"
-              aria-disabled={busy}
-              onClick={go({ page: 'settings' })}
-            >
-              Settings
-            </a>
+          <Nav className="justify-content-end" style={EQUAL}>
+            {menuLink('Settings', 'settings')}
           </Nav>
         </Container>
       </Navbar>

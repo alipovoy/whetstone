@@ -1,7 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Alert, Badge, Button, ListGroup, Stack } from 'react-bootstrap'
 import {
-  formatClock,
   gradeAttempt,
   lastGraded,
   openAttempt,
@@ -14,6 +13,7 @@ import type { Problem, Topic } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
 import { RUN_LIMIT_MS, type RunnerStatus, type RunResult, type TestResult } from '@/runner/types'
 import { CodeEditor } from './CodeEditor'
+import { Countdown } from './Countdown'
 import { Markdown } from './Markdown'
 
 export type Runner = Pick<PyodideRunner, 'run' | 'test' | 'status' | 'subscribe'>
@@ -177,18 +177,6 @@ export function ProblemPage({ topic, problem, initial, attempts, runner, onSave,
         </details>
       )}
     </Stack>
-  )
-}
-
-export function Countdown({ ms }: { ms: number }) {
-  return ms > 0 ? (
-    <Badge bg="light" text="dark" className="border fs-6" title="Time left">
-      {formatClock(ms)}
-    </Badge>
-  ) : (
-    <Badge bg="warning" text="dark" className="fs-6">
-      Time is up
-    </Badge>
   )
 }
 

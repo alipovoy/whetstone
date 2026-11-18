@@ -183,6 +183,16 @@ describe('App', () => {
     expect(problemRow('Second problem')).toBeInTheDocument()
   })
 
+  it('marks the menu item of the current page', async () => {
+    renderApp(fakeRunner())
+    const current = () => screen.getByRole('link', { current: 'page' })
+    expect(current()).toHaveTextContent('Code')
+    await userEvent.click(screen.getByRole('link', { name: 'Settings' }))
+    expect(current()).toHaveTextContent('Settings')
+    await userEvent.click(screen.getByRole('link', { name: 'Quiz' }))
+    expect(current()).toHaveTextContent('Quiz')
+  })
+
   it('lowers the maximum score with each hint and caps the grade', async () => {
     const runner = fakeRunner()
     runner.test.mockResolvedValueOnce({
@@ -521,6 +531,7 @@ describe('Topics', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Flag' }))
       expect(lastSaved(put)).toMatchObject({ picks: [[1], []], flagged: [true, false] })
       await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+      expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
       await userEvent.click(screen.getByRole('checkbox', { name: 'a' }))
 
       await userEvent.click(screen.getByRole('button', { name: 'Review and submit' }))
@@ -571,6 +582,20 @@ describe('Topics', () => {
       const expired = startQuiz(crypto.randomUUID(), setup, Date.now() - 11 * 60_000)
       const put = withQuestions([expired])
       await vi.waitFor(() => expect(lastSaved(put).result).toMatchObject({ score: 0 }))
+    })
+
+    it('submits a timed quiz while another, untimed, runs too (started in another tab)', async () => {
+      const setup = { topics: [quizTopic], types: ['single' as const], size: 5 }
+      const untimed = startQuiz(crypto.randomUUID(), setup, Date.now())
+      const expired = startQuiz(
+        crypto.randomUUID(),
+        { ...setup, minutes: 10 },
+        Date.now() - 11 * 60_000,
+      )
+      const put = withQuestions([untimed, expired])
+      await vi.waitFor(() =>
+        expect(lastSaved(put)).toMatchObject({ id: expired.id, result: { score: 0 } }),
+      )
     })
   })
 })

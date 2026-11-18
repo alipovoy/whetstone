@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Badge, Button, Card, Form, ListGroup, Stack } from 'react-bootstrap'
 import { choose, submitQuiz, timeLeft, toggleFlag, type Quiz, type Shown } from '@/core/quiz'
 import { Markdown } from './Markdown'
-import { Countdown } from './ProblemPage'
+import { Countdown } from './Countdown'
 
 interface Props {
   quiz: Quiz
@@ -104,11 +104,13 @@ function Taking({ quiz, onChange }: Props) {
         >
           Previous
         </Button>
-        {index < total - 1 && (
-          <Button variant="outline-secondary" onClick={() => setIndex(index + 1)}>
-            Next
-          </Button>
-        )}
+        <Button
+          variant="outline-secondary"
+          disabled={index === total - 1}
+          onClick={() => setIndex(index + 1)}
+        >
+          Next
+        </Button>
         <Button
           variant="outline-warning"
           aria-pressed={flagged}
