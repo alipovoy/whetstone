@@ -142,12 +142,16 @@ export function App({ runner, storage }: Props) {
   }
   const resume = (topic: Topic, problem: Problem) =>
     navigate({ page: 'solve', topic: topic.id, problem: problem.id })
-  // Every open attempt goes: an earlier Start over may have left one behind the latest.
+  // Every open attempt goes: Start over, before Discard replaced it, left one behind the latest.
   const discard = (topic: Topic, problem: Problem) => {
-    const open = (a: Attempt) => a.topic === topic.id && a.problem === problem.id && !a.grade
-    for (const attempt of attempts.filter(open))
-      store?.attempts.delete(attempt.id).catch((error: unknown) => setSaveError(message(error)))
-    setAttempts((list) => list.filter((a) => !open(a)))
+    const ids = attempts
+      .filter((a) => a.topic === topic.id && a.problem === problem.id && !a.grade)
+      .map((a) => a.id)
+    setAttempts((list) => list.filter((a) => !ids.includes(a.id)))
+    if (store)
+      Promise.all(ids.map((id) => store.attempts.delete(id))).catch((error: unknown) =>
+        setSaveError(message(error)),
+      )
   }
 
   const owner = route.page === 'solve' ? enabled.find((f) => f.topic.id === route.topic) : undefined
