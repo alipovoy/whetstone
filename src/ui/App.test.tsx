@@ -10,7 +10,7 @@ import { startQuiz, submitQuiz, type Quiz } from '@/core/quiz'
 import { itemText, topicFromFile, type TopicRecord } from '@/core/topics'
 import { App, type AppRunner, type AppStorage } from './App'
 import { href, type Route } from './route'
-import { setThemeChoice } from './theme'
+import { applyTheme, setScheme, setThemeChoice } from './theme'
 
 const problem = (id: string, title: string): TopicFile['problems'][number] => ({
   id,
@@ -305,7 +305,10 @@ describe('App', () => {
 })
 
 describe('Layout', () => {
-  afterEach(() => setThemeChoice('system'))
+  afterEach(() => {
+    setThemeChoice('system')
+    setScheme('slate')
+  })
 
   it('continues the latest unfinished problem from Home, and lists recent results', async () => {
     const open = startAttempt(
@@ -380,6 +383,21 @@ describe('Layout', () => {
       'aria-pressed',
       'true',
     )
+  })
+
+  it('switches the colour scheme in Appearance and restores it on load', async () => {
+    renderApp(fakeRunner(), {}, { page: 'appearance' })
+    await userEvent.click(screen.getByRole('radio', { name: /Rainbow/ }))
+    expect(document.documentElement).toHaveAttribute('data-ws-scheme', 'rainbow')
+    expect(localStorage.getItem('whetstone.scheme')).toBe('rainbow')
+    expect(document.querySelector('.ws-app')).toHaveAttribute('data-ws-section', 'settings')
+
+    localStorage.setItem('whetstone.scheme', 'mint')
+    act(() => applyTheme())
+    expect(screen.getByRole('radio', { name: /Mint/ })).toBeChecked()
+    localStorage.setItem('whetstone.scheme', 'unknown')
+    act(() => applyTheme())
+    expect(screen.getByRole('radio', { name: /Slate/ })).toBeChecked()
   })
 
   it('shows Reports with a side menu', async () => {

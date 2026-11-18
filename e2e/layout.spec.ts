@@ -38,3 +38,32 @@ test('move between the sections from the top bar, reload, switch the theme', asy
   await page.getByRole('link', { name: 'Whetstone' }).click()
   await expect(page).toHaveURL(/#\/$/)
 })
+
+test('switch the colour scheme, in light and dark, and keep it', async ({ page }) => {
+  await page.goto('./#/settings/appearance')
+  const accent = () =>
+    page.evaluate(() => getComputedStyle(document.body).getPropertyValue('--bs-primary').trim())
+  await page.getByRole('button', { name: 'Light theme' }).click()
+  await expect.poll(accent).toBe('#2c6a8c')
+
+  await page.getByRole('radio', { name: /Sunset/ }).check()
+  await expect.poll(accent).toBe('#c03f12')
+  await page.getByRole('button', { name: 'Dark theme' }).click()
+  await expect.poll(accent).toBe('#f38c5c')
+  await page.reload()
+  await expect(page.getByRole('radio', { name: /Sunset/ })).toBeChecked()
+  await expect.poll(accent).toBe('#f38c5c')
+
+  await page.getByRole('radio', { name: /Rainbow/ }).check()
+  const underline = (label: string) =>
+    page
+      .getByRole('navigation', { name: 'Main' })
+      .getByRole('link', { name: label })
+      .evaluate((a) => getComputedStyle(a).borderBottomColor)
+  const settings = await underline('Settings')
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('link', { name: 'Quizzes' })
+    .click()
+  expect(await underline('Quizzes')).not.toBe(settings)
+})
