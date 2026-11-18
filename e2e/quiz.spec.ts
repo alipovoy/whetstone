@@ -113,4 +113,12 @@ test('show the quiz status below the question on a narrow screen', async ({ page
   const question = (await page.getByRole('region', { name: /^Question 1 of/ }).boundingBox())!
   const status = (await page.getByRole('complementary', { name: 'Quiz status' }).boundingBox())!
   expect(status.y).toBeGreaterThan(question.y + question.height - 1)
+  await expect(page.locator('.ws-question-clock')).toBeVisible()
+
+  const panel = page.getByRole('complementary', { name: 'Quiz status' })
+  await panel.getByRole('button', { name: /^Question 3,/ }).click()
+  await expect(page.getByRole('heading', { name: 'Question 3 of 10' })).toBeInViewport()
+  const bar = (await page.getByRole('banner').boundingBox())!
+  const heading = (await page.getByRole('heading', { name: 'Question 3 of 10' }).boundingBox())!
+  expect(heading.y).toBeGreaterThanOrEqual(bar.y + bar.height)
 })

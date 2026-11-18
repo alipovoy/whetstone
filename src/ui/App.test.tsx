@@ -851,10 +851,10 @@ describe('Topics', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Next' }))
       expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
       await userEvent.click(screen.getByRole('checkbox', { name: 'a' }))
-      const legend = screen.getByRole('complementary', { name: 'Quiz status' })
-      expect(legend).toHaveTextContent('Answered 2')
-      expect(legend).toHaveTextContent('Not answered 0')
-      expect(legend).toHaveTextContent('Flagged 1')
+      const panel = screen.getByRole('complementary', { name: 'Quiz status' })
+      expect(panel).toHaveTextContent('Answered 2')
+      expect(panel).toHaveTextContent('Not answered 0')
+      expect(panel).toHaveTextContent('Flagged 1')
 
       await userEvent.click(status.getByRole('button', { name: 'Submit quiz' }))
       const dialog = within(screen.getByRole('dialog', { name: 'Submit the quiz?' }))
@@ -970,6 +970,19 @@ describe('Topics', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Start quiz' }))
       expect(put.quizzes.delete).toHaveBeenCalledWith(running.id)
       expect(lastSaved(put).questions).toHaveLength(2)
+    })
+
+    it('closes the submit dialog when time runs out and shows the result', async () => {
+      const quiz = startQuiz(crypto.randomUUID(), quizOf(['single'], true), Date.now())
+      const soon = { ...quiz, deadline: Date.now() + 300 }
+      withQuestions([soon])
+      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Resume' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Submit quiz' }))
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(await screen.findByRole('region', { name: 'Quiz result' })).toBeInTheDocument()
+      await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(document.body).not.toHaveClass('modal-open')
     })
 
     it('submits a quiz whose deadline has passed', async () => {

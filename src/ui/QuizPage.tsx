@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { formatClock } from '@/core/attempt'
 import { Badge, Button, Card, ListGroup, Modal, Stack } from 'react-bootstrap'
 import { choose, submitQuiz, timeLeft, toggleFlag, type Quiz, type Shown } from '@/core/quiz'
 import { Markdown } from './Markdown'
@@ -29,8 +30,13 @@ function Taking({ quiz, onChange }: Props) {
   const titleId = useId()
   // Inside the page, so the dialog takes the section's colours.
   const page = useRef<HTMLDivElement>(null)
-  const now = useNow(quiz.deadline !== undefined)
-  const left = timeLeft(quiz, now)
+  const question = useRef<HTMLElement>(null)
+  // On narrow screens the panel is below the question, which a jump then brings into view.
+  const jump = (i: number) => {
+    setIndex(i)
+    const box = question.current?.getBoundingClientRect()
+    if (box && box.top < 0) question.current?.scrollIntoView({ block: 'start' })
+  }
 
   const shown = quiz.questions[index]
   const picks = quiz.picks[index]
@@ -41,7 +47,11 @@ function Taking({ quiz, onChange }: Props) {
 
   return (
     <div className="ws-quiz" ref={page}>
-      <section className="ws-panel ws-question" aria-label={`Question ${index + 1} of ${total}`}>
+      <section
+        ref={question}
+        className="ws-panel ws-question"
+        aria-label={`Question ${index + 1} of ${total}`}
+      >
         <div className="ws-question-head">
           <h1 className="h5 mb-0">
             Question {index + 1} of {total}
@@ -58,6 +68,7 @@ function Taking({ quiz, onChange }: Props) {
               Flagged
             </span>
           )}
+          <QuizClock quiz={quiz} compact />
         </div>
         <div className="ws-question-text">
           <Markdown source={shown.text} />
@@ -107,14 +118,7 @@ function Taking({ quiz, onChange }: Props) {
       </section>
       <aside className="ws-panel ws-quiz-status" aria-label="Quiz status">
         <div className="ws-quiz-clock">
-          {left === undefined ? (
-            <span className="text-body-secondary">No time limit</span>
-          ) : (
-            <>
-              <span className="text-body-secondary">Time left</span>
-              <Countdown ms={left} low={left < LOW_MS} />
-            </>
-          )}
+          <QuizClock quiz={quiz} />
         </div>
         <nav className="ws-numbers" aria-label="Questions">
           {quiz.questions.map((_, i) => {
@@ -132,7 +136,7 @@ function Taking({ quiz, onChange }: Props) {
                 aria-current={i === index ? 'step' : undefined}
                 aria-label={`Question ${i + 1}, ${state}`}
                 title={`Question ${i + 1}, ${state}`}
-                onClick={() => setIndex(i)}
+                onClick={() => jump(i)}
               >
                 {i + 1}
               </button>
@@ -198,6 +202,31 @@ function Taking({ quiz, onChange }: Props) {
 
 function count(n: number): string {
   return n === 1 ? '1 question' : `${n} questions`
+}
+
+// Its own component, so only the clock re-renders every second. The compact copy shows on narrow
+// screens, where the panel is below the question; screen readers have the panel's.
+function QuizClock({ quiz, compact = false }: { quiz: Quiz; compact?: boolean }) {
+  const now = useNow(quiz.deadline !== undefined)
+  const left = timeLeft(quiz, now)
+  if (left === undefined)
+    return compact ? null : <span className="text-body-secondary">No time limit</span>
+  if (compact)
+    return (
+      <span
+        className="ws-clock ws-question-clock"
+        data-low={left < LOW_MS || undefined}
+        aria-hidden="true"
+      >
+        {left > 0 ? formatClock(left) : 'Time is up'}
+      </span>
+    )
+  return (
+    <>
+      <span className="text-body-secondary">Time left</span>
+      <Countdown ms={left} low={left < LOW_MS} />
+    </>
+  )
 }
 
 // The clock, re-read every second while a countdown is shown.
