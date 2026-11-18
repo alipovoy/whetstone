@@ -99,8 +99,14 @@ test('take a ten-question quiz on two topics, reload and resume it, read the res
   await expect(result.getByText('Not answered.')).toHaveCount(8)
   await expect(result).toContainText('Strings, Strings basics')
   await expect(result).toContainText('Graphs, Graphs basics')
-
-  await page.getByRole('link', { name: 'Quizzes' }).click()
+  await expect(result).toContainText('wrong or not answered')
+  await expect(
+    page.getByRole('region', { name: 'Score by concept' }).getByRole('listitem'),
+  ).toHaveCount(2)
+  await page.getByRole('switch', { name: 'Not fully correct only' }).check()
+  await expect(result.getByText('Not answered.')).toHaveCount(8)
+  await page.getByRole('link', { name: 'Build another quiz' }).click()
+  await expect(page.getByRole('form', { name: 'New quiz' })).toBeVisible()
   await expect(
     page.getByRole('region', { name: 'Past quizzes' }).getByRole('listitem'),
   ).toHaveCount(1)
