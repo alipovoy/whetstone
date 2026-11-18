@@ -41,6 +41,7 @@ export function TopBar({ section, held }: TopBarProps) {
             key={item.section}
             to={item.to}
             held={held}
+            data-ws-section={item.section}
             aria-current={item.section === section ? 'page' : undefined}
           >
             <Icon name={item.icon} />

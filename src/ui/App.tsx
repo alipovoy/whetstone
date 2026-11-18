@@ -170,7 +170,7 @@ export function App({ runner, storage }: Props) {
   )
 
   return (
-    <div className="ws-app">
+    <div className="ws-app" data-ws-section={section}>
       <TopBar section={section} held={busy} />
       <main className="ws-main">
         {(saveError || storage.skipped > 0) && (
