@@ -1,11 +1,30 @@
 import { describe, expect, it } from 'vitest'
-import type { Question, TopicFile } from '@/content/schema'
-import { candidates, choose, QuizSchema, startQuiz, submitQuiz, timeLeft, toggleFlag } from './quiz'
+import type { Difficulty, Question, TopicFile } from '@/content/schema'
+import {
+  candidates,
+  choose,
+  drawQuestions,
+  quizAreas,
+  QuizSchema,
+  startQuiz,
+  submitQuiz,
+  timeLeft,
+  timeLimit,
+  toggleFlag,
+  type QuizFilter,
+} from './quiz'
 
-const question = (id: string, type: Question['type'], answers: number[]): Question => ({
+const question = (
+  id: string,
+  type: Question['type'],
+  answers: number[],
+  difficulty: Difficulty = 'Easy',
+  concept = 'c',
+): Question => ({
   id,
   type,
-  concept: 'c',
+  difficulty,
+  concept,
   wordings: [
     { text: `${id} first`, options: ['a', 'b', 'c', 'd'] },
     { text: `${id} second`, options: ['A', 'B', 'C', 'D'] },
@@ -17,15 +36,33 @@ const question = (id: string, type: Question['type'], answers: number[]): Questi
 })
 
 const topic = (id: string, questions: Question[]): TopicFile => ({
-  topic: { id, name: id.toUpperCase(), concepts: [{ id: 'c', name: 'Concept', group: 'G' }] },
+  topic: {
+    id,
+    name: id.toUpperCase(),
+    concepts: [
+      { id: 'c', name: 'Concept', group: 'G' },
+      { id: 'd', name: 'Other', group: 'H' },
+    ],
+  },
   problems: [],
   questions,
 })
 
 const topics = [
-  topic('t1', [question('s1', 'single', [1]), question('m1', 'multiple', [0, 2])]),
-  topic('t2', [question('s2', 'single', [3])]),
+  topic('t1', [question('s1', 'single', [1]), question('m1', 'multiple', [0, 2], 'Hard')]),
+  topic('t2', [question('s2', 'single', [3], 'Medium', 'd')]),
 ]
+
+const everything: QuizFilter = {
+  topics: ['t1', 't2'],
+  offAreas: [],
+  types: ['single', 'multiple'],
+  difficulties: ['Easy', 'Medium', 'Hard'],
+}
+const setup = (filter: Partial<QuizFilter>, timed = false) => ({
+  questions: candidates(topics, { ...everything, ...filter }),
+  timed,
+})
 
 // Takes the given values in turn: for a shuffle, 0.99 keeps an item in place.
 const sequence = (...values: number[]) => {
@@ -35,22 +72,46 @@ const sequence = (...values: number[]) => {
 
 const ID = '00000000-0000-4000-8000-000000000000'
 
-describe('candidates', () => {
-  it('takes the questions of the chosen types from every chosen topic', () => {
-    const ids = (types: Question['type'][]) => candidates(topics, types).map((c) => c.question.id)
-    expect(ids(['single'])).toEqual(['s1', 's2'])
-    expect(ids(['single', 'multiple'])).toEqual(['s1', 'm1', 's2'])
+describe('choosing questions', () => {
+  const ids = (filter: Partial<QuizFilter>) =>
+    candidates(topics, { ...everything, ...filter }).map((c) => c.question.id)
+
+  it('takes the questions of the chosen topics, areas, types and difficulties', () => {
+    expect(ids({})).toEqual(['s1', 'm1', 's2'])
+    expect(ids({ topics: ['t2'] })).toEqual(['s2'])
+    expect(ids({ types: ['single'] })).toEqual(['s1', 's2'])
+    expect(ids({ offAreas: ['G'] })).toEqual(['s2'])
+    expect(ids({ difficulties: ['Hard', 'Medium'] })).toEqual(['m1', 's2'])
+    expect(ids({ topics: [] })).toEqual([])
+  })
+
+  it('offers the areas of the chosen topics', () => {
+    expect(quizAreas(topics, ['t1'])).toEqual(['G'])
+    expect(quizAreas(topics, ['t1', 't2'])).toEqual(['G', 'H'])
+  })
+
+  it('draws the same questions for a seed, and more of them as the count grows', () => {
+    const list = candidates(topics, everything)
+    const key = (n: number, seed: number) => drawQuestions(list, n, seed).map((c) => c.question.id)
+    expect(key(2, 0.5)).toEqual(key(2, 0.5))
+    expect(key(3, 0.5).slice(0, 2)).toEqual(key(2, 0.5))
+    expect(key(2, 0.5).every((id) => key(3, 0.5).includes(id))).toBe(true)
+    const seeds = new Set([0.1, 0.2, 0.3, 0.4, 0.5, 0.6].map((s) => key(3, s).join()))
+    expect(seeds.size).toBeGreaterThan(1)
+  })
+
+  it('allows 1, 2 or 3 minutes per easy, medium or hard question', () => {
+    expect(timeLimit(topics.flatMap((t) => t.questions))).toEqual({
+      minutes: 6,
+      counts: { Easy: 1, Medium: 1, Hard: 1 },
+    })
+    expect(timeLimit([]).minutes).toBe(0)
   })
 })
 
 describe('startQuiz', () => {
   it('copies one wording per question, with its options shuffled and the answers following them', () => {
-    const quiz = startQuiz(
-      ID,
-      { topics, types: ['multiple'], size: 10 },
-      5,
-      sequence(0.6, 0, 0.99, 0.99),
-    )
+    const quiz = startQuiz(ID, setup({ types: ['multiple'] }), 5, sequence(0.6, 0, 0.99, 0.99))
     expect(QuizSchema.safeParse(quiz).success).toBe(true)
     // Wording 2 of 2; the shuffle swaps the first and last option: d b c a, so a and c move to 3 and 2.
     expect(quiz.questions).toEqual([
@@ -61,6 +122,7 @@ describe('startQuiz', () => {
         concept: 'c',
         concept_name: 'Concept',
         type: 'multiple',
+        difficulty: 'Hard',
         wording: 1,
         text: 'm1 second',
         options: ['D', 'B', 'C', 'A'],
@@ -71,16 +133,16 @@ describe('startQuiz', () => {
     expect(quiz).toMatchObject({ picks: [[]], flagged: [false], deadline: undefined })
   })
 
-  it('takes at most the asked number of questions and sets a deadline from the minutes', () => {
-    const quiz = startQuiz(ID, { topics, types: ['single', 'multiple'], size: 2, minutes: 10 }, 5)
-    expect(quiz.questions).toHaveLength(2)
-    expect(quiz.deadline).toBe(5 + 10 * 60_000)
-    expect(timeLeft(quiz, 5 + 60_000)).toBe(9 * 60_000)
+  it('sets the deadline from the difficulty of its questions when timed', () => {
+    const quiz = startQuiz(ID, setup({}, true), 5)
+    expect(quiz.questions).toHaveLength(3)
+    expect(quiz.deadline).toBe(5 + 6 * 60_000)
+    expect(timeLeft(quiz, 5 + 60_000)).toBe(5 * 60_000)
     expect(timeLeft(quiz, quiz.deadline! + 1)).toBe(0)
   })
 
   it('takes no answer or flag after the deadline, and is submitted at the deadline', () => {
-    const quiz = startQuiz(ID, { topics, types: ['single'], size: 1, minutes: 1 }, 0)
+    const quiz = startQuiz(ID, setup({ topics: ['t1'], types: ['single'] }, true), 0)
     const deadline = quiz.deadline!
     expect(choose(quiz, 0, 0, deadline)).toBe(quiz)
     expect(toggleFlag(quiz, 0, deadline)).toBe(quiz)
@@ -88,14 +150,12 @@ describe('startQuiz', () => {
   })
 
   it('refuses when nothing matches', () => {
-    expect(() =>
-      startQuiz(ID, { topics: [topic('t', [])], types: ['single'], size: 5 }, 0),
-    ).toThrow()
+    expect(() => startQuiz(ID, setup({ topics: [] }), 0)).toThrow()
   })
 })
 
 describe('answering and submitting', () => {
-  const quiz = startQuiz(ID, { topics, types: ['single', 'multiple'], size: 3 }, 0, () => 0.99)
+  const quiz = startQuiz(ID, setup({}), 0, () => 0.99)
   const [single, multiple] = [
     quiz.questions.findIndex((q) => q.type === 'single'),
     quiz.questions.findIndex((q) => q.type === 'multiple'),

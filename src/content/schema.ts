@@ -53,6 +53,7 @@ const QuestionWordingSchema = z.object({
 export const QuestionSchema = z.object({
   id,
   type: z.enum(['single', 'multiple']),
+  difficulty: DifficultySchema,
   concept: id,
   wordings: z.array(QuestionWordingSchema).min(1, 'needs at least one wording'),
   // Indexes into the options; every wording lists its options in the same order.

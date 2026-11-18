@@ -1,5 +1,11 @@
 import { z } from 'zod'
-import { conceptName, type Question, type TopicFile } from '@/content/schema'
+import {
+  conceptName,
+  DIFFICULTIES,
+  type Difficulty,
+  type Question,
+  type TopicFile,
+} from '@/content/schema'
 import { choiceScore, quizScore } from './scoring'
 
 // Bumped when the stored shape changes; records of another version are skipped, not migrated.
@@ -21,6 +27,8 @@ const ShownSchema = z.object({
   concept: z.string(),
   concept_name: z.string(),
   type: z.enum(['single', 'multiple']),
+  // Quizzes stored before questions had a difficulty lack it.
+  difficulty: z.string().optional(),
   wording: z.number().int().min(0),
   text: z.string(),
   options: z.array(z.string()),
@@ -57,42 +65,97 @@ export const QuizSchema = z
 export type Quiz = z.infer<typeof QuizSchema>
 export type Shown = z.infer<typeof ShownSchema>
 
+export const QUESTION_MINUTES: Record<Difficulty, number> = { Easy: 1, Medium: 2, Hard: 3 }
+
+export interface QuizFilter {
+  topics: string[]
+  // Areas left out; a new area is in until it is switched off.
+  offAreas: string[]
+  types: QuestionType[]
+  difficulties: Difficulty[]
+}
+
 export interface Candidate {
   topic: TopicFile['topic']
   question: Question
+  area: string
 }
 
-export function candidates(topics: TopicFile[], types: QuestionType[]): Candidate[] {
-  return topics.flatMap(({ topic, questions }) =>
-    questions.filter((q) => types.includes(q.type)).map((question) => ({ topic, question })),
+function all(topics: TopicFile[], chosen: string[]): Candidate[] {
+  return topics
+    .filter((t) => chosen.includes(t.topic.id))
+    .flatMap(({ topic, questions }) =>
+      questions.map((question) => ({
+        topic,
+        question,
+        area: topic.concepts.find((c) => c.id === question.concept)?.group ?? '',
+      })),
+    )
+}
+
+export function candidates(topics: TopicFile[], filter: QuizFilter): Candidate[] {
+  return all(topics, filter.topics).filter(
+    ({ question, area }) =>
+      !filter.offAreas.includes(area) &&
+      filter.types.includes(question.type) &&
+      filter.difficulties.includes(question.difficulty),
   )
 }
 
+// Areas are concept groups; the same name in two topics is one area.
+export function quizAreas(topics: TopicFile[], chosen: string[]): string[] {
+  return [...new Set(all(topics, chosen).map((c) => c.area))]
+}
+
+// Each question has a fixed rank for a given seed, so the draw holds still while the count or
+// the filters change, and the time limit shown before the start is the one the quiz gets.
+export function drawQuestions(list: Candidate[], size: number, seed: number): Candidate[] {
+  const rank = (c: Candidate) => hash(`${seed}/${c.topic.id}/${c.question.id}`)
+  return list.toSorted((a, b) => rank(a) - rank(b)).slice(0, size)
+}
+
+// FNV-1a: a quick, well-spread hash of a string.
+function hash(text: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193)
+  return h >>> 0
+}
+
+export interface TimeLimit {
+  minutes: number
+  counts: Record<Difficulty, number>
+}
+
+export function timeLimit(questions: Pick<Question, 'difficulty'>[]): TimeLimit {
+  const counts: Record<Difficulty, number> = { Easy: 0, Medium: 0, Hard: 0 }
+  for (const q of questions) counts[q.difficulty]++
+  const minutes = DIFFICULTIES.reduce((sum, d) => sum + counts[d] * QUESTION_MINUTES[d], 0)
+  return { minutes, counts }
+}
+
 export interface QuizSetup {
-  topics: TopicFile[]
-  types: QuestionType[]
-  size: number
-  minutes?: number
+  questions: Candidate[]
+  timed: boolean
 }
 
 // The quiz copies what it shows, so it stays readable after its topics change.
 export function startQuiz(
   id: string,
-  { topics, types, size, minutes }: QuizSetup,
+  { questions, timed }: QuizSetup,
   now: number,
   random: () => number = Math.random,
 ): Quiz {
-  const chosen = shuffle(candidates(topics, types), random).slice(0, size)
-  if (chosen.length === 0) throw new Error('No questions of the chosen types in the chosen topics')
+  if (questions.length === 0) throw new Error('No questions match the chosen settings')
+  const { minutes } = timeLimit(questions.map((c) => c.question))
   return {
     version: QUIZ_VERSION,
     id,
     started_at: now,
     updated_at: now,
-    deadline: minutes ? now + minutes * 60_000 : undefined,
-    questions: chosen.map((c) => show(c, random)),
-    picks: chosen.map(() => []),
-    flagged: chosen.map(() => false),
+    deadline: timed ? now + minutes * 60_000 : undefined,
+    questions: questions.map((c) => show(c, random)),
+    picks: questions.map(() => []),
+    flagged: questions.map(() => false),
   }
 }
 
@@ -108,6 +171,7 @@ function show({ topic, question }: Candidate, random: () => number): Shown {
     concept: question.concept,
     concept_name: conceptName(topic, question.concept),
     type: question.type,
+    difficulty: question.difficulty,
     wording: index,
     text: wording.text,
     options: order.map((i) => wording.options[i]),

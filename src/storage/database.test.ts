@@ -76,7 +76,7 @@ describe('openDatabase', () => {
   it('closes its connection when a newer version opens the database', async () => {
     const name = freshName()
     const { attempts } = await openDatabase(name)
-    const newer = await openDB(name, 5)
+    const newer = await openDB(name, 6)
     newer.close()
     await expect(attempts.put(startAttempt(ID, 't', problem, '', 1))).rejects.toThrow(
       'updated in another tab',
@@ -113,6 +113,40 @@ describe('openDatabase', () => {
     expect(topic.questions).toEqual(builtInTopic.questions)
   })
 
+  it('gives stored questions a difficulty: built-in ones theirs, others Easy', async () => {
+    const name = freshName()
+    const strip = (question: Record<string, unknown>) => {
+      const { difficulty: _difficulty, ...rest } = question
+      return rest
+    }
+    const builtIn = topicFromFile(builtInTopic, 1)
+    const own = {
+      ...topicFromFile({ ...builtInTopic, topic: { ...builtInTopic.topic, id: 'own' } }, 2),
+      questions: builtInTopic.questions.slice(0, 2).map(strip),
+    }
+    const changed = builtInTopic.questions[3]
+    const old = await openDB(name, 4, {
+      upgrade(db) {
+        for (const store of ['attempts', 'topics', 'quizzes'])
+          db.createObjectStore(store, { keyPath: 'id' })
+      },
+    })
+    await old.put('topics', {
+      ...builtIn,
+      questions: [...builtIn.questions.map(strip), { ...strip(changed), id: 'mine' }],
+    })
+    await old.put('topics', own)
+    old.close()
+
+    const topics = (await (await openDatabase(name)).topics.all()).records
+    const byId = (id: string) => topics.find((t) => t.id === id)!.questions
+    expect(byId(builtInTopic.topic.id)).toEqual([
+      ...builtInTopic.questions,
+      { ...changed, id: 'mine', difficulty: 'Easy' },
+    ])
+    expect(byId('own').map((q) => q.difficulty)).toEqual(['Easy', 'Easy'])
+  })
+
   it('adds topics to a database of the previous version and keeps its attempts', async () => {
     const name = freshName()
     const old = await openDB(name, 1, {
@@ -135,7 +169,12 @@ describe('openDatabase', () => {
       },
     })
     old.close()
-    const quiz = startQuiz(ID, { topics: [builtInTopic], types: ['single'], size: 5 }, 1)
+    const questions = builtInTopic.questions.slice(0, 5).map((question) => ({
+      topic: builtInTopic.topic,
+      question,
+      area: '',
+    }))
+    const quiz = startQuiz(ID, { questions, timed: false }, 1)
     await (await openDatabase(name)).quizzes.put(quiz)
 
     expect((await (await openDatabase(name)).quizzes.all()).records).toEqual([quiz])

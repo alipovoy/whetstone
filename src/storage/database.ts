@@ -6,7 +6,7 @@ import { QuizSchema, type Quiz } from '@/core/quiz'
 import { topicFromFile, TopicRecordSchema, type TopicRecord } from '@/core/topics'
 
 export const DATABASE_NAME = 'whetstone'
-const DATABASE_VERSION = 4
+const DATABASE_VERSION = 5
 
 interface Schema extends DBSchema {
   attempts: { key: string; value: unknown }
@@ -43,6 +43,9 @@ export async function openDatabase(name = DATABASE_NAME): Promise<Database> {
         addBuiltInQuestions(transaction.objectStore('topics')).catch(() => transaction.abort())
       }
       if (oldVersion < 4) database.createObjectStore('quizzes', { keyPath: 'id' })
+      if (oldVersion < 5) {
+        addQuestionDifficulty(transaction.objectStore('topics')).catch(() => transaction.abort())
+      }
     },
     // A newer version of the app opened in another tab: let its upgrade through.
     blocking() {
@@ -69,6 +72,27 @@ async function addBuiltInQuestions(
   const have = new Set(questions.map((q) => q.id))
   const missing = builtInTopic.questions.filter((q) => !have.has(q.id))
   if (missing.length) await topics.put({ ...stored, questions: [...questions, ...missing] })
+}
+
+// Questions became graded by difficulty: built-in ones take theirs, all others start as Easy.
+async function addQuestionDifficulty(
+  topics: IDBPObjectStore<Schema, StoreName[], 'topics', 'versionchange'>,
+) {
+  const builtIn = new Map(builtInTopic.questions.map((q) => [q.id, q.difficulty]))
+  for (const stored of (await topics.getAll()) as StoredTopic[]) {
+    if (!stored.questions?.some((q) => q.difficulty === undefined)) continue
+    const own = stored.id === builtInTopic.topic.id ? builtIn : new Map()
+    const questions = stored.questions.map((q) => ({
+      ...q,
+      difficulty: q.difficulty ?? own.get(q.id) ?? 'Easy',
+    }))
+    await topics.put({ ...stored, questions })
+  }
+}
+
+interface StoredTopic {
+  id: string
+  questions?: { id: string; difficulty?: string }[]
 }
 
 export interface Saved<T> {
