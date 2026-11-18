@@ -113,14 +113,16 @@ async function listConcepts(
     if (typeof stored !== 'object' || stored === null) continue
     const own = stored.id === builtInTopic.topic.id ? builtIn : new Map<unknown, string[]>()
     const known = new Set(Array.isArray(stored.concepts) ? stored.concepts.map((c) => c?.id) : [])
-    // A built-in item keeps the built-in list as far as the topic still has those concepts.
+    // An unedited built-in item, whose concept is still the first of the built-in list, takes
+    // that list as far as the topic still has those concepts.
     const listed = (items: unknown) =>
       Array.isArray(items)
         ? items.map((item: unknown) => {
             if (!single(item)) return item
             const { concept, ...rest } = item
-            const builtInList = own.get(rest.id)?.filter((c) => known.has(c))
-            const concepts = builtInList?.includes(concept as string) ? builtInList : [concept]
+            const builtInList = own.get(rest.id) ?? []
+            const unedited = builtInList.length > 0 && builtInList[0] === concept
+            const concepts = unedited ? builtInList.filter((c) => known.has(c)) : [concept]
             return { ...rest, concepts }
           })
         : items

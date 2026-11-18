@@ -18,7 +18,7 @@ describe('built-in topic', () => {
 
   it('has choice questions on every concept, all built-in', () => {
     expect(algorithms.questions.length).toBeGreaterThanOrEqual(30)
-    expect(new Set(algorithms.questions.flatMap((q) => q.concepts))).toEqual(
+    expect(new Set(algorithms.questions.map((q) => q.concepts[0]))).toEqual(
       new Set(algorithms.topic.concepts.map((c) => c.id)),
     )
     expect(new Set(algorithms.questions.map((q) => q.source))).toEqual(new Set(['built-in']))

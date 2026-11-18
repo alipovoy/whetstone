@@ -670,6 +670,10 @@ a[aria-disabled='true'] {
   padding: 0;
   list-style: none;
 }
+.ws-answer-about {
+  display: grid;
+  gap: 0.25rem;
+}
 .ws-problem-name .ws-concept-tags,
 .ws-report-head .ws-concept-tags {
   margin-top: 0.25rem;

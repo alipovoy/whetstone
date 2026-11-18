@@ -1,13 +1,13 @@
 import { z } from 'zod'
 import {
   conceptAreas,
+  conceptRefs,
   DIFFICULTIES,
   DifficultySchema,
   type Difficulty,
   type Question,
   type TopicFile,
 } from '@/content/schema'
-import { named } from './attempt'
 import { choiceScore, quizScore } from './scoring'
 
 // Bumped when the stored shape changes; records of another version are skipped, not migrated.
@@ -173,7 +173,7 @@ function show({ topic, question }: Candidate, random: () => number): Shown {
     topic: topic.id,
     topic_name: topic.name,
     question: question.id,
-    concepts: named(topic, question.concepts),
+    concepts: conceptRefs(topic, question.concepts),
     type: question.type,
     difficulty: question.difficulty,
     wording: index,

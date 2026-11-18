@@ -360,8 +360,10 @@ function Answer({ index, shown, picks, score }: AnswerProps) {
     <section className="ws-panel ws-answer" aria-label={`Question ${index + 1}`}>
       <div className="ws-answer-head">
         <span className="fw-bold">Question {index + 1}</span>
-        <span className="text-body-secondary">{shown.topic_name}</span>
-        <ConceptTags names={shown.concepts.map((c) => c.name)} />
+        <div className="ws-answer-about">
+          <span className="text-body-secondary">{shown.topic_name}</span>
+          <ConceptTags names={shown.concepts.map((c) => c.name)} />
+        </div>
         <span className="ws-answer-score" data-grade={answerGrade(score)}>
           Score {score}
         </span>

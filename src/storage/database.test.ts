@@ -155,6 +155,7 @@ describe('openDatabase', () => {
     })
     const builtIn = topicFromFile(builtInTopic, 1)
     const [first, second] = builtInTopic.problems.filter((p) => p.concepts.length > 1)
+    const edited = builtInTopic.questions.find((q) => q.concepts.length > 1)!
     const own = {
       ...topicFromFile({ ...builtInTopic, topic: { ...builtInTopic.topic, id: 'own' } }, 2),
     }
@@ -169,7 +170,11 @@ describe('openDatabase', () => {
       // The second concept of `second` was deleted from the topic.
       concepts: builtIn.concepts.filter((c) => c.id !== second.concepts[1]),
       problems: [first, second].map(single),
-      questions: builtInTopic.questions.slice(0, 2).map(single),
+      // `edited` had its concept changed to its second built-in one.
+      questions: [
+        ...builtInTopic.questions.slice(0, 2).map(single),
+        { ...single(edited), concept: edited.concepts[1] },
+      ],
     })
     await old.put('topics', { ...own, problems: [first].map(single), questions: [] })
     await old.put('attempts', { id: 'a' })
@@ -183,7 +188,10 @@ describe('openDatabase', () => {
       first,
       { ...second, concepts: [second.concepts[0]] },
     ])
-    expect(byId(builtInTopic.topic.id).questions).toEqual(builtInTopic.questions.slice(0, 2))
+    expect(byId(builtInTopic.topic.id).questions).toEqual([
+      ...builtInTopic.questions.slice(0, 2),
+      { ...edited, concepts: [edited.concepts[1]] },
+    ])
     expect(byId('own').problems).toEqual([{ ...first, concepts: [first.concepts[0]] }])
     expect(await db.attempts.all()).toEqual({ records: [], skipped: 0 })
     expect(await db.quizzes.all()).toEqual({ records: [], skipped: 0 })

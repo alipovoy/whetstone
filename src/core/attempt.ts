@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { conceptNames, type Difficulty, type Problem, type Topic } from '@/content/schema'
+import { conceptRefs, type Difficulty, type Problem, type Topic } from '@/content/schema'
 import { codingScore, hintCap } from './scoring'
 
 // Bumped when the stored shape changes; records of another version are skipped, not migrated.
@@ -138,7 +138,7 @@ export function gradeAttempt(
       at: now,
       asked: {
         topic_name: topic.name,
-        concepts: named(topic, problem.concepts),
+        concepts: conceptRefs(topic, problem.concepts),
         language: problem.language,
         difficulty: problem.difficulty,
         wording: problem.wordings[attempt.wording] ?? problem.wordings[0],
@@ -153,11 +153,6 @@ export function gradeAttempt(
       score: Math.min(code_score, hint_cap),
     },
   }
-}
-
-export function named(topic: Topic, concepts: string[]): { id: string; name: string }[] {
-  const names = conceptNames(topic, concepts)
-  return concepts.map((id, i) => ({ id, name: names[i] }))
 }
 
 export function remainingMs(attempt: Attempt): number {

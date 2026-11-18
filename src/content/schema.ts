@@ -24,7 +24,6 @@ const WordingSchema = z.object({
 
 export const MAX_CONCEPTS = 3
 
-// An item names 1 to 3 concepts of its topic, each once.
 const conceptList = <T extends z.ZodType>(item: T, key: (c: z.infer<T>) => string) =>
   z
     .array(item)
@@ -99,6 +98,11 @@ export type Difficulty = z.infer<typeof DifficultySchema>
 // A concept missing from its topic is shown by its id.
 export function conceptNames(topic: Topic, concepts: string[]): string[] {
   return concepts.map((key) => topic.concepts.find((c) => c.id === key)?.name ?? key)
+}
+
+export function conceptRefs(topic: Topic, concepts: string[]): { id: string; name: string }[] {
+  const names = conceptNames(topic, concepts)
+  return concepts.map((key, i) => ({ id: key, name: names[i] }))
 }
 
 // Areas are concept groups, each listed once; a concept missing from its topic has none.

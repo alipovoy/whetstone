@@ -20,8 +20,9 @@ export const statusOptions = (statuses: readonly ProblemStatus[]) =>
 export function ConceptTags({ names }: { names: string[] }) {
   return (
     <ul className="ws-concept-tags" aria-label="Concepts">
-      {names.map((name) => (
-        <li key={name}>{name}</li>
+      {/* Names may repeat across a topic's concepts. */}
+      {names.map((name, i) => (
+        <li key={i}>{name}</li>
       ))}
     </ul>
   )
