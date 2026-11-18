@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Badge, Button, Container, ListGroup, Nav, Navbar, Stack } from 'react-bootstrap'
 import { lastGraded, latestAttempt, startAttempt, type Attempt } from '@/core/attempt'
 import { startQuiz, submitQuiz, type Quiz, type QuizSetup } from '@/core/quiz'
 import { newTopic, served, type TopicRecord } from '@/core/topics'
 import type { Problem, Topic, TopicFile } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
-import type { RunnerStatus } from '@/runner/types'
 import type { Records } from '@/storage/database'
 import { ProblemPage } from './ProblemPage'
 import { QuizPage } from './QuizPage'
@@ -26,13 +25,6 @@ export interface AppStorage {
   quizzes: Quiz[]
   skipped: number
   error?: string
-}
-
-const STATUS: Record<RunnerStatus['state'], { bg: string; label: string }> = {
-  idle: { bg: 'secondary', label: 'Python not loaded' },
-  loading: { bg: 'warning', label: 'Preparing Python' },
-  ready: { bg: 'success', label: 'Python is ready' },
-  failed: { bg: 'danger', label: 'Python stopped' },
 }
 
 type View =
@@ -167,8 +159,11 @@ export function App({ runner, storage }: Props) {
     <>
       <Navbar className="border-bottom mb-3">
         <Container>
-          <Navbar.Brand as="span">Whetstone</Navbar.Brand>
-          <Nav className="me-auto">
+          {/* Equal sides keep Code and Quiz in the centre. */}
+          <Navbar.Brand as="span" className="flex-fill" style={{ flexBasis: 0 }}>
+            Whetstone
+          </Navbar.Brand>
+          <Nav>
             <a
               className="nav-link"
               href="#"
@@ -181,8 +176,7 @@ export function App({ runner, storage }: Props) {
               Quiz
             </a>
           </Nav>
-          <RuntimeStatus runner={runner} />
-          <Nav>
+          <Nav className="flex-fill justify-content-end" style={{ flexBasis: 0 }}>
             <a
               className="nav-link"
               href="#"
@@ -340,16 +334,5 @@ function ProblemRow({ problem, latest, graded, onStart, onResume }: ProblemRowPr
         </Stack>
       </Stack>
     </ListGroup.Item>
-  )
-}
-
-function RuntimeStatus({ runner }: { runner: AppRunner }) {
-  const status = useSyncExternalStore(runner.subscribe, runner.status)
-  const { bg, label } = STATUS[status.state]
-  const detail = status.detail && status.state !== 'ready' ? `${label}: ${status.detail}` : label
-  return (
-    <Badge bg={bg} text={bg === 'warning' ? 'dark' : undefined} role="status" title={detail}>
-      {label}
-    </Badge>
   )
 }

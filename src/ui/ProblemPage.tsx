@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Alert, Badge, Button, ListGroup, Stack } from 'react-bootstrap'
 import {
   formatClock,
@@ -12,11 +12,11 @@ import {
 import { failureText, hintCap, MAX_HINTS } from '@/core/scoring'
 import type { Problem, Topic } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
-import { RUN_LIMIT_MS, type RunResult, type TestResult } from '@/runner/types'
+import { RUN_LIMIT_MS, type RunnerStatus, type RunResult, type TestResult } from '@/runner/types'
 import { CodeEditor } from './CodeEditor'
 import { Markdown } from './Markdown'
 
-export type Runner = Pick<PyodideRunner, 'run' | 'test'>
+export type Runner = Pick<PyodideRunner, 'run' | 'test' | 'status' | 'subscribe'>
 
 type Outcome =
   | { kind: 'run'; result: RunResult }
@@ -163,6 +163,9 @@ export function ProblemPage({ topic, problem, initial, attempts, runner, onSave,
         <Button variant="primary" onClick={grade} disabled={busy}>
           Grade
         </Button>
+        <span className="ms-auto">
+          <RuntimeStatus runner={runner} />
+        </span>
       </Stack>
       {busy && <p role="status">Running…</p>}
       {outcome && <OutcomeView outcome={outcome} visible={problem.visible_tests} />}
@@ -295,5 +298,23 @@ function TestList({ tests, visible }: { tests: TestResult['tests']; visible: str
         })}
       </ListGroup>
     </>
+  )
+}
+
+const STATUS: Record<RunnerStatus['state'], { bg: string; label: string }> = {
+  idle: { bg: 'secondary', label: 'Python not loaded' },
+  loading: { bg: 'warning', label: 'Preparing Python' },
+  ready: { bg: 'success', label: 'Python is ready' },
+  failed: { bg: 'danger', label: 'Python stopped' },
+}
+
+function RuntimeStatus({ runner }: { runner: Runner }) {
+  const status = useSyncExternalStore(runner.subscribe, runner.status)
+  const { bg, label } = STATUS[status.state]
+  const detail = status.detail && status.state !== 'ready' ? `${label}: ${status.detail}` : label
+  return (
+    <Badge bg={bg} text={bg === 'warning' ? 'dark' : undefined} role="status" title={detail}>
+      {label}
+    </Badge>
   )
 }

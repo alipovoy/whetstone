@@ -49,13 +49,12 @@ test('create a topic, fill it from a chat, solve a problem from it', async ({ pa
 
   await page.getByRole('button', { name: 'New problem' }).click()
   await page.getByRole('textbox', { name: 'Problem JSON' }).fill(answer)
-  await expect(page.getByText('Python is ready')).toBeVisible({ timeout: 90_000 })
   await page.getByRole('button', { name: 'Add' }).click()
   await expect(
     page
       .getByRole('region', { name: 'Topic problems' })
       .getByRole('listitem', { name: 'Count vowels' }),
-  ).toBeVisible({ timeout: 30_000 })
+  ).toBeVisible({ timeout: 90_000 })
   expect(await copied()).toContain('do not repeat them:\n- Count vowels')
 
   await page.reload()
