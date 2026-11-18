@@ -31,6 +31,7 @@ const questions = (topic: string) =>
 
 async function addTopic(page: Page, name: string) {
   await page.getByRole('link', { name: 'Settings' }).click()
+  await page.getByRole('link', { name: 'Topics' }).click()
   await page.getByRole('textbox', { name: 'New topic name' }).fill(name)
   await page.getByRole('button', { name: 'Create topic' }).click()
   await page.getByRole('tab', { name: 'Questions' }).click()
@@ -52,7 +53,7 @@ test('take a ten-question quiz on two topics, reload and resume it, read the res
   await page.goto('./')
   await addTopic(page, 'Strings')
   await addTopic(page, 'Graphs')
-  await page.getByRole('link', { name: 'Quiz' }).click()
+  await page.getByRole('link', { name: 'Quizzes' }).click()
   // Only the two new topics: they hold exactly ten questions, so both are in the quiz.
   await page.getByLabel('Algorithms & data structures (35)').uncheck()
   await expect(page.getByLabel('Strings (5)')).toBeChecked()
@@ -69,7 +70,7 @@ test('take a ten-question quiz on two topics, reload and resume it, read the res
   await expect.poll(() => savedAnswers(page)).toBe(2)
 
   await page.reload()
-  await page.getByRole('link', { name: 'Quiz' }).click()
+  await page.getByRole('link', { name: 'Quizzes' }).click()
   await expect(page.getByText('Quiz in progress: 2 of 10 answered.')).toBeVisible()
   await page.getByRole('button', { name: 'Resume' }).click()
   await expect(page.getByText('Question 3 of 10')).toBeVisible()
@@ -87,7 +88,7 @@ test('take a ten-question quiz on two topics, reload and resume it, read the res
   await expect(result).toContainText('Strings, Strings basics')
   await expect(result).toContainText('Graphs, Graphs basics')
 
-  await page.getByRole('link', { name: 'Quiz' }).click()
+  await page.getByRole('link', { name: 'Quizzes' }).click()
   await expect(
     page.getByRole('region', { name: 'Past quizzes' }).getByRole('listitem'),
   ).toHaveCount(1)

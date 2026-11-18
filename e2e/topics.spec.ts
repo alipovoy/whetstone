@@ -40,6 +40,7 @@ test('create a topic, fill it from a chat, solve a problem from it', async ({ pa
   }
   await page.goto('./')
   await page.getByRole('link', { name: 'Settings' }).click()
+  await page.getByRole('link', { name: 'Topics' }).click()
   await page.getByRole('textbox', { name: 'New topic name' }).fill('Strings')
   await page.getByRole('button', { name: 'Create topic' }).click()
   await page.getByText('Chat bot request for problems').click()
@@ -58,6 +59,7 @@ test('create a topic, fill it from a chat, solve a problem from it', async ({ pa
   expect(await copied()).toContain('do not repeat them:\n- Count vowels')
 
   await page.reload()
+  await page.getByRole('link', { name: 'Coding problems' }).click()
   await page.getByRole('button', { name: 'Start Count vowels' }).click()
   const editor = page.getByRole('textbox', { name: 'Solution code' })
   await editor.click()

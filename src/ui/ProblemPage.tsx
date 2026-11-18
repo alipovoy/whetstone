@@ -5,6 +5,7 @@ import {
   lastGraded,
   openAttempt,
   remainingMs,
+  startAttempt,
   type Attempt,
   type Grade,
 } from '@/core/attempt'
@@ -26,7 +27,8 @@ type Outcome =
 interface Props {
   topic: Topic
   problem: Problem
-  initial: Attempt
+  // Without an attempt, a new one starts.
+  initial?: Attempt
   attempts: Attempt[]
   runner: Runner
   onSave: (attempt: Attempt) => void
@@ -38,7 +40,11 @@ const TICK_MS = 1000
 const MAX_TICK_MS = 2 * TICK_MS
 
 export function ProblemPage({ topic, problem, initial, attempts, runner, onSave, onBusy }: Props) {
-  const [attempt, setAttempt] = useState(initial)
+  const [attempt, setAttempt] = useState(
+    () =>
+      initial ??
+      startAttempt(crypto.randomUUID(), topic.id, problem, problem.starter_code, Date.now()),
+  )
   const [busy, setBusy] = useState(false)
   const [outcome, setOutcome] = useState<Outcome | null>(null)
   const wording = problem.wordings[0]

@@ -40,6 +40,7 @@ ${JSON.stringify({
 test('see the built-in questions, add one from a chat answer', async ({ page }) => {
   await page.goto('./')
   await page.getByRole('link', { name: 'Settings' }).click()
+  await page.getByRole('link', { name: 'Topics' }).click()
   await expect(page.getByRole('listitem', { name: 'Algorithms & data structures' })).toContainText(
     '35 questions',
   )
@@ -59,6 +60,7 @@ test('see the built-in questions, add one from a chat answer', async ({ page }) 
 
   await page.reload()
   await page.getByRole('link', { name: 'Settings' }).click()
+  await page.getByRole('link', { name: 'Topics' }).click()
   await page.getByRole('button', { name: 'Open Algorithms & data structures' }).click()
   await page.getByRole('tab', { name: 'Questions' }).click()
   await expect(questions.getByRole('listitem')).toHaveCount(36)

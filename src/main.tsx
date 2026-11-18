@@ -1,4 +1,7 @@
+import '@fontsource-variable/atkinson-hyperlegible-next/index.css'
+import '@fontsource-variable/atkinson-hyperlegible-mono/index.css'
 import 'bootstrap/dist/css/bootstrap.min.css'
+import './ui/app.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { builtInTopic } from './content'
@@ -6,9 +9,9 @@ import { createPyodideRunner } from './runner'
 import { topicFromFile } from './core/topics'
 import { openDatabase } from './storage/database'
 import { App, type AppStorage } from './ui/App'
-import { followSystemTheme } from './ui/theme'
+import { applyTheme } from './ui/theme'
 
-followSystemTheme()
+applyTheme()
 
 async function openStorage(): Promise<AppStorage> {
   try {

@@ -1,14 +1,16 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { EditorView } from 'codemirror'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TopicFile } from '@/content/schema'
-import type { RunnerStatus, TestResult } from '@/runner/types'
+import type { RunnerStatus, RunResult, TestResult } from '@/runner/types'
 import { AttemptSchema, gradeAttempt, startAttempt, type Attempt } from '@/core/attempt'
 import { PROBLEM_TEMPLATE } from '@/core/bridge'
-import { startQuiz, type Quiz } from '@/core/quiz'
+import { startQuiz, submitQuiz, type Quiz } from '@/core/quiz'
 import { itemText, topicFromFile, type TopicRecord } from '@/core/topics'
 import { App, type AppRunner, type AppStorage } from './App'
+import { href, type Route } from './route'
+import { setThemeChoice } from './theme'
 
 const problem = (id: string, title: string): TopicFile['problems'][number] => ({
   id,
@@ -38,6 +40,29 @@ const topic: TopicFile = {
   questions: [],
 }
 
+const choiceQuestion = (
+  id: string,
+  type: 'single' | 'multiple',
+  options: string[],
+  answers: number[],
+): TopicFile['questions'][number] => ({
+  id,
+  type,
+  concept: 'c',
+  wordings: [{ text: `Text of ${id}`, options }],
+  answers,
+  explanation: `Why ${id}`,
+  summary: id,
+  source: 'user',
+})
+const quizTopic: TopicFile = {
+  ...topic,
+  questions: [
+    choiceQuestion('pick-one', 'single', ['wrong', 'right'], [1]),
+    choiceQuestion('pick-all', 'multiple', ['a', 'b', 'c', 'd'], [0, 2]),
+  ],
+}
+
 const graded: TestResult = {
   stdout: '',
   tests: [
@@ -64,7 +89,12 @@ function fakeRunner(): AppRunner & { test: ReturnType<typeof vi.fn> } {
   }
 }
 
-function renderApp(runner: AppRunner, storage: Partial<AppStorage> = {}) {
+function renderApp(
+  runner: AppRunner,
+  storage: Partial<AppStorage> = {},
+  at: Route = { page: 'problems' },
+) {
+  window.history.replaceState(null, '', href(at))
   const put = vi.fn<(attempt: Attempt) => Promise<void>>(async () => undefined)
   const topics = {
     put: vi.fn<(topic: TopicRecord) => Promise<void>>(async () => undefined),
@@ -176,21 +206,26 @@ describe('App', () => {
     expect(await screen.findByRole('region', { name: 'Output' })).toHaveTextContent('hello')
   })
 
-  it('returns to the problem list from Code; the app name is not a link', async () => {
+  it('returns to the problem list from the menu, and Home from the logo', async () => {
     await startFirst()
-    expect(screen.queryByRole('link', { name: 'Whetstone' })).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('link', { name: 'Code' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
     expect(problemRow('Second problem')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Practise')
+    expect(window.location.hash).toBe('#/')
   })
 
   it('marks the menu item of the current page', async () => {
     renderApp(fakeRunner())
-    const current = () => screen.getByRole('link', { current: 'page' })
-    expect(current()).toHaveTextContent('Code')
-    await userEvent.click(screen.getByRole('link', { name: 'Settings' }))
+    const menu = () => within(screen.getByRole('navigation', { name: 'Main' }))
+    const current = () => menu().getByRole('link', { current: 'page' })
+    expect(current()).toHaveTextContent('Coding problems')
+    await userEvent.click(menu().getByRole('link', { name: 'Settings' }))
     expect(current()).toHaveTextContent('Settings')
-    await userEvent.click(screen.getByRole('link', { name: 'Quiz' }))
-    expect(current()).toHaveTextContent('Quiz')
+    await userEvent.click(menu().getByRole('link', { name: 'Reports' }))
+    expect(current()).toHaveTextContent('Reports')
+    await userEvent.click(menu().getByRole('link', { name: 'Quizzes' }))
+    expect(current()).toHaveTextContent('Quizzes')
   })
 
   it('lowers the maximum score with each hint and caps the grade', async () => {
@@ -219,7 +254,7 @@ describe('App', () => {
       expect.objectContaining({ problem: 'one', grade: expect.objectContaining({ score: 50 }) }),
     )
     expect(screen.getByText('Reference solution')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('link', { name: 'Code' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
     expect(problemRow('First problem')).toHaveTextContent('Last score 50')
   })
 
@@ -254,7 +289,7 @@ describe('App', () => {
     expect(screen.getByRole('textbox', { name: 'Solution code' })).toHaveTextContent('return 2')
     expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('Hint 1.')
 
-    await userEvent.click(screen.getByRole('link', { name: 'Code' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
     await userEvent.click(screen.getByRole('button', { name: 'Start over Second problem' }))
     expect(screen.getByRole('textbox', { name: 'Solution code' })).toHaveTextContent('pass')
     expect(screen.getByRole('region', { name: 'Hints' })).not.toHaveTextContent('Hint 1.')
@@ -266,6 +301,114 @@ describe('App', () => {
       screen.getByText(/Your work is not being saved: IndexedDB is unavailable/),
     ).toBeInTheDocument()
     expect(screen.getByText(/2 saved records could not be read/)).toBeInTheDocument()
+  })
+})
+
+describe('Layout', () => {
+  afterEach(() => setThemeChoice('system'))
+
+  it('continues the latest unfinished problem from Home, and lists recent results', async () => {
+    const open = startAttempt(
+      crypto.randomUUID(),
+      't',
+      topic.problems[1],
+      'def f(x):\n    return 2',
+      5,
+    )
+    const done = gradeAttempt(
+      startAttempt(crypto.randomUUID(), 't', topic.problems[0], '', 1),
+      topic.topic,
+      topic.problems[0],
+      { tests: graded.tests, loaded: true },
+      2,
+    )
+    const quiz = submitQuiz(
+      startQuiz(crypto.randomUUID(), { topics: [quizTopic], types: ['single'], size: 5 }, 3),
+      4,
+    )
+    renderApp(fakeRunner(), { attempts: [done, open], quizzes: [quiz] }, { page: 'home' })
+    const recent = screen.getByRole('region', { name: 'Recent' })
+    expect(
+      within(recent)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual([
+      expect.stringMatching(/^Quiz: Topic.*1 questions.*0$/),
+      expect.stringMatching(/^First problem.*Coding problem.*50$/),
+    ])
+
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    expect(window.location.hash).toBe('#/coding/t/two')
+    expect(screen.getByRole('textbox', { name: 'Solution code' })).toHaveTextContent('return 2')
+  })
+
+  it('starts a random problem from Home', async () => {
+    const put = renderApp(fakeRunner(), {}, { page: 'home' })
+    expect(within(screen.getByRole('region', { name: 'Recent' })).getByText(/Nothing yet/))
+    await userEvent.click(screen.getByRole('button', { name: 'Random problem' }))
+    expect(put).toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Grade' })).toBeInTheDocument()
+  })
+
+  it('opens the latest attempt at the address of a problem, as after a reload', () => {
+    const open = startAttempt(
+      crypto.randomUUID(),
+      't',
+      topic.problems[0],
+      'def f(x):\n    return 7',
+      5,
+    )
+    renderApp(fakeRunner(), { attempts: [open] }, { page: 'solve', topic: 't', problem: 'one' })
+    expect(screen.getByRole('textbox', { name: 'Solution code' })).toHaveTextContent('return 7')
+  })
+
+  it('says when the problem or quiz of an address is gone', () => {
+    renderApp(fakeRunner(), {}, { page: 'solve', topic: 't', problem: 'gone' })
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'This problem is not available',
+    )
+  })
+
+  it('switches the theme from the top bar and keeps the choice', async () => {
+    renderApp(fakeRunner(), {}, { page: 'appearance' })
+    await userEvent.click(screen.getByRole('button', { name: 'Dark theme' }))
+    expect(document.documentElement).toHaveAttribute('data-bs-theme', 'dark')
+    expect(localStorage.getItem('whetstone.theme')).toBe('dark')
+    expect(screen.getByRole('radio', { name: 'Dark' })).toBeChecked()
+    await userEvent.click(screen.getByRole('radio', { name: /System/ }))
+    expect(screen.getByRole('button', { name: 'System theme' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
+  it('shows Reports with a side menu', async () => {
+    renderApp(fakeRunner(), {}, { page: 'reports', section: 'coding' })
+    const side = within(screen.getByRole('navigation', { name: 'Reports' }))
+    await userEvent.click(side.getByRole('link', { name: 'Quizzes' }))
+    expect(side.getByRole('link', { current: 'page' })).toHaveTextContent('Quizzes')
+    expect(screen.getByRole('link', { name: 'Build a quiz' })).toBeInTheDocument()
+  })
+
+  it('stays on the page while Python runs, from the menu and from Back', async () => {
+    const runner = fakeRunner()
+    let finish = () => {}
+    runner.run = vi.fn(
+      () => new Promise<RunResult>((resolve) => (finish = () => resolve({ stdout: '' }))),
+    )
+    await startFirst(runner)
+    const at = window.location.hash
+    await userEvent.click(screen.getByRole('button', { name: 'Run' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
+    act(() => {
+      window.history.replaceState(null, '', '#/quizzes')
+      window.dispatchEvent(new HashChangeEvent('hashchange'))
+    })
+    expect(window.location.hash).toBe(at)
+    expect(screen.getByRole('button', { name: 'Grade' })).toBeInTheDocument()
+    await act(async () => finish())
+    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
+    expect(problemRow('First problem')).toBeInTheDocument()
   })
 })
 
@@ -282,6 +425,7 @@ describe('Topics', () => {
 
   async function openTopic(name: string) {
     await userEvent.click(screen.getByRole('link', { name: 'Settings' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Topics' }))
     await userEvent.click(screen.getByRole('button', { name: `Open ${name}` }))
   }
 
@@ -302,8 +446,7 @@ describe('Topics', () => {
       .mockResolvedValueOnce(graded)
       .mockResolvedValueOnce(allPass)
       .mockResolvedValueOnce(graded)
-    const put = renderApp(runner)
-    await userEvent.click(screen.getByRole('link', { name: 'Settings' }))
+    const put = renderApp(runner, {}, { page: 'topics' })
     await userEvent.type(screen.getByRole('textbox', { name: 'New topic name' }), 'Strings')
     await userEvent.click(screen.getByRole('button', { name: 'Create topic' }))
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Strings')
@@ -359,7 +502,7 @@ describe('Topics', () => {
       'Copied',
     )
 
-    await userEvent.click(screen.getByRole('link', { name: 'Code' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
     await userEvent.click(screen.getByRole('button', { name: 'Start Reverse words' }))
     expect(screen.getByRole('heading', { name: /Reverse words/ })).toBeInTheDocument()
   })
@@ -480,7 +623,7 @@ describe('Topics', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Renamed')
 
     await userEvent.click(screen.getByRole('switch', { name: 'Enabled' }))
-    await userEvent.click(screen.getByRole('link', { name: 'Code' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
     expect(screen.queryByRole('listitem', { name: 'First problem' })).toBeNull()
     expect(screen.getByText(/No problems to practise/)).toBeInTheDocument()
 
@@ -492,28 +635,6 @@ describe('Topics', () => {
   })
 
   describe('quizzes', () => {
-    const question = (
-      id: string,
-      type: 'single' | 'multiple',
-      options: string[],
-      answers: number[],
-    ): TopicFile['questions'][number] => ({
-      id,
-      type,
-      concept: 'c',
-      wordings: [{ text: `Text of ${id}`, options }],
-      answers,
-      explanation: `Why ${id}`,
-      summary: id,
-      source: 'user',
-    })
-    const quizTopic: TopicFile = {
-      ...topic,
-      questions: [
-        question('pick-one', 'single', ['wrong', 'right'], [1]),
-        question('pick-all', 'multiple', ['a', 'b', 'c', 'd'], [0, 2]),
-      ],
-    }
     const withQuestions = (quizzes: Quiz[] = []) =>
       renderApp(fakeRunner(), { topics: [topicFromFile(quizTopic, 0)], quizzes })
     const lastSaved = (put: ReturnType<typeof renderApp>) => put.quizzes.put.mock.lastCall![0]
@@ -522,7 +643,7 @@ describe('Topics', () => {
       // Keeps the order of questions and options.
       vi.spyOn(Math, 'random').mockReturnValue(0.99)
       const put = withQuestions()
-      await userEvent.click(screen.getByRole('link', { name: 'Quiz' }))
+      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
       expect(screen.getByText('Only 2 questions match; the quiz will have 2.')).toBeInTheDocument()
       await userEvent.click(screen.getByRole('button', { name: 'Start quiz' }))
 
@@ -552,7 +673,7 @@ describe('Topics', () => {
       expect(second).toHaveTextContent('Why pick-all')
       expect(lastSaved(put).result).toMatchObject({ scores: [100, 50], score: 67 })
 
-      await userEvent.click(screen.getByRole('link', { name: 'Quiz' }))
+      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
       expect(screen.getByRole('region', { name: 'Past quizzes' })).toHaveTextContent(
         'Topic, 2 questions',
       )
@@ -565,13 +686,13 @@ describe('Topics', () => {
         0,
       )
       const put = withQuestions([running])
-      await userEvent.click(screen.getByRole('link', { name: 'Quiz' }))
+      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
       expect(screen.getByText(/Quiz in progress: 0 of 1 answered/)).toBeInTheDocument()
       await userEvent.click(screen.getByRole('button', { name: 'Resume' }))
       expect(screen.getByText('Question 1 of 1')).toBeInTheDocument()
 
       vi.spyOn(window, 'confirm').mockReturnValue(true)
-      await userEvent.click(screen.getByRole('link', { name: 'Quiz' }))
+      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
       await userEvent.click(screen.getByRole('button', { name: 'Start quiz' }))
       expect(put.quizzes.delete).toHaveBeenCalledWith(running.id)
       expect(lastSaved(put).questions).toHaveLength(2)

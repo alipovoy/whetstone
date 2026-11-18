@@ -5,7 +5,7 @@ const topic = JSON.parse(readFileSync('src/content/algorithms.json', 'utf8'))
 const problem = topic.problems[0]
 
 test('solve a problem: run the visible tests, then grade to 100', async ({ page }) => {
-  await page.goto('./')
+  await page.goto('./#/coding')
   await page
     .getByRole('button', { name: /^Start / })
     .first()

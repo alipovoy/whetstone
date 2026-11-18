@@ -1,16 +1,21 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, Badge, Button, Container, ListGroup, Nav, Navbar, Stack } from 'react-bootstrap'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Alert, Badge, Button, ListGroup, Stack } from 'react-bootstrap'
 import { lastGraded, latestAttempt, startAttempt, type Attempt } from '@/core/attempt'
 import { startQuiz, submitQuiz, type Quiz, type QuizSetup } from '@/core/quiz'
 import { newTopic, served, type TopicRecord } from '@/core/topics'
 import type { Problem, Topic, TopicFile } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
 import type { Records } from '@/storage/database'
+import { HomePage } from './HomePage'
+import { SideMenuPage, TopBar } from './Layout'
 import { ProblemPage } from './ProblemPage'
 import { QuizPage } from './QuizPage'
 import { QuizzesPage } from './QuizzesPage'
 import { TopicPage } from './TopicPage'
 import { TopicsPage } from './TopicsPage'
+import { Link } from './Link'
+import { navigate, sectionOf, useRoute, type Route } from './route'
+import { AppearancePage, ReportPage } from './SectionPages'
 
 export type AppRunner = Pick<PyodideRunner, 'run' | 'test' | 'warmUp' | 'status' | 'subscribe'>
 
@@ -27,27 +32,6 @@ export interface AppStorage {
   error?: string
 }
 
-type View =
-  | { page: 'problems' }
-  | { page: 'settings' }
-  | { page: 'topic'; id: string }
-  | { page: 'quizzes' }
-  | { page: 'quiz'; id: string }
-  | { page: 'solve'; topic: Topic; problem: Problem; attempt: Attempt }
-
-const EQUAL = { flex: '1 1 0' }
-
-type Section = 'problems' | 'quizzes' | 'settings'
-
-const SECTION: Record<View['page'], Section> = {
-  problems: 'problems',
-  solve: 'problems',
-  quizzes: 'quizzes',
-  quiz: 'quizzes',
-  settings: 'settings',
-  topic: 'settings',
-}
-
 interface Props {
   runner: AppRunner
   storage: AppStorage
@@ -60,9 +44,9 @@ export function App({ runner, storage }: Props) {
   const topicsNow = useRef(storage.topics)
   const [quizzes, setQuizzes] = useState(storage.quizzes)
   const quizzesNow = useRef(storage.quizzes)
-  const [view, setView] = useState<View>({ page: 'problems' })
   const [busy, setBusy] = useState(false)
   const [saveError, setSaveError] = useState(storage.error)
+  const route = useRoute(busy)
 
   useEffect(() => runner.warmUp(), [runner])
 
@@ -91,12 +75,12 @@ export function App({ runner, storage }: Props) {
   const createTopic = (name: string) => {
     const topic = newTopic(crypto.randomUUID(), name, Date.now())
     putTopic(topic)
-    setView({ page: 'topic', id: topic.id })
+    navigate({ page: 'topic', id: topic.id })
   }
   const deleteTopic = (id: string) => {
     setTopicList(topicsNow.current.filter((t) => t.id !== id))
     store?.topics.delete(id).catch((error: unknown) => setSaveError(message(error)))
-    setView({ page: 'settings' })
+    navigate({ page: 'topics' })
   }
 
   const setQuizList = (list: Quiz[]) => {
@@ -122,7 +106,7 @@ export function App({ runner, storage }: Props) {
     const quiz = startQuiz(crypto.randomUUID(), setup, Date.now())
     setQuizList([...quizzesNow.current, quiz])
     store?.quizzes.put(quiz).catch((error: unknown) => setSaveError(message(error)))
-    setView({ page: 'quiz', id: quiz.id })
+    navigate({ page: 'quiz', id: quiz.id })
   }
 
   // The countdown runs on the wall clock: a quiz is submitted at its deadline on any page.
@@ -150,118 +134,175 @@ export function App({ runner, storage }: Props) {
     [topics],
   )
 
-  const start = (topic: Topic, problem: Problem) =>
-    setView({
-      page: 'solve',
-      topic,
-      problem,
-      attempt: startAttempt(
-        crypto.randomUUID(),
-        topic.id,
-        problem,
-        problem.starter_code,
-        Date.now(),
-      ),
-    })
-
-  const go = (next: View) => (event: React.MouseEvent) => {
-    event.preventDefault()
-    if (!busy) setView(next)
+  // The address of a problem opens its latest attempt, so starting one saves it first.
+  const start = (topic: Topic, problem: Problem) => {
+    save(startAttempt(crypto.randomUUID(), topic.id, problem, problem.starter_code, Date.now()))
+    navigate({ page: 'solve', topic: topic.id, problem: problem.id })
   }
-  const section = SECTION[view.page]
-  const menuLink = (label: string, page: Section) => (
-    <a
-      className={page === section ? 'nav-link active' : 'nav-link'}
-      href="#"
-      aria-current={page === section ? 'page' : undefined}
-      aria-disabled={busy}
-      onClick={go({ page })}
-    >
-      {label}
-    </a>
+  const resume = (topic: Topic, problem: Problem) =>
+    navigate({ page: 'solve', topic: topic.id, problem: problem.id })
+
+  const owner = route.page === 'solve' ? enabled.find((f) => f.topic.id === route.topic) : undefined
+  const target =
+    route.page === 'solve' ? owner?.problems.find((p) => p.id === route.problem) : undefined
+
+  const section = sectionOf(route)
+  const topic = route.page === 'topic' ? topics.find((t) => t.id === route.id) : undefined
+  const quiz = route.page === 'quiz' ? quizzes.find((q) => q.id === route.id) : undefined
+
+  const settings = (children: ReactNode) => (
+    <div className="ws-page">
+      <SideMenuPage
+        label="Settings"
+        held={busy}
+        items={[
+          { label: 'Appearance', to: { page: 'appearance' }, current: route.page === 'appearance' },
+          {
+            label: 'Topics',
+            to: { page: 'topics' },
+            current: route.page === 'topics' || route.page === 'topic',
+          },
+        ]}
+      >
+        {children}
+      </SideMenuPage>
+    </div>
   )
-  const topic = view.page === 'topic' ? topics.find((t) => t.id === view.id) : undefined
-  const quiz = view.page === 'quiz' ? quizzes.find((q) => q.id === view.id) : undefined
 
   return (
-    <>
-      <Navbar className="border-bottom mb-3">
-        <Container>
-          {/* Equal sides keep Code and Quiz in the centre; me-0 lets the name fit half a phone screen.
-              Not flex-fill: its !important basis is auto, so the sides would follow their text. */}
-          <Navbar.Brand as="span" className="me-0" style={EQUAL}>
-            Whetstone
-          </Navbar.Brand>
-          <Nav>
-            {menuLink('Code', 'problems')}
-            {menuLink('Quiz', 'quizzes')}
-          </Nav>
-          <Nav className="justify-content-end" style={EQUAL}>
-            {menuLink('Settings', 'settings')}
-          </Nav>
-        </Container>
-      </Navbar>
-      <Container as="main" className="pb-4">
-        {saveError && <Alert variant="warning">Your work is not being saved: {saveError}</Alert>}
-        {storage.skipped > 0 && (
-          <Alert variant="info" dismissible>
-            {storage.skipped} saved records could not be read by this version of Whetstone and were
-            not loaded.
-          </Alert>
+    <div className="ws-app">
+      <TopBar section={section} held={busy} />
+      <main className="ws-main">
+        {(saveError || storage.skipped > 0) && (
+          <div className="ws-page pb-0">
+            {saveError && (
+              <Alert variant="warning" className="mb-0">
+                Your work is not being saved: {saveError}
+              </Alert>
+            )}
+            {storage.skipped > 0 && (
+              <Alert variant="info" dismissible className="mb-0">
+                {storage.skipped} saved records could not be read by this version of Whetstone and
+                were not loaded.
+              </Alert>
+            )}
+          </div>
         )}
-        {view.page === 'solve' && (
-          <ProblemPage
-            key={view.attempt.id}
-            topic={view.topic}
-            problem={view.problem}
-            initial={view.attempt}
-            attempts={attempts}
-            runner={runner}
-            onSave={save}
-            onBusy={setBusy}
-          />
-        )}
-        {view.page === 'problems' && (
-          <ProblemList
+        {route.page === 'home' && (
+          <HomePage
             topics={enabled}
             attempts={attempts}
-            onStart={start}
-            onResume={(owner, problem, attempt) =>
-              setView({ page: 'solve', topic: owner, problem, attempt })
-            }
-          />
-        )}
-        {view.page === 'settings' && (
-          <TopicsPage
-            topics={topics}
-            onCreate={createTopic}
-            onOpen={(id) => setView({ page: 'topic', id })}
-          />
-        )}
-        {topic && (
-          <TopicPage
-            key={topic.id}
-            topic={topic}
-            runner={runner}
-            onChange={(change) => updateTopic(topic.id, change)}
-            onDelete={() => deleteTopic(topic.id)}
-            onBusy={setBusy}
-          />
-        )}
-        {view.page === 'quizzes' && (
-          <QuizzesPage
-            topics={enabled}
             quizzes={quizzes}
-            onStart={beginQuiz}
-            onOpen={(id) => setView({ page: 'quiz', id })}
-            onDiscard={discardQuiz}
+            onStart={start}
+            onResume={resume}
           />
         )}
-        {quiz && (
-          <QuizPage key={quiz.id} quiz={quiz} onChange={(change) => updateQuiz(quiz.id, change)} />
+        {route.page === 'solve' && (
+          <div className="ws-page">
+            {owner && target ? (
+              <ProblemPage
+                key={`${owner.topic.id}/${target.id}`}
+                topic={owner.topic}
+                problem={target}
+                initial={latestAttempt(attempts, owner.topic.id, target.id)}
+                attempts={attempts}
+                runner={runner}
+                onSave={save}
+                onBusy={setBusy}
+              />
+            ) : (
+              <Missing what="This problem" back={{ page: 'problems' }} />
+            )}
+          </div>
         )}
-      </Container>
-    </>
+        {route.page === 'problems' && (
+          <div className="ws-page">
+            <ProblemList topics={enabled} attempts={attempts} onStart={start} onResume={resume} />
+          </div>
+        )}
+        {route.page === 'quizzes' && (
+          <div className="ws-page">
+            <QuizzesPage
+              topics={enabled}
+              quizzes={quizzes}
+              onStart={beginQuiz}
+              onOpen={(id) => navigate({ page: 'quiz', id })}
+              onDiscard={discardQuiz}
+            />
+          </div>
+        )}
+        {route.page === 'quiz' && (
+          <div className="ws-page">
+            {quiz ? (
+              <QuizPage
+                key={quiz.id}
+                quiz={quiz}
+                onChange={(change) => updateQuiz(quiz.id, change)}
+              />
+            ) : (
+              <Missing what="This quiz" back={{ page: 'quizzes' }} />
+            )}
+          </div>
+        )}
+        {route.page === 'reports' && (
+          <div className="ws-page">
+            <SideMenuPage
+              label="Reports"
+              items={[
+                {
+                  label: 'Coding problems',
+                  to: { page: 'reports', section: 'coding' },
+                  current: route.section === 'coding',
+                },
+                {
+                  label: 'Quizzes',
+                  to: { page: 'reports', section: 'quizzes' },
+                  current: route.section === 'quizzes',
+                },
+              ]}
+            >
+              <ReportPage section={route.section} />
+            </SideMenuPage>
+          </div>
+        )}
+        {route.page === 'appearance' && settings(<AppearancePage />)}
+        {route.page === 'topics' &&
+          settings(
+            <TopicsPage
+              topics={topics}
+              onCreate={createTopic}
+              onOpen={(id) => navigate({ page: 'topic', id })}
+            />,
+          )}
+        {route.page === 'topic' &&
+          settings(
+            topic ? (
+              <TopicPage
+                key={topic.id}
+                topic={topic}
+                runner={runner}
+                onChange={(change) => updateTopic(topic.id, change)}
+                onDelete={() => deleteTopic(topic.id)}
+                onBusy={setBusy}
+              />
+            ) : (
+              <Missing what="This topic" back={{ page: 'topics' }} />
+            ),
+          )}
+      </main>
+    </div>
+  )
+}
+
+function Missing({ what, back }: { what: string; back: Route }) {
+  return (
+    <div className="ws-panel ws-empty">
+      <h1 className="h4">{what} is not available</h1>
+      <p className="text-body-secondary">It was deleted, or its topic is disabled.</p>
+      <Link className="btn btn-primary" to={back}>
+        Go back
+      </Link>
+    </div>
   )
 }
 
@@ -273,16 +314,19 @@ interface ProblemListProps {
   topics: TopicFile[]
   attempts: Attempt[]
   onStart: (topic: Topic, problem: Problem) => void
-  onResume: (topic: Topic, problem: Problem, attempt: Attempt) => void
+  onResume: (topic: Topic, problem: Problem) => void
 }
 
 function ProblemList({ topics, attempts, onStart, onResume }: ProblemListProps) {
   const shown = topics.filter((t) => t.problems.length > 0)
   return (
     <section aria-label="Problems">
-      <h1 className="h3">Problems</h1>
+      <h1 className="h3">Coding problems</h1>
       {shown.length === 0 && (
-        <p>No problems to practise. Add problems to a topic, or enable one, under Settings.</p>
+        <p>
+          No problems to practise. Add problems to a topic, or enable one, in{' '}
+          <Link to={{ page: 'topics' }}>Settings, Topics</Link>.
+        </p>
       )}
       {shown.map(({ topic, problems }) => (
         <section key={topic.id} aria-label={topic.name} className="mb-3">
@@ -295,7 +339,7 @@ function ProblemList({ topics, attempts, onStart, onResume }: ProblemListProps) 
                 latest={latestAttempt(attempts, topic.id, problem.id)}
                 graded={lastGraded(attempts, topic.id, problem.id)}
                 onStart={() => onStart(topic, problem)}
-                onResume={(attempt) => onResume(topic, problem, attempt)}
+                onResume={() => onResume(topic, problem)}
               />
             ))}
           </ListGroup>
@@ -310,7 +354,7 @@ interface ProblemRowProps {
   latest?: Attempt
   graded?: Attempt
   onStart: () => void
-  onResume: (attempt: Attempt) => void
+  onResume: () => void
 }
 
 function ProblemRow({ problem, latest, graded, onStart, onResume }: ProblemRowProps) {
@@ -327,12 +371,7 @@ function ProblemRow({ problem, latest, graded, onStart, onResume }: ProblemRowPr
         {unfinished && <Badge bg="info">In progress</Badge>}
         <Stack direction="horizontal" gap={2} className="ms-auto">
           {unfinished && (
-            <Button
-              size="sm"
-              variant="primary"
-              aria-label={`Resume ${title}`}
-              onClick={() => onResume(unfinished)}
-            >
+            <Button size="sm" variant="primary" aria-label={`Resume ${title}`} onClick={onResume}>
               Resume
             </Button>
           )}
