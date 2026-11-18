@@ -5,6 +5,8 @@ describe('routes', () => {
   const routes: Route[] = [
     { page: 'home' },
     { page: 'problems' },
+    { page: 'problems', filter: { search: 'a&b=c?#', topic: 'my topic', area: 'Trees / graphs' } },
+    { page: 'problems', filter: { difficulty: 'Hard', status: 'needs-work' } },
     { page: 'solve', topic: 'my topic', problem: 'a/b' },
     { page: 'quizzes' },
     { page: 'quiz', id: 'q1' },
@@ -37,9 +39,20 @@ describe('routes', () => {
     expect(parseRoute('#/settings')).toEqual({ page: 'appearance' })
   })
 
+  it('drops unknown or empty filter values', () => {
+    expect(parseRoute('#/coding?difficulty=Insane&status=done&search=&area=X&color=red')).toEqual({
+      page: 'problems',
+      filter: { area: 'X' },
+    })
+    expect(parseRoute('#/coding?')).toEqual({ page: 'problems' })
+    expect(href({ page: 'problems', filter: {} })).toBe('#/coding')
+  })
+
   it('names the menu section of each page', () => {
     expect(routes.map(sectionOf)).toEqual([
       'home',
+      'coding',
+      'coding',
       'coding',
       'coding',
       'quizzes',

@@ -295,6 +295,77 @@ describe('App', () => {
     expect(screen.getByRole('region', { name: 'Hints' })).not.toHaveTextContent('Hint 1.')
   })
 
+  it('filters the problems, keeps the filter in the address and starts a random match', async () => {
+    const done = gradeAttempt(
+      startAttempt(crypto.randomUUID(), 't', topic.problems[0], '', 1),
+      topic.topic,
+      topic.problems[0],
+      { tests: graded.tests, loaded: true },
+      2,
+    )
+    renderApp(fakeRunner(), { attempts: [done] })
+    const filters = screen.getByRole('region', { name: 'Filters' })
+    expect(filters).toHaveTextContent('2 problems')
+    expect(within(problemRow('First problem')).getByRole('img')).toHaveAccessibleName(
+      '1 of 2 tests passed',
+    )
+    expect(problemRow('First problem')).toHaveTextContent('Needs work')
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeDisabled()
+
+    await userEvent.selectOptions(screen.getByLabelText('Status'), 'New')
+    expect(window.location.hash).toBe('#/coding?status=new')
+    expect(filters).toHaveTextContent('1 of 2 problems')
+    expect(screen.queryByRole('listitem', { name: 'First problem' })).toBeNull()
+
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0)
+    await userEvent.click(screen.getByRole('button', { name: 'Start a random one' }))
+    random.mockRestore()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Second problem')
+
+    window.history.back()
+    await screen.findByRole('region', { name: 'Filters' })
+    expect(window.location.hash).toBe('#/coding?status=new')
+    await userEvent.type(screen.getByLabelText('Search'), 'nothing')
+    expect(screen.getByRole('region', { name: 'Problems' })).toHaveTextContent(
+      'No problems match these filters',
+    )
+    expect(screen.getByRole('button', { name: 'Start a random one' })).toBeDisabled()
+    await userEvent.click(
+      within(screen.getByRole('region', { name: 'Problems' })).getByRole('button', {
+        name: 'Clear filters',
+      }),
+    )
+    expect(window.location.hash).toBe('#/coding')
+    expect(problemRow('First problem')).toBeInTheDocument()
+  })
+
+  it('keeps an area only while the chosen topic has it', async () => {
+    const other: TopicFile = {
+      topic: { id: 'u', name: 'Other', concepts: [{ id: 'c', name: 'C', group: 'H' }] },
+      problems: [problem('three', 'Third problem')],
+      questions: [],
+    }
+    renderApp(
+      fakeRunner(),
+      { topics: [topicFromFile(topic, 0), topicFromFile(other, 1)] },
+      {
+        page: 'problems',
+        filter: { area: 'G' },
+      },
+    )
+    expect(screen.queryByRole('listitem', { name: 'Third problem' })).toBeNull()
+    await userEvent.selectOptions(screen.getByLabelText('Topic'), 'Topic')
+    expect(window.location.hash).toBe('#/coding?topic=t&area=G')
+    await userEvent.selectOptions(screen.getByLabelText('Topic'), 'Other')
+    expect(window.location.hash).toBe('#/coding?topic=u')
+    expect(
+      within(screen.getByLabelText('Area'))
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['All areas', 'H'])
+    expect(problemRow('Third problem')).toBeInTheDocument()
+  })
+
   it('warns when work cannot be saved', () => {
     renderApp(fakeRunner(), { store: null, error: 'IndexedDB is unavailable', skipped: 2 })
     expect(

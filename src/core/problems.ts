@@ -1,0 +1,70 @@
+import type { Difficulty, Problem, Topic, TopicFile } from '@/content/schema'
+import { lastGraded, latestAttempt, type Attempt } from './attempt'
+
+export const SOLVED_SCORE = 90
+
+export const PROBLEM_STATUSES = ['new', 'in-progress', 'solved', 'needs-work'] as const
+export type ProblemStatus = (typeof PROBLEM_STATUSES)[number]
+
+export interface ProblemFilter {
+  search?: string
+  topic?: string
+  area?: string
+  difficulty?: Difficulty
+  status?: ProblemStatus
+}
+
+export interface ProblemEntry {
+  topic: Topic
+  problem: Problem
+  title: string
+  concept: string
+  area: string
+  latest?: Attempt
+  graded?: Attempt
+  status: ProblemStatus
+}
+
+// An open attempt is the one to come back to, so it outranks an earlier grade.
+export function problemStatus(latest?: Attempt, graded?: Attempt): ProblemStatus {
+  if (latest && !latest.grade) return 'in-progress'
+  if (!graded?.grade) return 'new'
+  return graded.grade.score >= SOLVED_SCORE ? 'solved' : 'needs-work'
+}
+
+export function problemEntries(topics: TopicFile[], attempts: Attempt[]): ProblemEntry[] {
+  return topics.flatMap(({ topic, problems }) =>
+    problems.map((problem) => {
+      const concept = topic.concepts.find((c) => c.id === problem.concept)
+      const latest = latestAttempt(attempts, topic.id, problem.id)
+      const graded = lastGraded(attempts, topic.id, problem.id)
+      return {
+        topic,
+        problem,
+        title: problem.wordings[0].title,
+        concept: concept?.name ?? problem.concept,
+        area: concept?.group ?? '',
+        latest,
+        graded,
+        status: problemStatus(latest, graded),
+      }
+    }),
+  )
+}
+
+export function filterProblems(entries: ProblemEntry[], filter: ProblemFilter): ProblemEntry[] {
+  const words = (filter.search ?? '').toLowerCase().split(/\s+/).filter(Boolean)
+  return entries.filter(
+    (e) =>
+      (!filter.topic || e.topic.id === filter.topic) &&
+      (!filter.area || e.area === filter.area) &&
+      (!filter.difficulty || e.problem.difficulty === filter.difficulty) &&
+      (!filter.status || e.status === filter.status) &&
+      words.every((w) => `${e.title} ${e.concept}`.toLowerCase().includes(w)),
+  )
+}
+
+// Areas are concept groups; the same name in two topics is one area. Only areas with problems count.
+export function problemAreas(entries: ProblemEntry[], topic?: string): string[] {
+  return [...new Set(entries.filter((e) => !topic || e.topic.id === topic).map((e) => e.area))]
+}
