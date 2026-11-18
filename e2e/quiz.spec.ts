@@ -107,6 +107,7 @@ test('take a ten-question quiz on two topics, reload and resume it, read the res
   await expect(result.getByText('Not answered.')).toHaveCount(8)
   await page.getByRole('link', { name: 'Build another quiz' }).click()
   await expect(page.getByRole('form', { name: 'New quiz' })).toBeVisible()
+  await page.getByRole('link', { name: 'Reports, Quizzes' }).click()
   await expect(
     page.getByRole('region', { name: 'Past quizzes' }).getByRole('listitem'),
   ).toHaveCount(1)
