@@ -86,13 +86,18 @@ export function entryAreas(entries: Filterable[], topic?: string): string[] {
   ]
 }
 
-// A topic or area from an old address may be gone, or not go together; either would hide every
-// problem while its field reads "All", so it is dropped.
-export function applicableFilter(filter: ProblemFilter, entries: Filterable[]): ProblemFilter {
+// A topic or area from an old address may be gone, or not go together, and a status may be one
+// the list cannot have; each would hide every entry while its field reads "All", so it is dropped.
+export function applicableFilter(
+  filter: ProblemFilter,
+  entries: Filterable[],
+  statuses: readonly ProblemStatus[] = PROBLEM_STATUSES,
+): ProblemFilter {
   const topic = entries.some((e) => e.topic.id === filter.topic) ? filter.topic : undefined
   const area =
     filter.area !== undefined && entryAreas(entries, topic).includes(filter.area)
       ? filter.area
       : undefined
-  return { ...filter, topic, area }
+  const status = statuses.find((s) => s === filter.status)
+  return { ...filter, topic, area, status }
 }

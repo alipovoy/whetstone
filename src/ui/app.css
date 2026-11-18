@@ -629,6 +629,7 @@ a[aria-disabled='true'] {
   font-variant-numeric: tabular-nums;
 }
 .ws-problems {
+  container: rows / inline-size;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1681,6 +1682,10 @@ a[aria-disabled='true'] {
   .ws-hero h1 {
     font-size: 1.95rem;
   }
+}
+
+/* The list's own width decides, so rows fit beside a side menu too. */
+@container rows (max-width: 52rem) {
   .ws-problem {
     display: flex;
     flex-wrap: wrap;

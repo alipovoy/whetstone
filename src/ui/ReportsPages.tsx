@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import { Button } from 'react-bootstrap'
 import type { Topic } from '@/content/schema'
-import { formatClock, type Attempt } from '@/core/attempt'
+import { formatClock, type Attempt, type Grade } from '@/core/attempt'
 import { HISTORY_STATUSES, historyEntries, type HistoryEntry } from '@/core/history'
 import { applicableFilter, filterEntries, type ProblemFilter } from '@/core/problems'
 import type { Quiz } from '@/core/quiz'
 import { Filters } from './Filters'
+import { formatWhen as when, plural } from './format'
 import { Link } from './Link'
 import { GradeDetails } from './ProblemPage'
 import { statusOptions, StatusPill, TestMarks } from './progress'
@@ -13,11 +14,8 @@ import type { Route } from './route'
 
 const STATUSES = statusOptions(HISTORY_STATUSES)
 
-const when = (ms: number) =>
-  new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-
-const hintsText = (n: number) => (n === 0 ? 'No hints' : n === 1 ? '1 hint' : `${n} hints`)
-const attemptsText = (n: number) => (n === 1 ? '1 graded attempt' : `${n} graded attempts`)
+const hintsText = (n: number) => (n === 0 ? 'No hints' : plural(n, 'hint'))
+const attemptsText = (n: number) => plural(n, 'graded attempt')
 
 interface CodingProps {
   topics: Topic[]
@@ -28,9 +26,7 @@ interface CodingProps {
 
 export function CodingReport({ topics, attempts, filter: asked, onFilter }: CodingProps) {
   const entries = useMemo(() => historyEntries(topics, attempts), [topics, attempts])
-  // The address may carry a status no graded attempt has, such as In progress.
-  const status = HISTORY_STATUSES.find((s) => s === asked.status)
-  const filter = applicableFilter({ ...asked, status }, entries)
+  const filter = applicableFilter(asked, entries, HISTORY_STATUSES)
   const shown = filterEntries(entries, filter)
   const filtered = Object.values(filter).some(Boolean)
 
@@ -53,7 +49,7 @@ export function CodingReport({ topics, attempts, filter: asked, onFilter }: Codi
             entries={entries}
             statuses={STATUSES}
             filter={filter}
-            onFilter={(f) => onFilter(applicableFilter(f, entries))}
+            onFilter={(f) => onFilter(applicableFilter(f, entries, HISTORY_STATUSES))}
           >
             <p className="ws-count" aria-live="polite">
               {filtered
@@ -123,14 +119,14 @@ function HistoryRow({ entry }: { entry: HistoryEntry }) {
 }
 
 interface AttemptProps {
-  attempt: Attempt
+  attempt: Attempt & { grade: Grade }
   // The problem to open, while it is still served.
   problem?: Route
   back: Route
 }
 
 export function AttemptReport({ attempt, problem, back }: AttemptProps) {
-  const grade = attempt.grade!
+  const { grade } = attempt
   const { asked } = grade
   return (
     <section aria-labelledby="attempt-title" className="ws-report-page">
@@ -219,7 +215,7 @@ export function QuizReport({ quizzes }: { quizzes: Quiz[] }) {
                       {at}
                     </Link>
                     <span>
-                      {topics}, {quiz.questions.length} questions
+                      {topics}, {plural(quiz.questions.length, 'question')}
                     </span>
                   </div>
                   <span className="ws-last-score">

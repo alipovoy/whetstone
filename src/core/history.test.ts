@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { Problem, Topic } from '@/content/schema'
 import { gradeAttempt, startAttempt } from './attempt'
-import { historyEntries } from './history'
-import { filterEntries } from './problems'
+import { HISTORY_STATUSES, historyEntries } from './history'
+import { applicableFilter, filterEntries } from './problems'
 
 const topic: Topic = {
   id: 'algo',
@@ -60,5 +60,13 @@ describe('historyEntries', () => {
     const entries = historyEntries([topic], [graded('a', true, 1), graded('b', false, 2)])
     expect(filterEntries(entries, { status: 'solved', search: 'stacks' })).toEqual([entries[1]])
     expect(filterEntries(entries, { area: 'Linear', difficulty: 'Medium' })).toEqual([])
+  })
+
+  it('drops a status from the address that no graded attempt can have', () => {
+    const entries = historyEntries([topic], [graded('a', true, 1)])
+    expect(applicableFilter({ status: 'in-progress' }, entries, HISTORY_STATUSES)).toEqual({})
+    expect(applicableFilter({ status: 'solved' }, entries, HISTORY_STATUSES)).toEqual({
+      status: 'solved',
+    })
   })
 })

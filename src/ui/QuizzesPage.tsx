@@ -12,6 +12,7 @@ import {
   type QuizFilter,
   type QuizSetup,
 } from '@/core/quiz'
+import { plural } from './format'
 import { Link } from './Link'
 
 const DEFAULT_SIZE = 10
@@ -293,8 +294,4 @@ function Chip({
 
 function toggled<T>(list: T[], item: T): T[] {
   return list.includes(item) ? list.filter((i) => i !== item) : [...list, item]
-}
-
-function plural(n: number, noun: string): string {
-  return `${n} ${noun}${n === 1 ? '' : 's'}`
 }

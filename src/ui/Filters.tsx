@@ -22,9 +22,7 @@ interface Props {
 // Search, topic, area, difficulty and status; the topics and areas are those of the entries.
 export function Filters({ entries, statuses, filter, onFilter, children }: Props) {
   const id = useId()
-  const topics = [...new Map(entries.map((e) => [e.topic.id, e.topic.name])).entries()].toSorted(
-    ([, a], [, b]) => a.localeCompare(b),
-  )
+  const topics = [...new Map(entries.map((e) => [e.topic.id, e.topic.name])).entries()]
   const areas = entryAreas(entries, filter.topic)
   const set = (change: ProblemFilter) => onFilter({ ...filter, ...change })
 

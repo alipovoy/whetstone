@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Alert } from 'react-bootstrap'
-import { latestAttempt, startAttempt, type Attempt } from '@/core/attempt'
+import { latestAttempt, startAttempt, type Attempt, type Grade } from '@/core/attempt'
 import { startQuiz, submitQuiz, type Quiz, type QuizSetup } from '@/core/quiz'
 import { newTopic, served, type TopicRecord } from '@/core/topics'
 import type { Problem, Topic } from '@/content/schema'
@@ -171,7 +171,9 @@ export function App({ runner, storage }: Props) {
   const topic = route.page === 'topic' ? topics.find((t) => t.id === route.id) : undefined
   const quiz = route.page === 'quiz' ? quizzes.find((q) => q.id === route.id) : undefined
   const graded =
-    route.page === 'attempt' ? attempts.find((a) => a.id === route.id && a.grade) : undefined
+    route.page === 'attempt'
+      ? attempts.find((a): a is Attempt & { grade: Grade } => a.id === route.id && !!a.grade)
+      : undefined
   const servedProblem = (attempt: Attempt): Route | undefined =>
     enabled.some(
       (f) => f.topic.id === attempt.topic && f.problems.some((p) => p.id === attempt.problem),

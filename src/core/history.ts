@@ -1,6 +1,6 @@
 import { conceptArea, type Topic } from '@/content/schema'
 import type { Attempt, Grade } from './attempt'
-import { SOLVED_SCORE, type Filterable } from './problems'
+import { problemStatus, type Filterable } from './problems'
 
 export const HISTORY_STATUSES = ['solved', 'needs-work'] as const
 
@@ -27,7 +27,7 @@ export function historyEntries(topics: Topic[], attempts: Attempt[]): HistoryEnt
           concept: asked.concept_name,
           area: topic ? conceptArea(topic, asked.concept) : '',
           difficulty: asked.difficulty,
-          status: grade.score >= SOLVED_SCORE ? ('solved' as const) : ('needs-work' as const),
+          status: problemStatus(attempt, attempt),
         },
       ]
     })
