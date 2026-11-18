@@ -223,7 +223,7 @@ describe('App', () => {
     expect(await screen.findByRole('region', { name: 'Output' })).toHaveTextContent('hello')
   })
 
-  it('collapses the results, remembers it, and opens them on the next result', async () => {
+  it('collapses the results, remembers it, and opens them for the next result', async () => {
     await startFirst()
     await userEvent.click(screen.getByRole('button', { name: 'Run tests' }))
     const toggle = await screen.findByRole('button', { name: /^Results/ })
@@ -238,7 +238,7 @@ describe('App', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Grade' }))
     await screen.findByRole('region', { name: 'Grade' })
     expect(screen.getByRole('button', { name: /^Results/ })).toHaveTextContent('Score 50')
-    expect(localStorage.getItem('whetstone.results')).toBe('shown')
+    expect(localStorage.getItem('whetstone.results')).toBe('collapsed')
   })
 
   it('opens a problem with the results collapsed when last left so', () => {
