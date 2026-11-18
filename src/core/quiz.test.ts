@@ -6,6 +6,7 @@ import {
   drawQuestions,
   quizAreas,
   QuizSchema,
+  quizReport,
   startQuiz,
   submitQuiz,
   timeLeft,
@@ -187,5 +188,39 @@ describe('answering and submitting', () => {
     expect(choose(done, single, 0, 10)).toBe(done)
     expect(toggleFlag(done, single, 10)).toBe(done)
     expect(submitQuiz(done, 10)).toBe(done)
+  })
+})
+
+describe('quizReport', () => {
+  it('counts the answers, the time used and the score of each concept, weakest first', () => {
+    const t3 = topic('t3', [
+      question('a', 'single', [0], 'Easy', 'c'),
+      question('b', 'multiple', [0, 1], 'Easy', 'c'),
+      question('d', 'single', [0], 'Easy', 'd'),
+    ])
+    let quiz = startQuiz(
+      ID,
+      { questions: candidates([t3], { ...everything, topics: ['t3'] }), timed: true },
+      0,
+      () => 0.99,
+    )
+    expect(quizReport(quiz)).toBeUndefined()
+    const at = (id: string) => quiz.questions.findIndex((q) => q.question === id)
+    const right = (id: string) => quiz.questions[at(id)].answers
+    quiz = choose(quiz, at('a'), right('a')[0], 1)
+    quiz = choose(quiz, at('b'), right('b')[0], 2)
+    const report = quizReport(submitQuiz(quiz, 90_000))!
+    expect(report).toMatchObject({
+      correct: 1,
+      partly: 1,
+      wrong: 1,
+      used_ms: 90_000,
+      limit_ms: 180_000,
+    })
+    // Concept c: 100 for the single choice and 50 for the double-weighted multiple: (100 + 2 × 50) / 3.
+    expect(report.concepts).toEqual([
+      { topic_name: 'T3', concept_name: 'Other', questions: 1, score: 0 },
+      { topic_name: 'T3', concept_name: 'Concept', questions: 2, score: 67 },
+    ])
   })
 })

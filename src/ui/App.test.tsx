@@ -877,8 +877,18 @@ describe('Topics', () => {
       expect(second).toHaveTextContent('Score 50')
       expect(second).toHaveTextContent('Why pick-all')
       expect(lastSaved(put).result).toMatchObject({ scores: [100, 50], score: 67 })
+      const report = screen.getByRole('region', { name: 'Quiz result' })
+      expect(report).toHaveTextContent('1 correct, 1 partly correct, 0 wrong or not answered')
+      expect(report).toHaveTextContent(/Time used\s*0:0\d of 4:00/)
+      expect(screen.getByRole('region', { name: 'Score by concept' })).toHaveTextContent(
+        'CTopic, 2 questions67',
+      )
+      await userEvent.click(screen.getByRole('switch', { name: 'Not fully correct only' }))
+      expect(screen.queryByRole('region', { name: 'Question 1' })).toBeNull()
+      expect(screen.getByRole('region', { name: 'Question 2' })).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('link', { name: 'Build another quiz' }))
+      expect(screen.getByRole('form', { name: 'New quiz' })).toBeInTheDocument()
 
-      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
       expect(screen.getByRole('region', { name: 'Past quizzes' })).toHaveTextContent(
         'Topic, 2 questions',
       )

@@ -1223,6 +1223,189 @@ a[aria-disabled='true'] {
   font-variant-numeric: tabular-nums;
 }
 
+/* Quiz report */
+.ws-report {
+  display: grid;
+  gap: 1.5rem;
+}
+.ws-report-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem 2rem;
+  align-items: center;
+  padding: 1.5rem 1.75rem;
+  border-left: 6px solid var(--ws-accent);
+}
+.ws-report-head h1 {
+  margin-bottom: 0.25rem;
+}
+.ws-report-score {
+  grid-row: span 2;
+  display: grid;
+  justify-items: end;
+  margin: 0;
+  line-height: 1;
+}
+.ws-report-score strong {
+  font-size: 4rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.ws-report-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  margin: 0;
+}
+.ws-report-facts dt {
+  color: var(--ws-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.ws-report-facts dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.ws-report-head .btn {
+  justify-self: start;
+}
+.ws-concepts {
+  padding: 1.25rem 1.75rem;
+}
+.ws-concepts ul {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ws-concepts li {
+  display: grid;
+  grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr) 2.5rem;
+  gap: 1rem;
+  align-items: center;
+}
+.ws-concept-name {
+  display: grid;
+  font-weight: 600;
+}
+.ws-concept-name small {
+  color: var(--ws-muted);
+  font-weight: 400;
+}
+.ws-bar {
+  height: 0.6rem;
+  background: var(--ws-sunken);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.ws-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+.ws-bar[data-band='low'] i {
+  background: var(--ws-hard);
+}
+.ws-bar[data-band='mid'] i {
+  background: var(--ws-medium);
+}
+.ws-bar[data-band='high'] i {
+  background: var(--ws-easy);
+}
+.ws-concept-score {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ws-review {
+  display: grid;
+  gap: 1rem;
+}
+.ws-review-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+.ws-review-head .form-check {
+  margin: 0;
+}
+.ws-answer {
+  padding: 1.25rem 1.5rem;
+}
+.ws-answer-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+}
+.ws-answer-score {
+  margin-left: auto;
+  font-weight: 700;
+}
+.ws-answer-score[data-band='low'] {
+  color: var(--ws-hard);
+}
+.ws-answer-score[data-band='mid'] {
+  color: var(--ws-medium);
+}
+.ws-answer-score[data-band='high'] {
+  color: var(--ws-easy);
+}
+.ws-answer-options {
+  display: grid;
+  gap: 0.4rem;
+  max-width: 70ch;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+.ws-answer-options li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--ws-radius);
+}
+.ws-answer-options li[data-correct] {
+  border-color: var(--ws-easy);
+  box-shadow: inset 3px 0 0 var(--ws-easy);
+}
+.ws-answer-options li[data-picked]:not([data-correct]) {
+  border-color: var(--ws-hard);
+  box-shadow: inset 3px 0 0 var(--ws-hard);
+}
+.ws-tag {
+  margin-left: auto;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--ws-sunken);
+  color: var(--ws-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.ws-tag + .ws-tag {
+  margin-left: 0;
+}
+.ws-tag-correct {
+  background: var(--bs-success-bg-subtle);
+  color: var(--bs-success-text-emphasis);
+}
+.ws-explanation {
+  max-width: 70ch;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--bs-border-color);
+}
+.ws-explanation > :last-child {
+  margin-bottom: 0;
+}
+
 /* Side menu of Reports and Settings */
 .ws-with-side {
   display: grid;
@@ -1320,6 +1503,20 @@ a[aria-disabled='true'] {
 }
 
 @media (max-width: 900px) {
+  .ws-report-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ws-report-score {
+    grid-row: auto;
+    justify-items: start;
+  }
+  .ws-concepts li {
+    grid-template-columns: minmax(0, 1fr) 2.5rem;
+  }
+  .ws-bar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
   .ws-quiz {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -1,10 +1,19 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { formatClock } from '@/core/attempt'
-import { Badge, Button, Card, ListGroup, Modal, Stack } from 'react-bootstrap'
-import { choose, submitQuiz, timeLeft, toggleFlag, type Quiz, type Shown } from '@/core/quiz'
+import { Button, Form, Modal } from 'react-bootstrap'
+import {
+  choose,
+  quizReport,
+  submitQuiz,
+  timeLeft,
+  toggleFlag,
+  type Quiz,
+  type Shown,
+} from '@/core/quiz'
 import { Markdown } from './Markdown'
 import { Countdown } from './Countdown'
 import { Icon } from './icons'
+import { Link } from './Link'
 
 // The clock turns to a warning in the last minute.
 const LOW_MS = 60_000
@@ -242,22 +251,93 @@ function useNow(ticking: boolean): number {
 
 function Results({ quiz }: { quiz: Quiz }) {
   const result = quiz.result!
+  const report = quizReport(quiz)!
+  const [onlyMissed, setOnlyMissed] = useState(false)
+  const switchId = useId()
+  const topics = [...new Set(quiz.questions.map((q) => q.topic_name))].join(', ')
+  const shown = quiz.questions.flatMap((q, i) =>
+    onlyMissed && result.scores[i] === 100 ? [] : [{ q, i }],
+  )
+
   return (
-    <section aria-label="Quiz result">
-      <h1 className="h3">Quiz result</h1>
-      <p className="fs-5">
-        Score <strong>{result.score}</strong>{' '}
-        <span className="text-body-secondary fs-6">
-          {new Date(quiz.started_at).toLocaleString()}, {quiz.questions.length} questions
-        </span>
-      </p>
-      <Stack gap={3}>
-        {quiz.questions.map((shown, i) => (
-          <Answer key={i} index={i} shown={shown} picks={quiz.picks[i]} score={result.scores[i]} />
+    <section className="ws-report" aria-label="Quiz result">
+      <div className="ws-panel ws-report-head">
+        <div>
+          <h1 className="h3">Quiz result</h1>
+          <p className="text-body-secondary mb-0">
+            {topics}, {new Date(quiz.started_at).toLocaleString()}
+          </p>
+        </div>
+        <p className="ws-report-score">
+          <span className="text-body-secondary">Score </span>
+          <strong>{result.score}</strong>
+        </p>
+        <dl className="ws-report-facts">
+          <div>
+            <dt>Answers</dt>
+            <dd>
+              {report.correct} correct, {report.partly} partly correct, {report.wrong} wrong or not
+              answered
+            </dd>
+          </div>
+          <div>
+            <dt>Time used</dt>
+            <dd>
+              {formatClock(report.used_ms)}
+              {report.limit_ms === undefined
+                ? ', no time limit'
+                : ` of ${formatClock(report.limit_ms)}`}
+            </dd>
+          </div>
+        </dl>
+        <Link className="btn btn-primary" to={{ page: 'quizzes' }}>
+          Build another quiz
+        </Link>
+      </div>
+      <section className="ws-panel ws-concepts" aria-label="Score by concept">
+        <h2 className="h5">Score by concept</h2>
+        <ul>
+          {report.concepts.map((c) => (
+            <li key={`${c.topic_name}/${c.concept_name}`}>
+              <span className="ws-concept-name">
+                {c.concept_name}
+                <small>
+                  {c.topic_name}, {c.questions === 1 ? '1 question' : `${c.questions} questions`}
+                </small>
+              </span>
+              <span className="ws-bar" data-band={band(c.score)} aria-hidden="true">
+                <i style={{ width: `${c.score}%` }} />
+              </span>
+              <strong className="ws-concept-score">{c.score}</strong>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section className="ws-review" aria-label="Review">
+        <div className="ws-review-head">
+          <h2 className="h5 mb-0">Review</h2>
+          <Form.Check
+            type="switch"
+            role="switch"
+            id={switchId}
+            label="Not fully correct only"
+            checked={onlyMissed}
+            onChange={() => setOnlyMissed((v) => !v)}
+          />
+        </div>
+        {shown.length === 0 && (
+          <p className="text-body-secondary">Every answer is fully correct.</p>
+        )}
+        {shown.map(({ q, i }) => (
+          <Answer key={i} index={i} shown={q} picks={quiz.picks[i]} score={result.scores[i]} />
         ))}
-      </Stack>
+      </section>
     </section>
   )
+}
+
+function band(score: number): 'low' | 'mid' | 'high' {
+  return score < 50 ? 'low' : score < 80 ? 'mid' : 'high'
 }
 
 interface AnswerProps {
@@ -269,45 +349,34 @@ interface AnswerProps {
 
 function Answer({ index, shown, picks, score }: AnswerProps) {
   return (
-    <Card as="section" aria-label={`Question ${index + 1}`}>
-      <Card.Header>
-        <Stack direction="horizontal" gap={2} className="flex-wrap">
-          <span className="fw-semibold">Question {index + 1}</span>
-          <span className="text-body-secondary">
-            {shown.topic_name}, {shown.concept_name}
-          </span>
-          <Badge
-            bg={score === 100 ? 'success' : score > 0 ? 'warning' : 'danger'}
-            className="ms-auto"
-          >
-            Score {score}
-          </Badge>
-        </Stack>
-      </Card.Header>
-      <Card.Body>
-        <Markdown source={shown.text} />
-        <ListGroup as="ul" className="mb-3">
-          {shown.options.map((option, o) => {
-            const correct = shown.answers.includes(o)
-            const picked = picks.includes(o)
-            return (
-              <ListGroup.Item
-                as="li"
-                key={o}
-                variant={correct ? 'success' : picked ? 'danger' : undefined}
-              >
-                <Stack direction="horizontal" gap={2}>
-                  <span>{option}</span>
-                  {picked && <Badge bg="secondary">Your answer</Badge>}
-                  {correct && <Badge bg="success">Correct</Badge>}
-                </Stack>
-              </ListGroup.Item>
-            )
-          })}
-        </ListGroup>
-        {picks.length === 0 && <p className="text-body-secondary">Not answered.</p>}
+    <section className="ws-panel ws-answer" aria-label={`Question ${index + 1}`}>
+      <div className="ws-answer-head">
+        <span className="fw-bold">Question {index + 1}</span>
+        <span className="text-body-secondary">
+          {shown.topic_name}, {shown.concept_name}
+        </span>
+        <span className="ws-answer-score" data-band={band(score)}>
+          Score {score}
+        </span>
+      </div>
+      <Markdown source={shown.text} />
+      <ul className="ws-answer-options">
+        {shown.options.map((option, o) => {
+          const correct = shown.answers.includes(o)
+          const picked = picks.includes(o)
+          return (
+            <li key={o} data-correct={correct || undefined} data-picked={picked || undefined}>
+              <span>{option}</span>
+              {picked && <span className="ws-tag">Your answer</span>}
+              {correct && <span className="ws-tag ws-tag-correct">Correct</span>}
+            </li>
+          )
+        })}
+      </ul>
+      {picks.length === 0 && <p className="text-body-secondary">Not answered.</p>}
+      <div className="ws-explanation">
         <Markdown source={shown.explanation} />
-      </Card.Body>
-    </Card>
+      </div>
+    </section>
   )
 }

@@ -233,3 +233,50 @@ export function submitQuiz(quiz: Quiz, now: number): Quiz {
 export function timeLeft(quiz: Quiz, now: number): number | undefined {
   return quiz.deadline === undefined ? undefined : Math.max(0, quiz.deadline - now)
 }
+
+export interface ConceptScore {
+  topic_name: string
+  concept_name: string
+  questions: number
+  score: number
+}
+
+export interface QuizReport {
+  correct: number
+  partly: number
+  wrong: number
+  used_ms: number
+  limit_ms?: number
+  // Weakest first.
+  concepts: ConceptScore[]
+}
+
+export function quizReport(quiz: Quiz): QuizReport | undefined {
+  const { result } = quiz
+  if (!result) return undefined
+  const groups = new Map<
+    string,
+    { shown: Shown; scores: { type: QuestionType; score: number }[] }
+  >()
+  quiz.questions.forEach((shown, i) => {
+    const key = `${shown.topic}/${shown.concept}`
+    const group = groups.get(key) ?? { shown, scores: [] }
+    group.scores.push({ type: shown.type, score: result.scores[i] })
+    groups.set(key, group)
+  })
+  return {
+    correct: result.scores.filter((s) => s === 100).length,
+    partly: result.scores.filter((s) => s > 0 && s < 100).length,
+    wrong: result.scores.filter((s) => s === 0).length,
+    used_ms: result.at - quiz.started_at,
+    limit_ms: quiz.deadline === undefined ? undefined : quiz.deadline - quiz.started_at,
+    concepts: [...groups.values()]
+      .map(({ shown, scores }) => ({
+        topic_name: shown.topic_name,
+        concept_name: shown.concept_name,
+        questions: scores.length,
+        score: quizScore(scores),
+      }))
+      .toSorted((a, b) => a.score - b.score),
+  }
+}
