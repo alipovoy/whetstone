@@ -1,7 +1,9 @@
 import { z } from 'zod'
 import {
+  conceptArea,
   conceptName,
   DIFFICULTIES,
+  DifficultySchema,
   type Difficulty,
   type Question,
   type TopicFile,
@@ -28,7 +30,7 @@ const ShownSchema = z.object({
   concept_name: z.string(),
   type: z.enum(['single', 'multiple']),
   // Quizzes stored before questions had a difficulty lack it.
-  difficulty: z.string().optional(),
+  difficulty: DifficultySchema.optional(),
   wording: z.number().int().min(0),
   text: z.string(),
   options: z.array(z.string()),
@@ -88,7 +90,7 @@ function all(topics: TopicFile[], chosen: string[]): Candidate[] {
       questions.map((question) => ({
         topic,
         question,
-        area: topic.concepts.find((c) => c.id === question.concept)?.group ?? '',
+        area: conceptArea(topic, question.concept),
       })),
     )
 }
@@ -102,7 +104,7 @@ export function candidates(topics: TopicFile[], filter: QuizFilter): Candidate[]
   )
 }
 
-// Areas are concept groups; the same name in two topics is one area.
+// The same area name in two topics is one area.
 export function quizAreas(topics: TopicFile[], chosen: string[]): string[] {
   return [...new Set(all(topics, chosen).map((c) => c.area))]
 }
@@ -110,8 +112,11 @@ export function quizAreas(topics: TopicFile[], chosen: string[]): string[] {
 // Each question has a fixed rank for a given seed, so the draw holds still while the count or
 // the filters change, and the time limit shown before the start is the one the quiz gets.
 export function drawQuestions(list: Candidate[], size: number, seed: number): Candidate[] {
-  const rank = (c: Candidate) => hash(`${seed}/${c.topic.id}/${c.question.id}`)
-  return list.toSorted((a, b) => rank(a) - rank(b)).slice(0, size)
+  return list
+    .map((c) => ({ c, rank: hash(`${seed}/${c.topic.id}/${c.question.id}`) }))
+    .toSorted((a, b) => a.rank - b.rank)
+    .slice(0, size)
+    .map(({ c }) => c)
 }
 
 // FNV-1a: a quick, well-spread hash of a string.

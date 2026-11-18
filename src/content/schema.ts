@@ -23,7 +23,7 @@ const WordingSchema = z.object({
 })
 
 export const DIFFICULTIES = ['Easy', 'Medium', 'Hard'] as const
-const DifficultySchema = z.enum(DIFFICULTIES)
+export const DifficultySchema = z.enum(DIFFICULTIES)
 
 export const ProblemSchema = z.object({
   id,
@@ -84,6 +84,11 @@ export type Difficulty = z.infer<typeof DifficultySchema>
 // A concept missing from its topic is shown by its id.
 export function conceptName(topic: Topic, concept: string): string {
   return topic.concepts.find((c) => c.id === concept)?.name ?? concept
+}
+
+// Areas are concept groups; a concept missing from its topic has none.
+export function conceptArea(topic: Topic, concept: string): string {
+  return topic.concepts.find((c) => c.id === concept)?.group ?? ''
 }
 
 export type Validation = { ok: true; file: TopicFile } | { ok: false; errors: string[] }

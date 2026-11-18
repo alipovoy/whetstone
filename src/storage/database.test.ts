@@ -147,6 +147,27 @@ describe('openDatabase', () => {
     expect(byId('own').map((q) => q.difficulty)).toEqual(['Easy', 'Easy'])
   })
 
+  it('opens past a stored topic of another shape, leaving it for the schema to skip', async () => {
+    const name = freshName()
+    const old = await openDB(name, 4, {
+      upgrade(db) {
+        for (const store of ['attempts', 'topics', 'quizzes'])
+          db.createObjectStore(store, { keyPath: 'id' })
+      },
+    })
+    await old.put('topics', { id: 'odd', questions: 'none' })
+    await old.put('topics', { id: 'odder', questions: [null, { id: 'q' }] })
+    old.close()
+
+    const db = await openDatabase(name)
+    const raw = await openDB(name)
+    expect(await raw.get('topics', 'odder')).toMatchObject({
+      questions: [null, { id: 'q', difficulty: 'Easy' }],
+    })
+    raw.close()
+    expect((await db.topics.all()).skipped).toBe(2)
+  })
+
   it('adds topics to a database of the previous version and keeps its attempts', async () => {
     const name = freshName()
     const old = await openDB(name, 1, {

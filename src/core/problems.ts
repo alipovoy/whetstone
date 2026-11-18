@@ -1,4 +1,11 @@
-import type { Difficulty, Problem, Topic, TopicFile } from '@/content/schema'
+import {
+  conceptArea,
+  conceptName,
+  type Difficulty,
+  type Problem,
+  type Topic,
+  type TopicFile,
+} from '@/content/schema'
 import { lastGraded, latestAttempt, type Attempt } from './attempt'
 
 export const SOLVED_SCORE = 90
@@ -35,15 +42,14 @@ export function problemStatus(latest?: Attempt, graded?: Attempt): ProblemStatus
 export function problemEntries(topics: TopicFile[], attempts: Attempt[]): ProblemEntry[] {
   return topics.flatMap(({ topic, problems }) =>
     problems.map((problem) => {
-      const concept = topic.concepts.find((c) => c.id === problem.concept)
       const latest = latestAttempt(attempts, topic.id, problem.id)
       const graded = lastGraded(attempts, topic.id, problem.id)
       return {
         topic,
         problem,
         title: problem.wordings[0].title,
-        concept: concept?.name ?? problem.concept,
-        area: concept?.group ?? '',
+        concept: conceptName(topic, problem.concept),
+        area: conceptArea(topic, problem.concept),
         latest,
         graded,
         status: problemStatus(latest, graded),
@@ -64,7 +70,7 @@ export function filterProblems(entries: ProblemEntry[], filter: ProblemFilter): 
   )
 }
 
-// Areas are concept groups; the same name in two topics is one area. Only areas with problems count.
+// The same area name in two topics is one area. Only areas with problems count.
 export function problemAreas(entries: ProblemEntry[], topic?: string): string[] {
   return [...new Set(entries.filter((e) => !topic || e.topic.id === topic).map((e) => e.area))]
 }

@@ -38,14 +38,14 @@ export async function openDatabase(name = DATABASE_NAME): Promise<Database> {
         const topics = database.createObjectStore('topics', { keyPath: 'id' })
         void topics.put(topicFromFile(builtInTopic, Date.now()))
       }
-      if (oldVersion < 3) {
-        // A failed merge aborts the upgrade, so it runs again on the next open.
-        addBuiltInQuestions(transaction.objectStore('topics')).catch(() => transaction.abort())
-      }
+      // Changes to stored records run one after another, each reading what the last one wrote.
+      // A failed change aborts the upgrade, so it runs again on the next open.
+      let changes = Promise.resolve()
+      const topics = () => transaction.objectStore('topics')
+      if (oldVersion < 3) changes = changes.then(() => addBuiltInQuestions(topics()))
       if (oldVersion < 4) database.createObjectStore('quizzes', { keyPath: 'id' })
-      if (oldVersion < 5) {
-        addQuestionDifficulty(transaction.objectStore('topics')).catch(() => transaction.abort())
-      }
+      if (oldVersion < 5) changes = changes.then(() => addQuestionDifficulty(topics()))
+      changes.catch(() => transaction.abort())
     },
     // A newer version of the app opened in another tab: let its upgrade through.
     blocking() {
@@ -80,19 +80,22 @@ async function addQuestionDifficulty(
 ) {
   const builtIn = new Map(builtInTopic.questions.map((q) => [q.id, q.difficulty]))
   for (const stored of (await topics.getAll()) as StoredTopic[]) {
-    if (!stored.questions?.some((q) => q.difficulty === undefined)) continue
-    const own = stored.id === builtInTopic.topic.id ? builtIn : new Map()
-    const questions = stored.questions.map((q) => ({
-      ...q,
-      difficulty: q.difficulty ?? own.get(q.id) ?? 'Easy',
-    }))
+    // A record of another shape is left for the schema to skip, not allowed to fail the upgrade.
+    if (!Array.isArray(stored?.questions)) continue
+    const missing = (q: unknown): q is Record<string, unknown> =>
+      typeof q === 'object' && q !== null && !('difficulty' in q)
+    if (!stored.questions.some(missing)) continue
+    const own = stored.id === builtInTopic.topic.id ? builtIn : new Map<unknown, string>()
+    const questions = stored.questions.map((q) =>
+      missing(q) ? { ...q, difficulty: own.get(q.id) ?? 'Easy' } : q,
+    )
     await topics.put({ ...stored, questions })
   }
 }
 
 interface StoredTopic {
   id: string
-  questions?: { id: string; difficulty?: string }[]
+  questions?: unknown
 }
 
 export interface Saved<T> {

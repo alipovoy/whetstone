@@ -120,11 +120,15 @@ function NewQuiz({ topics, onStart }: Pick<Props, 'topics' | 'onStart'>) {
   const count = Math.max(1, Math.min(size, matching.length))
   const questions = drawQuestions(matching, count, seed)
   const limit = timeLimit(questions.map((c) => c.question))
-  const toggle = <K extends keyof QuizFilter>(key: K, item: QuizFilter[K][number]) =>
-    setFilter((f) => {
-      const list = f[key] as (typeof item)[]
-      return { ...f, [key]: list.includes(item) ? list.filter((i) => i !== item) : [...list, item] }
-    })
+  const change = (update: (f: QuizFilter) => Partial<QuizFilter>) =>
+    setFilter((f) => ({ ...f, ...update(f) }))
+  // While the count is typed it may be empty or out of range; it settles on blur.
+  const [typed, setTyped] = useState<string | null>(null)
+  const typeCount = (text: string) => {
+    setTyped(text)
+    const n = Math.trunc(Number(text))
+    if (text.trim() !== '' && n >= 1) setSize(Math.min(n, matching.length))
+  }
 
   if (offered.length === 0)
     return (
@@ -139,6 +143,7 @@ function NewQuiz({ topics, onStart }: Pick<Props, 'topics' | 'onStart'>) {
 
   return (
     <Form
+      noValidate
       className="ws-panel ws-builder"
       aria-label="New quiz"
       onSubmit={(event) => {
@@ -155,7 +160,7 @@ function NewQuiz({ topics, onStart }: Pick<Props, 'topics' | 'onStart'>) {
               type="button"
               className="ws-tile"
               aria-pressed={filter.topics.includes(topic.id)}
-              onClick={() => toggle('topics', topic.id)}
+              onClick={() => change((f) => ({ topics: toggled(f.topics, topic.id) }))}
             >
               <span className="ws-tile-name">{topic.name}</span>
               <span className="ws-tile-count">{plural(inTopic.length, 'question')}</span>
@@ -168,7 +173,7 @@ function NewQuiz({ topics, onStart }: Pick<Props, 'topics' | 'onStart'>) {
           <Chip
             key={area}
             on={!filter.offAreas.includes(area)}
-            onClick={() => toggle('offAreas', area)}
+            onClick={() => change((f) => ({ offAreas: toggled(f.offAreas, area) }))}
           >
             {area}
           </Chip>
@@ -180,7 +185,11 @@ function NewQuiz({ topics, onStart }: Pick<Props, 'topics' | 'onStart'>) {
       <div className="ws-builder-row">
         <Choices label="Question types">
           {TYPES.map(({ type, label }) => (
-            <Chip key={type} on={filter.types.includes(type)} onClick={() => toggle('types', type)}>
+            <Chip
+              key={type}
+              on={filter.types.includes(type)}
+              onClick={() => change((f) => ({ types: toggled(f.types, type) }))}
+            >
               {label}
             </Chip>
           ))}
@@ -190,7 +199,7 @@ function NewQuiz({ topics, onStart }: Pick<Props, 'topics' | 'onStart'>) {
             <Chip
               key={d}
               on={filter.difficulties.includes(d)}
-              onClick={() => toggle('difficulties', d)}
+              onClick={() => change((f) => ({ difficulties: toggled(f.difficulties, d) }))}
             >
               {d}
             </Chip>
@@ -205,7 +214,10 @@ function NewQuiz({ topics, onStart }: Pick<Props, 'topics' | 'onStart'>) {
               variant="outline-secondary"
               aria-label="Fewer questions"
               disabled={matching.length === 0 || count <= 1}
-              onClick={() => setSize(count - 1)}
+              onClick={() => {
+                setTyped(null)
+                setSize(count - 1)
+              }}
             >
               −
             </Button>
@@ -214,15 +226,20 @@ function NewQuiz({ topics, onStart }: Pick<Props, 'topics' | 'onStart'>) {
               inputMode="numeric"
               min={1}
               max={matching.length}
-              value={matching.length === 0 ? 0 : count}
+              step={1}
+              value={matching.length === 0 ? 0 : (typed ?? count)}
               disabled={matching.length === 0}
-              onChange={(event) => setSize(Number(event.target.value) || 1)}
+              onChange={(event) => typeCount(event.target.value)}
+              onBlur={() => setTyped(null)}
             />
             <Button
               variant="outline-secondary"
               aria-label="More questions"
               disabled={count >= matching.length}
-              onClick={() => setSize(count + 1)}
+              onClick={() => {
+                setTyped(null)
+                setSize(count + 1)
+              }}
             >
               +
             </Button>
@@ -239,7 +256,7 @@ function NewQuiz({ topics, onStart }: Pick<Props, 'topics' | 'onStart'>) {
             onChange={() => setTimed((t) => !t)}
           />
           {matching.length > 0 && (
-            <p className="mb-0" aria-label="Time limit breakdown">
+            <output className="d-block" aria-label="Time limit breakdown">
               {timed ? (
                 <>
                   <strong>{limit.minutes} min</strong>:{' '}
@@ -255,7 +272,7 @@ function NewQuiz({ topics, onStart }: Pick<Props, 'topics' | 'onStart'>) {
                   No time limit. Take as long as you need.
                 </span>
               )}
-            </p>
+            </output>
           )}
         </div>
       </div>
@@ -299,6 +316,10 @@ function Chip({
       {children}
     </button>
   )
+}
+
+function toggled<T>(list: T[], item: T): T[] {
+  return list.includes(item) ? list.filter((i) => i !== item) : [...list, item]
 }
 
 function plural(n: number, noun: string): string {

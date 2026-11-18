@@ -905,6 +905,11 @@ describe('Topics', () => {
       await userEvent.click(chip('Question types', 'Multiple choice'))
       expect(form.getByText('2 questions match')).toBeInTheDocument()
 
+      await userEvent.clear(count)
+      await userEvent.type(count, '99')
+      expect(form.getByRole('button', { name: 'More questions' })).toBeDisabled()
+      await userEvent.tab()
+      expect(count).toHaveValue(2)
       await userEvent.click(form.getByRole('button', { name: 'Fewer questions' }))
       expect(count).toHaveValue(1)
       expect(form.getByRole('button', { name: 'Fewer questions' })).toBeDisabled()
@@ -914,6 +919,21 @@ describe('Topics', () => {
       await userEvent.click(form.getByRole('button', { name: 'Start quiz' }))
       expect(lastSaved(put).questions).toHaveLength(1)
       expect(lastSaved(put).deadline).toBeUndefined()
+    })
+
+    it('gives a timed quiz of some of the matching questions the limit it showed', async () => {
+      const put = withQuestions()
+      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
+      const form = within(screen.getByRole('form', { name: 'New quiz' }))
+      await userEvent.click(form.getByRole('button', { name: 'Fewer questions' }))
+      const minutes = Number(
+        /^(\d+) min/.exec(form.getByLabelText('Time limit breakdown').textContent!)![1],
+      )
+      await userEvent.click(form.getByRole('button', { name: 'Start quiz' }))
+      const quiz = lastSaved(put)
+      expect(quiz.questions).toHaveLength(1)
+      expect(minutes).toBe(quiz.questions[0].difficulty === 'Hard' ? 3 : 1)
+      expect(quiz.deadline! - quiz.started_at).toBe(minutes * 60_000)
     })
 
     it('resumes a quiz in progress, or discards it to start another', async () => {
