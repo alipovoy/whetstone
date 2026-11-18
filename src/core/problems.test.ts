@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { TopicFile } from '@/content/schema'
+import type { Difficulty, TopicFile } from '@/content/schema'
 import { gradeAttempt, startAttempt, type Attempt } from './attempt'
 import {
   applicableFilter,
@@ -9,9 +9,9 @@ import {
   problemStatus,
 } from './problems'
 
-const problem = (id: string, concept: string, difficulty: 'Easy' | 'Medium', title: string) => ({
+const problem = (id: string, concept: string, difficulty: Difficulty, title: string) => ({
   id,
-  concept,
+  concepts: [concept],
   difficulty,
   language: 'python' as const,
   wordings: [{ title, statement: 's', examples: [], constraints: [] }],
@@ -100,11 +100,11 @@ describe('problem list', () => {
   const titles = (filter: Parameters<typeof filterEntries>[1]) =>
     filterEntries(entries, filter).map((e) => e.title)
 
-  it('lists every problem in topic order with its concept, area and status', () => {
-    expect(entries.map((e) => [e.title, e.concept, e.area, e.status])).toEqual([
-      ['Balanced brackets', 'Stacks', 'Linear', 'solved'],
-      ['Count the islands', 'Graphs', 'Trees and graphs', 'in-progress'],
-      ['Count vowels', 'Scanning', 'Linear', 'new'],
+  it('lists every problem in topic order with its concepts, areas and status', () => {
+    expect(entries.map((e) => [e.title, e.concepts, e.areas, e.status])).toEqual([
+      ['Balanced brackets', ['Stacks'], ['Linear'], 'solved'],
+      ['Count the islands', ['Graphs'], ['Trees and graphs'], 'in-progress'],
+      ['Count vowels', ['Scanning'], ['Linear'], 'new'],
     ])
     expect(entries[1].graded?.grade?.score).toBe(25)
   })
@@ -124,6 +124,22 @@ describe('problem list', () => {
     expect(titles({ search: 'count graphs' })).toEqual(['Count the islands'])
     expect(titles({ search: '  stacks  ' })).toEqual(['Balanced brackets'])
     expect(titles({ search: 'Algorithms' })).toEqual([])
+  })
+
+  it('matches a problem of several concepts by any of them and their areas', () => {
+    const [algo] = files
+    const both = {
+      ...problem('paths', 'graphs', 'Hard', 'Shortest path'),
+      concepts: ['graphs', 'stacks'],
+    }
+    const [entry] = problemEntries([{ ...algo, problems: [both] }], [])
+    expect([entry.concepts, entry.areas]).toEqual([
+      ['Graphs', 'Stacks'],
+      ['Trees and graphs', 'Linear'],
+    ])
+    for (const filter of [{ area: 'Linear' }, { area: 'Trees and graphs' }, { search: 'stacks' }])
+      expect(filterEntries([entry], filter)).toEqual([entry])
+    expect(entryAreas([entry])).toEqual(['Trees and graphs', 'Linear'])
   })
 
   it('drops a topic or an area that no problem has, or that do not go together', () => {

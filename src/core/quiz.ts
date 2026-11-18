@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import {
-  conceptArea,
-  conceptName,
+  conceptAreas,
+  conceptRefs,
   DIFFICULTIES,
   DifficultySchema,
   type Difficulty,
@@ -11,7 +11,7 @@ import {
 import { choiceScore, quizScore } from './scoring'
 
 // Bumped when the stored shape changes; records of another version are skipped, not migrated.
-export const QUIZ_VERSION = 1
+export const QUIZ_VERSION = 2
 
 export type QuestionType = Question['type']
 
@@ -26,8 +26,7 @@ const ShownSchema = z.object({
   topic: z.string(),
   topic_name: z.string(),
   question: z.string(),
-  concept: z.string(),
-  concept_name: z.string(),
+  concepts: z.array(z.object({ id: z.string(), name: z.string() })),
   type: z.enum(['single', 'multiple']),
   // Quizzes stored before questions had a difficulty lack it.
   difficulty: DifficultySchema.optional(),
@@ -71,7 +70,8 @@ export const QUESTION_MINUTES: Record<Difficulty, number> = { Easy: 1, Medium: 2
 
 export interface QuizFilter {
   topics: string[]
-  // Areas left out; a new area is in until it is switched off.
+  // Areas left out; a new area is in until it is switched off. A question stays in while any of
+  // its areas is in.
   offAreas: string[]
   types: QuestionType[]
   difficulties: Difficulty[]
@@ -80,7 +80,7 @@ export interface QuizFilter {
 export interface Candidate {
   topic: TopicFile['topic']
   question: Question
-  area: string
+  areas: string[]
 }
 
 function all(topics: TopicFile[], chosen: string[]): Candidate[] {
@@ -90,15 +90,15 @@ function all(topics: TopicFile[], chosen: string[]): Candidate[] {
       questions.map((question) => ({
         topic,
         question,
-        area: conceptArea(topic, question.concept),
+        areas: conceptAreas(topic, question.concepts),
       })),
     )
 }
 
 export function candidates(topics: TopicFile[], filter: QuizFilter): Candidate[] {
   return all(topics, filter.topics).filter(
-    ({ question, area }) =>
-      !filter.offAreas.includes(area) &&
+    ({ question, areas }) =>
+      areas.some((a) => !filter.offAreas.includes(a)) &&
       filter.types.includes(question.type) &&
       filter.difficulties.includes(question.difficulty),
   )
@@ -106,7 +106,7 @@ export function candidates(topics: TopicFile[], filter: QuizFilter): Candidate[]
 
 // The same area name in two topics is one area.
 export function quizAreas(topics: TopicFile[], chosen: string[]): string[] {
-  return [...new Set(all(topics, chosen).map((c) => c.area))]
+  return [...new Set(all(topics, chosen).flatMap((c) => c.areas))]
 }
 
 // Each question has a fixed rank for a given seed, so the draw holds still while the count or
@@ -173,8 +173,7 @@ function show({ topic, question }: Candidate, random: () => number): Shown {
     topic: topic.id,
     topic_name: topic.name,
     question: question.id,
-    concept: question.concept,
-    concept_name: conceptName(topic, question.concept),
+    concepts: conceptRefs(topic, question.concepts),
     type: question.type,
     difficulty: question.difficulty,
     wording: index,
@@ -258,18 +257,26 @@ export function answerGrade(points: number): AnswerGrade {
   return points === 100 ? 'correct' : points > 0 ? 'partly' : 'wrong'
 }
 
+type Scored = { type: QuestionType; score: number }
+
 export function quizReport(quiz: Quiz): QuizReport | undefined {
   const { result } = quiz
   if (!result) return undefined
-  const groups = new Map<
-    string,
-    { shown: Shown; scores: { type: QuestionType; score: number }[] }
-  >()
+  // A question counts fully toward each of its concepts.
+  const groups = new Map<string, Omit<ConceptScore, 'questions' | 'score'> & { scores: Scored[] }>()
   quiz.questions.forEach((shown, i) => {
-    const key = `${shown.topic}/${shown.concept}`
-    const group = groups.get(key) ?? { shown, scores: [] }
-    group.scores.push({ type: shown.type, score: result.scores[i] })
-    groups.set(key, group)
+    for (const concept of shown.concepts) {
+      const key = `${shown.topic}/${concept.id}`
+      const group = groups.get(key) ?? {
+        topic: shown.topic,
+        concept: concept.id,
+        topic_name: shown.topic_name,
+        concept_name: concept.name,
+        scores: [],
+      }
+      group.scores.push({ type: shown.type, score: result.scores[i] })
+      groups.set(key, group)
+    }
   })
   const counts = { correct: 0, partly: 0, wrong: 0 }
   for (const points of result.scores) counts[answerGrade(points)]++
@@ -280,11 +287,8 @@ export function quizReport(quiz: Quiz): QuizReport | undefined {
         ? undefined
         : { used_ms: result.at - quiz.started_at, limit_ms: quiz.deadline - quiz.started_at },
     concepts: [...groups.values()]
-      .map(({ shown, scores }) => ({
-        topic: shown.topic,
-        concept: shown.concept,
-        topic_name: shown.topic_name,
-        concept_name: shown.concept_name,
+      .map(({ scores, ...concept }) => ({
+        ...concept,
         questions: scores.length,
         score: quizScore(scores),
       }))

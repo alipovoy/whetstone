@@ -1,4 +1,4 @@
-import { conceptArea, type Topic } from '@/content/schema'
+import { conceptAreas, type Topic } from '@/content/schema'
 import type { Attempt, Grade } from './attempt'
 import { problemStatus, type Filterable } from './problems'
 
@@ -10,7 +10,7 @@ export interface HistoryEntry extends Filterable {
 }
 
 // A grade keeps the problem as asked, so an attempt reads the same after its problem changes or
-// goes. Only the topic's current name and the concept's area come from the topic, if it is kept.
+// goes. Only the topic's current name and the concepts' areas come from the topic, if it is kept.
 export function historyEntries(topics: Topic[], attempts: Attempt[]): HistoryEntry[] {
   return attempts
     .flatMap((attempt) => {
@@ -24,8 +24,13 @@ export function historyEntries(topics: Topic[], attempts: Attempt[]): HistoryEnt
           grade,
           topic: { id: attempt.topic, name: topic?.name ?? asked.topic_name },
           title: asked.wording.title,
-          concept: asked.concept_name,
-          area: topic ? conceptArea(topic, asked.concept) : '',
+          concepts: asked.concepts.map((c) => c.name),
+          areas: topic
+            ? conceptAreas(
+                topic,
+                asked.concepts.map((c) => c.id),
+              )
+            : [],
           difficulty: asked.difficulty,
           status: problemStatus(attempt, attempt),
         },

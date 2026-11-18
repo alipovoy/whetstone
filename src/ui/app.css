@@ -662,6 +662,30 @@ a[aria-disabled='true'] {
   color: var(--ws-muted);
   font-size: 0.8125rem;
 }
+.ws-concept-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ws-answer-about {
+  display: grid;
+  gap: 0.25rem;
+}
+.ws-problem-name .ws-concept-tags,
+.ws-report-head .ws-concept-tags {
+  margin-top: 0.25rem;
+}
+.ws-concept-tags li {
+  padding: 0 0.4rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.25rem;
+  color: var(--ws-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
 .ws-difficulty {
   font-size: 0.875rem;
   font-weight: 700;
@@ -878,6 +902,10 @@ a[aria-disabled='true'] {
   gap: 0.75rem;
   color: var(--ws-muted);
   font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+.ws-statement .ws-concept-tags {
+  margin: 0 0 1rem;
 }
 .ws-example,
 .ws-reference pre {

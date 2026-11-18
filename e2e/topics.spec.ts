@@ -9,7 +9,7 @@ const answer = `Here is your problem.
 ${JSON.stringify({
   problems: [
     {
-      concept: { name: 'Counting', group: 'Strings' },
+      concepts: [{ name: 'Counting', group: 'Strings' }],
       difficulty: 'Easy',
       language: 'python',
       wordings: [

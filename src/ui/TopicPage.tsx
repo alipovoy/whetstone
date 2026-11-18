@@ -19,11 +19,12 @@ import {
   type ItemList,
   type TopicRecord,
 } from '@/core/topics'
-import type { Problem } from '@/content/schema'
+import { conceptNames, type Problem } from '@/content/schema'
 import { RUN_LIMIT_MS, type TestResult } from '@/runner/types'
 import { CodeBlock } from './CodeBlock'
 import { CodeEditor } from './CodeEditor'
 import type { Runner } from './ProblemPage'
+import { ConceptTags } from './progress'
 
 interface Props {
   topic: TopicRecord
@@ -43,14 +44,13 @@ interface Row {
   id: string
   title: string
   badge: string
-  concept: string
+  concepts: string[]
   text: string
 }
 
 export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) {
   const [checking, setChecking] = useState(false)
   const { file, unreadable } = served(topic)
-  const conceptName = (id: string) => topic.concepts.find((c) => c.id === id)?.name ?? ''
 
   useEffect(() => onBusy(checking), [checking, onBusy])
 
@@ -58,14 +58,14 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
     id: p.id,
     title: p.wordings[0].title,
     badge: p.difficulty,
-    concept: conceptName(p.concept),
+    concepts: conceptNames(file.topic, p.concepts),
     text: itemText(p, topic.concepts),
   }))
   const questions: Row[] = file.questions.map((q) => ({
     id: q.id,
     title: q.summary,
     badge: `${q.difficulty}, ${q.type === 'single' ? 'single choice' : 'multiple choice'}`,
-    concept: conceptName(q.concept),
+    concepts: conceptNames(file.topic, q.concepts),
     text: itemText(q, topic.concepts),
   }))
   const request = { topic: topic.name, concepts: topic.concepts }
@@ -144,12 +144,12 @@ function Items({ list, rows, unreadable, children, onChange, ...editor }: ItemsP
         </Alert>
       )}
       <ListGroup as="ul" className="mb-2">
-        {rows.map(({ id, title, badge, concept, text }) => (
+        {rows.map(({ id, title, badge, concepts, text }) => (
           <ListGroup.Item as="li" key={id} aria-label={title}>
             <Stack direction="horizontal" gap={2} className="flex-wrap">
               <span className="fw-semibold">{title}</span>
               <Badge bg="secondary">{badge}</Badge>
-              <span className="text-body-secondary">{concept}</span>
+              <ConceptTags names={concepts} />
               <Stack direction="horizontal" gap={2} className="ms-auto">
                 <Button
                   size="sm"

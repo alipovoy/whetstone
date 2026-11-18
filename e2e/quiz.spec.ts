@@ -20,7 +20,7 @@ function savedAnswers(page: Page): Promise<number> {
 const questions = (topic: string) =>
   JSON.stringify(
     [1, 2, 3, 4, 5].map((n) => ({
-      concept: { name: `${topic} basics`, group: topic },
+      concepts: [{ name: `${topic} basics`, group: topic }],
       type: 'single',
       difficulty: 'Medium',
       wordings: [{ text: `${topic} question ${n}?`, options: ['Right', 'Wrong'] }],
@@ -40,7 +40,7 @@ async function addTopic(page: Page, name: string) {
   await page.getByRole('textbox', { name: 'Question JSON' }).fill(questions(name))
   await page.getByRole('button', { name: 'Add' }).click()
   await expect(
-    page.getByRole('region', { name: 'Topic questions' }).getByRole('listitem'),
+    page.getByRole('region', { name: 'Topic questions' }).locator(':scope > ul > li'),
   ).toHaveCount(5)
 }
 
@@ -97,8 +97,9 @@ test('take a ten-question quiz on two topics, reload and resume it, read the res
   const result = page.getByRole('region', { name: 'Quiz result' })
   await expect(result).toContainText(/Score \d+/)
   await expect(result.getByText('Not answered.')).toHaveCount(8)
-  await expect(result).toContainText('Strings, Strings basics')
-  await expect(result).toContainText('Graphs, Graphs basics')
+  const concepts = result.getByRole('list', { name: 'Concepts' })
+  await expect(concepts.getByText('Strings basics').first()).toBeVisible()
+  await expect(concepts.getByText('Graphs basics').first()).toBeVisible()
   await expect(result).toContainText('wrong or not answered')
   await expect(
     page.getByRole('region', { name: 'Score by concept' }).getByRole('listitem'),

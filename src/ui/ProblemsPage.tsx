@@ -13,7 +13,7 @@ import {
 import { Filters } from './Filters'
 import { Icon } from './icons'
 import { Link } from './Link'
-import { statusOptions, StatusPill, TestMarks } from './progress'
+import { ConceptTags, statusOptions, StatusPill, TestMarks } from './progress'
 
 const STATUSES = statusOptions(PROBLEM_STATUSES)
 
@@ -123,15 +123,14 @@ interface ProblemRowProps {
 }
 
 function ProblemRow({ entry, onStart, onResume, onDiscard }: ProblemRowProps) {
-  const { topic, problem, title, concept, graded, status } = entry
+  const { topic, problem, title, concepts, graded, status } = entry
   const unfinished = status === 'in-progress'
   return (
     <li className="ws-problem" aria-label={title}>
       <div className="ws-problem-name">
         <Link to={{ page: 'solve', topic: topic.id, problem: problem.id }}>{title}</Link>
-        <span>
-          {concept}, {topic.name}
-        </span>
+        <span>{topic.name}</span>
+        <ConceptTags names={concepts} />
       </div>
       <span className="ws-difficulty" data-level={problem.difficulty}>
         {problem.difficulty}

@@ -21,7 +21,7 @@ const topic: Topic = {
 
 const problem: Problem = {
   id: 'p',
-  concept: 'c',
+  concepts: ['c'],
   difficulty: 'Medium',
   language: 'python',
   wordings: [{ title: 'T', statement: 'S', examples: [], constraints: [] }],
@@ -65,7 +65,7 @@ describe('gradeAttempt', () => {
       score: 75,
       asked: {
         topic_name: 'Topic',
-        concept_name: 'Concept',
+        concepts: [{ id: 'c', name: 'Concept' }],
         tests: problem.tests,
         visible_tests: ['test_a'],
         hints: ['h1', 'h2'],
@@ -109,7 +109,7 @@ describe('AttemptSchema', () => {
   )
 
   it.each([
-    ['another version', { version: 2 }],
+    ['another version', { version: 1 }],
     ['an id that is not a UUID', { id: 'a1' }],
     ['a score that does not follow from its parts', { grade: { ...graded.grade!, score: 90 } }],
     ['hints copied that differ from hints used', { hints_used: 1 }],
@@ -118,7 +118,11 @@ describe('AttemptSchema', () => {
   })
 
   it('reads a saved grade even after the content rules change', () => {
-    const asked = { ...graded.grade!.asked, difficulty: 'Expert', concept: 'Not An Id' }
+    const asked = {
+      ...graded.grade!.asked,
+      difficulty: 'Expert',
+      concepts: [{ id: 'gone', name: 'Gone' }],
+    }
     expect(AttemptSchema.safeParse({ ...graded, grade: { ...graded.grade!, asked } }).success).toBe(
       true,
     )

@@ -1,3 +1,4 @@
+import { MAX_CONCEPTS } from '@/content/schema'
 import type { ItemList } from './topics'
 
 export const MAX_ITEMS = 10
@@ -10,7 +11,7 @@ export interface PromptRequest {
 }
 
 const PROBLEM = {
-  concept: { name: 'Two pointers', group: 'Arrays and strings' },
+  concepts: [{ name: 'Two pointers', group: 'Arrays and strings' }],
   difficulty: 'Easy',
   language: 'python',
   wordings: [
@@ -37,7 +38,7 @@ const PROBLEM = {
 }
 
 const QUESTION = {
-  concept: { name: 'Two pointers', group: 'Arrays and strings' },
+  concepts: [{ name: 'Two pointers', group: 'Arrays and strings' }],
   type: 'single',
   difficulty: 'Easy',
   wordings: [
@@ -60,7 +61,7 @@ export function problemRequest({ topic, concepts, existing }: PromptRequest): st
     `Write 3 new Python coding interview problems for the topic "${topic}", from Easy to Hard.`,
     ...shape('problems', PROBLEM),
     'Rules:',
-    '- `concept` names the idea the problem practises; reuse an existing concept when one fits.',
+    `- \`concepts\` lists the 1 to ${MAX_CONCEPTS} different ideas the problem practises; reuse existing concepts when they fit.`,
     '- `difficulty` is Easy, Medium or Hard. `statement` is Markdown.',
     '- `tests` is a Python module: it imports from `solution` and defines functions named `test_*`, each with a one-line docstring and plain `assert`s.',
     '- `visible_tests` names some of the tests; at least one test stays hidden.',
@@ -76,7 +77,7 @@ export function questionRequest({ topic, concepts, existing }: PromptRequest): s
     `Write 5 new interview quiz questions for the topic "${topic}", single and multiple choice, from Easy to Hard.`,
     ...shape('questions', QUESTION),
     'Rules:',
-    '- `concept` names the idea the question checks; reuse an existing concept when one fits.',
+    `- \`concepts\` lists the 1 to ${MAX_CONCEPTS} different ideas the question checks; reuse existing concepts when they fit.`,
     '- `type` is `single` (exactly one correct option) or `multiple` (one or more correct options).',
     '- `difficulty` is Easy, Medium or Hard: about 1, 2 or 3 minutes to answer.',
     '- `answers` lists the indexes of the correct options, counted from 0. At least one option is wrong.',

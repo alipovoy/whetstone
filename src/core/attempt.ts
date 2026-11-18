@@ -1,9 +1,9 @@
 import { z } from 'zod'
-import { conceptName, type Difficulty, type Problem, type Topic } from '@/content/schema'
+import { conceptRefs, type Difficulty, type Problem, type Topic } from '@/content/schema'
 import { codingScore, hintCap } from './scoring'
 
 // Bumped when the stored shape changes; records of another version are skipped, not migrated.
-export const ATTEMPT_VERSION = 1
+export const ATTEMPT_VERSION = 2
 
 const MINUTE_MS = 60_000
 
@@ -20,8 +20,7 @@ const score = z.number().int().min(0).max(100)
 
 const AskedSchema = z.object({
   topic_name: z.string(),
-  concept: z.string(),
-  concept_name: z.string(),
+  concepts: z.array(z.object({ id: z.string(), name: z.string() })),
   language: z.string(),
   difficulty: z.string(),
   wording: z.object({
@@ -139,8 +138,7 @@ export function gradeAttempt(
       at: now,
       asked: {
         topic_name: topic.name,
-        concept: problem.concept,
-        concept_name: conceptName(topic, problem.concept),
+        concepts: conceptRefs(topic, problem.concepts),
         language: problem.language,
         difficulty: problem.difficulty,
         wording: problem.wordings[attempt.wording] ?? problem.wordings[0],

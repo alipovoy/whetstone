@@ -22,12 +22,26 @@ const WordingSchema = z.object({
   constraints: z.array(text),
 })
 
+export const MAX_CONCEPTS = 3
+
+const conceptList = <T extends z.ZodType>(item: T, key: (c: z.infer<T>) => string) =>
+  z
+    .array(item)
+    .min(1, 'needs at least one concept')
+    .max(MAX_CONCEPTS, `has at most ${MAX_CONCEPTS} concepts`)
+    .refine((list) => new Set(list.map(key)).size === list.length, 'a concept repeats')
+
+const conceptIds = conceptList(id, (c) => c)
+const namedConcepts = conceptList(ConceptSchema.omit({ id: true }), (c) =>
+  c.name.trim().toLowerCase(),
+)
+
 export const DIFFICULTIES = ['Easy', 'Medium', 'Hard'] as const
 export const DifficultySchema = z.enum(DIFFICULTIES)
 
 export const ProblemSchema = z.object({
   id,
-  concept: id,
+  concepts: conceptIds,
   difficulty: DifficultySchema,
   language: z.literal('python'),
   wordings: z.array(WordingSchema).min(1, 'needs at least one wording'),
@@ -40,9 +54,9 @@ export const ProblemSchema = z.object({
   source: z.enum(['built-in', 'user', 'ai']),
 })
 
-// What a person or a chat writes: the app assigns id and source, and the concept is named, not referenced.
+// What a person or a chat writes: the app assigns id and source, and concepts are named, not referenced.
 export const DraftProblemSchema = ProblemSchema.omit({ id: true, source: true }).extend({
-  concept: ConceptSchema.omit({ id: true }),
+  concepts: namedConcepts,
 })
 
 const QuestionWordingSchema = z.object({
@@ -54,7 +68,7 @@ export const QuestionSchema = z.object({
   id,
   type: z.enum(['single', 'multiple']),
   difficulty: DifficultySchema,
-  concept: id,
+  concepts: conceptIds,
   wordings: z.array(QuestionWordingSchema).min(1, 'needs at least one wording'),
   // Indexes into the options; every wording lists its options in the same order.
   answers: z.array(z.number().int().min(0)).min(1, 'needs at least one answer'),
@@ -64,7 +78,7 @@ export const QuestionSchema = z.object({
 })
 
 export const DraftQuestionSchema = QuestionSchema.omit({ id: true, source: true }).extend({
-  concept: ConceptSchema.omit({ id: true }),
+  concepts: namedConcepts,
 })
 
 export const TopicFileSchema = z.object({
@@ -82,13 +96,19 @@ export type Question = z.infer<typeof QuestionSchema>
 export type Difficulty = z.infer<typeof DifficultySchema>
 
 // A concept missing from its topic is shown by its id.
-export function conceptName(topic: Topic, concept: string): string {
-  return topic.concepts.find((c) => c.id === concept)?.name ?? concept
+export function conceptNames(topic: Topic, concepts: string[]): string[] {
+  return concepts.map((key) => topic.concepts.find((c) => c.id === key)?.name ?? key)
 }
 
-// Areas are concept groups; a concept missing from its topic has none.
-export function conceptArea(topic: Topic, concept: string): string {
-  return topic.concepts.find((c) => c.id === concept)?.group ?? ''
+export function conceptRefs(topic: Topic, concepts: string[]): { id: string; name: string }[] {
+  const names = conceptNames(topic, concepts)
+  return concepts.map((key, i) => ({ id: key, name: names[i] }))
+}
+
+// Areas are concept groups, each listed once; a concept missing from its topic has none.
+export function conceptAreas(topic: Topic, concepts: string[]): string[] {
+  const areas = concepts.flatMap((key) => topic.concepts.find((c) => c.id === key)?.group ?? [])
+  return [...new Set(areas)]
 }
 
 export type Validation = { ok: true; file: TopicFile } | { ok: false; errors: string[] }
@@ -113,16 +133,22 @@ function crossChecks({ topic, problems, questions }: TopicFile): string[] {
   for (const p of problems) {
     if (ids.has(p.id)) errors.push(`${p.id}: id repeats`)
     ids.add(p.id)
-    if (!concepts.has(p.concept)) errors.push(`${p.id}: concept "${p.concept}" is not in the topic`)
+    errors.push(...missingConcepts(p, concepts))
     errors.push(...testErrors(p).map((e) => `${p.id}: ${e}`))
   }
   for (const q of questions) {
     if (ids.has(q.id)) errors.push(`${q.id}: id repeats`)
     ids.add(q.id)
-    if (!concepts.has(q.concept)) errors.push(`${q.id}: concept "${q.concept}" is not in the topic`)
+    errors.push(...missingConcepts(q, concepts))
     errors.push(...answerErrors(q).map((e) => `${q.id}: ${e}`))
   }
   return errors
+}
+
+function missingConcepts(item: Problem | Question, known: Set<string>): string[] {
+  return item.concepts
+    .filter((c) => !known.has(c))
+    .map((c) => `${item.id}: concept "${c}" is not in the topic`)
 }
 
 export function answerErrors(q: Pick<Question, 'type' | 'wordings' | 'answers'>): string[] {

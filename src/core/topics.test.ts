@@ -14,7 +14,7 @@ import {
 
 const problem: Problem = {
   id: 'p',
-  concept: 'two-pointers',
+  concepts: ['two-pointers'],
   difficulty: 'Easy',
   language: 'python',
   wordings: [{ title: 'T', statement: 'S', examples: [], constraints: [] }],
@@ -31,7 +31,7 @@ const question: Question = {
   id: 'q1',
   type: 'single',
   difficulty: 'Easy',
-  concept: 'two-pointers',
+  concepts: ['two-pointers'],
   wordings: [{ text: 'Which?', options: ['a', 'b'] }],
   answers: [1],
   explanation: 'e',
@@ -56,7 +56,7 @@ const nextId = () => `new-${++n}`
 describe('served', () => {
   it('serves the problems that follow the content rules and counts the rest', () => {
     const broken = { ...problem, id: 'q', hints: [] }
-    const orphan = { ...problem, id: 'r', concept: 'gone' }
+    const orphan = { ...problem, id: 'r', concepts: ['gone'] }
     const { file, unreadable } = served({ ...topic, problems: [problem, broken, orphan] })
     expect(file.problems.map((p) => p.id)).toEqual(['p'])
     expect(file.topic).toEqual({ id: 't', name: 'Topic', concepts: topic.concepts })
@@ -115,7 +115,7 @@ describe('addQuestions', () => {
 describe('addProblems', () => {
   it('writes the concept by name, without the fields the app assigns', () => {
     const text = JSON.parse(itemText(problem, topic.concepts))
-    expect(text).toMatchObject({ concept: { name: 'Two pointers', group: 'Arrays' } })
+    expect(text).toMatchObject({ concepts: [{ name: 'Two pointers', group: 'Arrays' }] })
     expect(text).not.toHaveProperty('id')
     expect(text).not.toHaveProperty('source')
   })
@@ -124,21 +124,37 @@ describe('addProblems', () => {
     const added = addProblems(
       topic,
       [
-        authored({ concept: { name: 'two POINTERS', group: 'x' }, id: 'p', source: 'built-in' }),
-        authored({ concept: { name: 'Hash maps!', group: 'G' } }),
-        authored({ concept: { name: 'hash maps!', group: 'G' } }),
+        authored({ concepts: [{ name: 'two POINTERS', group: 'x' }], id: 'p', source: 'built-in' }),
+        authored({ concepts: [{ name: 'Hash maps!', group: 'G' }] }),
+        authored({
+          concepts: [
+            { name: 'hash maps!', group: 'G' },
+            { name: 'Two pointers', group: 'x' },
+          ],
+        }),
       ],
       () => 'x',
     )
     expect(added.ok).toBe(true)
     if (!added.ok) return
-    expect(added.added.map((p) => [p.id, p.concept, p.source])).toEqual([
-      ['x', 'two-pointers', 'user'],
-      ['x', 'hash-maps', 'user'],
-      ['x', 'hash-maps', 'user'],
+    expect(added.added.map((p) => [p.id, p.concepts, p.source])).toEqual([
+      ['x', ['two-pointers'], 'user'],
+      ['x', ['hash-maps'], 'user'],
+      ['x', ['hash-maps', 'two-pointers'], 'user'],
     ])
     expect(added.record.problems).toHaveLength(4)
     expect(added.record.concepts.map((c) => c.id)).toEqual(['two-pointers', 'hash-maps'])
+  })
+
+  it('rejects a problem without concepts, with too many or with one twice', () => {
+    const concepts = (names: string[]) => names.map((name) => ({ name, group: 'G' }))
+    const errors = (names: string[]) => {
+      const added = addProblems(topic, [authored({ concepts: concepts(names) })], () => 'x')
+      return added.ok ? [] : added.errors[0].errors
+    }
+    expect(errors([])).toEqual(['concepts: needs at least one concept'])
+    expect(errors(['a', 'b', 'c', 'd'])).toEqual(['concepts: has at most 3 concepts'])
+    expect(errors(['Stacks', ' stacks'])).toEqual(['concepts: a concept repeats'])
   })
 
   it('replaces a problem in place, keeping its id and source', () => {

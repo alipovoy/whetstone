@@ -17,6 +17,17 @@ const STATUS_OPTION: Record<ProblemStatus, string> = {
 export const statusOptions = (statuses: readonly ProblemStatus[]) =>
   statuses.map((value) => ({ value, label: STATUS_OPTION[value] }))
 
+export function ConceptTags({ names }: { names: string[] }) {
+  return (
+    <ul className="ws-concept-tags" aria-label="Concepts">
+      {/* Names may repeat across a topic's concepts. */}
+      {names.map((name, i) => (
+        <li key={i}>{name}</li>
+      ))}
+    </ul>
+  )
+}
+
 export function StatusPill({ status }: { status: ProblemStatus }) {
   return (
     <span className="ws-status" data-status={status}>

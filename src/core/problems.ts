@@ -1,6 +1,6 @@
 import {
-  conceptArea,
-  conceptName,
+  conceptAreas,
+  conceptNames,
   type Difficulty,
   type Problem,
   type Topic,
@@ -25,8 +25,8 @@ export interface ProblemFilter {
 export interface Filterable {
   topic: { id: string; name: string }
   title: string
-  concept: string
-  area: string
+  concepts: string[]
+  areas: string[]
   difficulty: string
   status: ProblemStatus
 }
@@ -54,8 +54,8 @@ export function problemEntries(topics: TopicFile[], attempts: Attempt[]): Proble
         topic,
         problem,
         title: problem.wordings[0].title,
-        concept: conceptName(topic, problem.concept),
-        area: conceptArea(topic, problem.concept),
+        concepts: conceptNames(topic, problem.concepts),
+        areas: conceptAreas(topic, problem.concepts),
         difficulty: problem.difficulty,
         latest,
         graded,
@@ -70,20 +70,16 @@ export function filterEntries<T extends Filterable>(entries: T[], filter: Proble
   return entries.filter(
     (e) =>
       (!filter.topic || e.topic.id === filter.topic) &&
-      (!filter.area || e.area === filter.area) &&
+      (!filter.area || e.areas.includes(filter.area)) &&
       (!filter.difficulty || e.difficulty === filter.difficulty) &&
       (!filter.status || e.status === filter.status) &&
-      words.every((w) => `${e.title} ${e.concept}`.toLowerCase().includes(w)),
+      words.every((w) => [e.title, ...e.concepts].join(' ').toLowerCase().includes(w)),
   )
 }
 
 // The same area name in two topics is one area. Only areas with entries count.
 export function entryAreas(entries: Filterable[], topic?: string): string[] {
-  return [
-    ...new Set(
-      entries.filter((e) => e.area && (!topic || e.topic.id === topic)).map((e) => e.area),
-    ),
-  ]
+  return [...new Set(entries.filter((e) => !topic || e.topic.id === topic).flatMap((e) => e.areas))]
 }
 
 // A topic or area from an old address may be gone, or not go together, and a status may be one

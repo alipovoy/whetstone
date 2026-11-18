@@ -9,7 +9,7 @@ import { Filters } from './Filters'
 import { formatWhen as when, plural } from './format'
 import { Link } from './Link'
 import { GradeDetails } from './ProblemPage'
-import { statusOptions, StatusPill, TestMarks } from './progress'
+import { ConceptTags, statusOptions, StatusPill, TestMarks } from './progress'
 import type { Route } from './route'
 
 const STATUSES = statusOptions(HISTORY_STATUSES)
@@ -89,15 +89,14 @@ export function CodingReport({ topics, attempts, filter: asked, onFilter }: Codi
 }
 
 function HistoryRow({ entry }: { entry: HistoryEntry }) {
-  const { attempt, grade, title, concept, topic, difficulty, status } = entry
+  const { attempt, grade, title, concepts, topic, difficulty, status } = entry
   const at = when(grade.at)
   return (
     <li className="ws-problem ws-history" aria-label={`${title}, ${at}`}>
       <div className="ws-problem-name">
         <Link to={{ page: 'attempt', id: attempt.id }}>{title}</Link>
-        <span>
-          {concept}, {topic.name}
-        </span>
+        <span>{topic.name}</span>
+        <ConceptTags names={concepts} />
       </div>
       <span className="ws-difficulty" data-level={difficulty}>
         {difficulty}
@@ -139,8 +138,9 @@ export function AttemptReport({ attempt, problem, back }: AttemptProps) {
             <span className="ws-difficulty me-2" data-level={asked.difficulty}>
               {asked.difficulty}
             </span>
-            {asked.concept_name}, {asked.topic_name}, graded {when(grade.at)}
+            {asked.topic_name}, graded {when(grade.at)}
           </p>
+          <ConceptTags names={asked.concepts.map((c) => c.name)} />
         </div>
         <p className="ws-report-score">
           <span className="text-body-secondary">Score </span>

@@ -57,19 +57,22 @@ export interface Served {
   unreadable: { problems: number; questions: number }
 }
 
+const known = (item: { concepts: string[] }, concepts: Set<string>) =>
+  item.concepts.every((c) => concepts.has(c))
+
 export function served(record: TopicRecord): Served {
   const concepts = new Set(record.concepts.map((c) => c.id))
   const problems: Problem[] = []
   for (const raw of record.problems) {
     const parsed = ProblemSchema.safeParse(raw)
-    if (parsed.success && concepts.has(parsed.data.concept) && !testErrors(parsed.data).length) {
+    if (parsed.success && known(parsed.data, concepts) && !testErrors(parsed.data).length) {
       problems.push(parsed.data)
     }
   }
   const questions: Question[] = []
   for (const raw of record.questions) {
     const parsed = QuestionSchema.safeParse(raw)
-    if (parsed.success && concepts.has(parsed.data.concept) && !answerErrors(parsed.data).length) {
+    if (parsed.success && known(parsed.data, concepts) && !answerErrors(parsed.data).length) {
       questions.push(parsed.data)
     }
   }
@@ -86,15 +89,14 @@ export function served(record: TopicRecord): Served {
   }
 }
 
-// The authoring shape: without the fields the app assigns, with the concept named.
+// The authoring shape: without the fields the app assigns, with the concepts named.
 export function itemText(item: Problem | Question, concepts: Concept[]): string {
-  const { id: _id, source: _source, concept, ...rest } = item
-  const named = concepts.find((c) => c.id === concept)
-  return JSON.stringify(
-    { concept: { name: named?.name ?? concept, group: named?.group ?? '' }, ...rest },
-    null,
-    2,
-  )
+  const { id: _id, source: _source, concepts: ids, ...rest } = item
+  const named = ids.map((id) => {
+    const concept = concepts.find((c) => c.id === id)
+    return { name: concept?.name ?? id, group: concept?.group ?? '' }
+  })
+  return JSON.stringify({ concepts: named, ...rest }, null, 2)
 }
 
 export type ItemList = 'problems' | 'questions'
@@ -113,7 +115,7 @@ export type Adding<T> =
   { ok: true; record: TopicRecord; added: T[] } | { ok: false; errors: ItemErrors[] }
 
 // Reads problems written by a person or a chat into the topic. The app assigns ids and source; a
-// concept is found by name or added. With `replaces`, the single item replaces that problem.
+// concept is found by name or added to the topic. With `replaces`, the single item replaces that problem.
 export function addProblems(
   record: TopicRecord,
   items: unknown[],
@@ -175,24 +177,27 @@ function addItems<T extends { id: string }>(
   return { ok: true, record: { ...record, concepts, [list]: kept }, added }
 }
 
-// Adds the item's concept to `concepts` when it is new, then checks the item as it is stored.
+// Adds the item's new concepts to `concepts`, then checks the item as it is stored.
 function finish<T>(
   schema: z.ZodType<T>,
-  { concept: named, ...rest }: { concept: { name: string; group: string } },
+  { concepts: named, ...rest }: { concepts: { name: string; group: string }[] },
   concepts: Concept[],
   id: string,
   source: unknown,
 ): Reading<T> {
-  const key = named.name.trim().toLowerCase()
-  let concept = concepts.find((c) => c.name.trim().toLowerCase() === key)
-  if (!concept) {
-    concept = { id: conceptId(named.name, concepts), ...named }
-    concepts.push(concept)
-  }
+  const ids = named.map((name) => {
+    const key = name.name.trim().toLowerCase()
+    let concept = concepts.find((c) => c.name.trim().toLowerCase() === key)
+    if (!concept) {
+      concept = { id: conceptId(name.name, concepts), ...name }
+      concepts.push(concept)
+    }
+    return concept.id
+  })
   const item = schema.safeParse({
     ...rest,
     id,
-    concept: concept.id,
+    concepts: ids,
     source: SourceSchema.safeParse(source).data ?? 'user',
   })
   return item.success ? { ok: true, item: item.data } : { ok: false, errors: issues(item.error) }

@@ -20,12 +20,12 @@ const question = (
   type: Question['type'],
   answers: number[],
   difficulty: Difficulty = 'Easy',
-  concept = 'c',
+  concepts = ['c'],
 ): Question => ({
   id,
   type,
   difficulty,
-  concept,
+  concepts,
   wordings: [
     { text: `${id} first`, options: ['a', 'b', 'c', 'd'] },
     { text: `${id} second`, options: ['A', 'B', 'C', 'D'] },
@@ -51,7 +51,7 @@ const topic = (id: string, questions: Question[]): TopicFile => ({
 
 const topics = [
   topic('t1', [question('s1', 'single', [1]), question('m1', 'multiple', [0, 2], 'Hard')]),
-  topic('t2', [question('s2', 'single', [3], 'Medium', 'd')]),
+  topic('t2', [question('s2', 'single', [3], 'Medium', ['d'])]),
 ]
 
 const everything: QuizFilter = {
@@ -84,6 +84,15 @@ describe('choosing questions', () => {
     expect(ids({ offAreas: ['G'] })).toEqual(['s2'])
     expect(ids({ difficulties: ['Hard', 'Medium'] })).toEqual(['m1', 's2'])
     expect(ids({ topics: [] })).toEqual([])
+  })
+
+  it('keeps a question of several areas while any of them is on', () => {
+    const both = [topic('t', [question('cd', 'single', [0], 'Easy', ['c', 'd'])])]
+    const kept = (offAreas: string[]) =>
+      candidates(both, { ...everything, topics: ['t'], offAreas }).map((c) => c.question.id)
+    expect(kept(['G'])).toEqual(['cd'])
+    expect(kept(['G', 'H'])).toEqual([])
+    expect(quizAreas(both, ['t'])).toEqual(['G', 'H'])
   })
 
   it('offers the areas of the chosen topics', () => {
@@ -120,8 +129,7 @@ describe('startQuiz', () => {
         topic: 't1',
         topic_name: 'T1',
         question: 'm1',
-        concept: 'c',
-        concept_name: 'Concept',
+        concepts: [{ id: 'c', name: 'Concept' }],
         type: 'multiple',
         difficulty: 'Hard',
         wording: 1,
@@ -194,9 +202,9 @@ describe('answering and submitting', () => {
 describe('quizReport', () => {
   it('counts the answers, the time used and the score of each concept, weakest first', () => {
     const t3 = topic('t3', [
-      question('a', 'single', [0], 'Easy', 'c'),
-      question('b', 'multiple', [0, 1], 'Easy', 'c'),
-      question('d', 'single', [0], 'Easy', 'd'),
+      question('a', 'single', [0], 'Easy', ['c']),
+      question('b', 'multiple', [0, 1], 'Easy', ['c']),
+      question('d', 'single', [0], 'Easy', ['d']),
     ])
     let quiz = startQuiz(
       ID,
@@ -234,6 +242,21 @@ describe('quizReport', () => {
         questions: 2,
         score: 67,
       },
+    ])
+  })
+
+  it('counts a question fully toward each of its concepts', () => {
+    const both = topic('t', [question('cd', 'single', [0], 'Easy', ['c', 'd'])])
+    let quiz = startQuiz(
+      ID,
+      { questions: candidates([both], { ...everything, topics: ['t'] }), timed: false },
+      0,
+    )
+    quiz = choose(quiz, 0, quiz.questions[0].answers[0], 1)
+    const report = quizReport(submitQuiz(quiz, 2))!
+    expect(report.concepts.map((c) => [c.concept_name, c.questions, c.score])).toEqual([
+      ['Concept', 1, 100],
+      ['Other', 1, 100],
     ])
   })
 

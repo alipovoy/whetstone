@@ -21,7 +21,7 @@ const answer = `Here you go.
 ${JSON.stringify({
   questions: [
     {
-      concept: { name: 'Hash maps', group: 'Lookup' },
+      concepts: [{ name: 'Hash maps', group: 'Lookup' }],
       type: 'single',
       difficulty: 'Easy',
       wordings: [
@@ -50,7 +50,7 @@ test('see the built-in questions, add one from a chat answer', async ({ page }) 
   await page.getByRole('tab', { name: 'Questions' }).click()
   await expect(page.getByRole('button', { name: 'New problem' })).toBeHidden()
   const questions = page.getByRole('region', { name: 'Topic questions' })
-  await expect(questions.getByRole('listitem')).toHaveCount(35)
+  await expect(questions.locator(':scope > ul > li')).toHaveCount(35)
 
   await page.getByRole('button', { name: 'New question' }).click()
   await page.getByRole('textbox', { name: 'Question JSON' }).fill(answer)
@@ -64,5 +64,5 @@ test('see the built-in questions, add one from a chat answer', async ({ page }) 
   await page.getByRole('link', { name: 'Topics' }).click()
   await page.getByRole('button', { name: 'Open Algorithms & data structures' }).click()
   await page.getByRole('tab', { name: 'Questions' }).click()
-  await expect(questions.getByRole('listitem')).toHaveCount(36)
+  await expect(questions.locator(':scope > ul > li')).toHaveCount(36)
 })

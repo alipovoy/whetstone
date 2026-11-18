@@ -18,7 +18,7 @@ describe('built-in topic', () => {
 
   it('has choice questions on every concept, all built-in', () => {
     expect(algorithms.questions.length).toBeGreaterThanOrEqual(30)
-    expect(new Set(algorithms.questions.map((q) => q.concept))).toEqual(
+    expect(new Set(algorithms.questions.map((q) => q.concepts[0]))).toEqual(
       new Set(algorithms.topic.concepts.map((c) => c.id)),
     )
     expect(new Set(algorithms.questions.map((q) => q.source))).toEqual(new Set(['built-in']))
@@ -76,7 +76,7 @@ describe('validateTopicFile', () => {
 
   it('rejects an unknown concept and a repeated id', () => {
     const file = clone()
-    file.problems[0].concept = 'nope'
+    file.problems[0].concepts = ['two-pointers', 'nope']
     file.problems[1].id = file.problems[0].id
     const result = validateTopicFile(file)
     expect(result.ok ? [] : result.errors).toEqual([

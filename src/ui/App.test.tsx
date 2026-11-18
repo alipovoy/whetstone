@@ -14,7 +14,7 @@ import { applyTheme, setScheme, setThemeChoice } from './theme'
 
 const problem = (id: string, title: string): TopicFile['problems'][number] => ({
   id,
-  concept: 'c',
+  concepts: ['c'],
   difficulty: 'Easy',
   language: 'python',
   wordings: [
@@ -50,7 +50,7 @@ const choiceQuestion = (
   id,
   type,
   difficulty,
-  concept: 'c',
+  concepts: ['c'],
   wordings: [{ text: `Text of ${id}`, options }],
   answers,
   explanation: `Why ${id}`,
@@ -159,6 +159,23 @@ describe('App', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Python is ready')
     expect(screen.getByText('x').tagName).toBe('STRONG')
     expect(document.querySelector('[onerror]')).toBeNull()
+  })
+
+  it('shows the topic of a problem and each of its concepts', () => {
+    const concepts = [...topic.topic.concepts, { id: 'd', name: 'D', group: 'H' }]
+    const both = { ...problem('both', 'Both concepts'), concepts: ['c', 'd'] }
+    renderApp(fakeRunner(), {
+      topics: [
+        topicFromFile({ ...topic, topic: { ...topic.topic, concepts }, problems: [both] }, 0),
+      ],
+    })
+    const row = problemRow('Both concepts')
+    expect(row).toHaveTextContent('Topic')
+    expect(
+      within(within(row).getByRole('list', { name: 'Concepts' }))
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['C', 'D'])
   })
 
   it('runs only the visible tests', async () => {
@@ -732,7 +749,7 @@ describe('Topics', () => {
   }
   const written = (title: string) => ({
     ...JSON.parse(itemText(topic.problems[0], topic.topic.concepts)),
-    concept: { name: 'Strings', group: 'Basics' },
+    concepts: [{ name: 'Strings', group: 'Basics' }],
     wordings: [{ ...topic.problems[0].wordings[0], title }],
   })
 
@@ -791,8 +808,8 @@ describe('Topics', () => {
       expect.objectContaining({
         name: 'Strings',
         problems: [
-          expect.objectContaining({ concept: 'strings', source: 'user' }),
-          expect.objectContaining({ concept: 'strings', source: 'user' }),
+          expect.objectContaining({ concepts: ['strings'], source: 'user' }),
+          expect.objectContaining({ concepts: ['strings'], source: 'user' }),
         ],
       }),
     )
@@ -864,7 +881,7 @@ describe('Topics', () => {
     expect(
       within(problems)
         .getAllByRole('listitem')
-        .map((li) => li.getAttribute('aria-label')),
+        .flatMap((li) => li.getAttribute('aria-label') ?? []),
     ).toEqual(['Renamed problem', 'Second problem'])
   })
 
@@ -873,7 +890,7 @@ describe('Topics', () => {
     renderApp(runner)
     await openTopic('Topic')
     const question = (summary: string) => ({
-      concept: { name: 'C', group: 'G' },
+      concepts: [{ name: 'C', group: 'G' }],
       type: 'multiple',
       difficulty: 'Medium',
       wordings: [{ text: 'Pick', options: ['a', 'b', 'c'] }],
