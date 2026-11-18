@@ -1,8 +1,9 @@
-import { useId, useMemo, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Button, Form } from 'react-bootstrap'
 import { DIFFICULTIES, type Problem, type Topic, type TopicFile } from '@/content/schema'
 import type { Attempt, Grade } from '@/core/attempt'
 import {
+  applicableFilter,
   filterProblems,
   problemAreas,
   problemEntries,
@@ -15,7 +16,7 @@ import {
 import { Icon } from './icons'
 import { Link } from './Link'
 
-export const STATUS_LABEL: Record<ProblemStatus, string> = {
+const STATUS_LABEL: Record<ProblemStatus, string> = {
   new: 'New',
   'in-progress': 'In progress',
   solved: 'Solved',
@@ -37,8 +38,19 @@ interface Props {
   onResume: (topic: Topic, problem: Problem) => void
 }
 
-export function ProblemsPage({ topics, attempts, filter, onFilter, onStart, onResume }: Props) {
+// Typing writes the address after a pause: browsers limit how often a page may replace it.
+const SEARCH_DELAY_MS = 300
+
+export function ProblemsPage({
+  topics,
+  attempts,
+  filter: asked,
+  onFilter,
+  onStart,
+  onResume,
+}: Props) {
   const entries = useMemo(() => problemEntries(topics, attempts), [topics, attempts])
+  const filter = applicableFilter(asked, entries)
   const shown = filterProblems(entries, filter)
   const filtered = Object.values(filter).some(Boolean)
 
@@ -60,7 +72,12 @@ export function ProblemsPage({ topics, attempts, filter, onFilter, onStart, onRe
         </div>
       ) : (
         <>
-          <Filters topics={topics} entries={entries} filter={filter} onFilter={onFilter}>
+          <Filters
+            topics={topics.filter((t) => t.problems.length > 0)}
+            entries={entries}
+            filter={filter}
+            onFilter={(f) => onFilter(applicableFilter(f, entries))}
+          >
             <p className="ws-count" aria-live="polite">
               {filtered
                 ? `${shown.length} of ${entries.length} problems`
@@ -119,29 +136,19 @@ function Filters({ topics, entries, filter, onFilter, children }: FiltersProps) 
   const id = useId()
   const areas = problemAreas(entries, filter.topic)
   const set = (change: ProblemFilter) => onFilter({ ...filter, ...change })
-  // An area the new topic lacks would hide every problem.
-  const setTopic = (topic?: string) => {
-    const keep = filter.area !== undefined && problemAreas(entries, topic).includes(filter.area)
-    set({ topic, area: keep ? filter.area : undefined })
-  }
 
   return (
     <section className="ws-panel ws-filters" aria-label="Filters">
       <div className="ws-filter-fields">
         <Form.Group className="ws-filter-search" controlId={`${id}-search`}>
           <Form.Label>Search</Form.Label>
-          <Form.Control
-            type="search"
-            placeholder="Title or concept"
-            value={filter.search ?? ''}
-            onChange={(e) => set({ search: e.target.value || undefined })}
-          />
+          <SearchField value={filter.search ?? ''} onChange={(search) => set({ search })} />
         </Form.Group>
         <Form.Group controlId={`${id}-topic`}>
           <Form.Label>Topic</Form.Label>
           <Form.Select
             value={filter.topic ?? ''}
-            onChange={(e) => setTopic(e.target.value || undefined)}
+            onChange={(e) => set({ topic: e.target.value || undefined })}
           >
             <option value="">All topics</option>
             {topics.map((t) => (
@@ -199,6 +206,38 @@ function Filters({ topics, entries, filter, onFilter, children }: FiltersProps) 
       </div>
       <div className="ws-filter-foot">{children}</div>
     </section>
+  )
+}
+
+interface SearchFieldProps {
+  value: string
+  onChange: (search?: string) => void
+}
+
+function SearchField({ value, onChange }: SearchFieldProps) {
+  const [text, setText] = useState(value)
+  // A change from outside, such as Clear filters or Back, replaces what was typed.
+  const [outside, setOutside] = useState(value)
+  if (value !== outside) {
+    setOutside(value)
+    setText(value)
+  }
+  const latest = useRef(onChange)
+  useEffect(() => {
+    latest.current = onChange
+  })
+  useEffect(() => {
+    if (text === value) return
+    const timer = setTimeout(() => latest.current(text || undefined), SEARCH_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [text, value])
+  return (
+    <Form.Control
+      type="search"
+      placeholder="Title or concept"
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+    />
   )
 }
 

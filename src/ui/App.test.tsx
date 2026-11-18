@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { EditorView } from 'codemirror'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -326,9 +326,8 @@ describe('App', () => {
     await screen.findByRole('region', { name: 'Filters' })
     expect(window.location.hash).toBe('#/coding?status=new')
     await userEvent.type(screen.getByLabelText('Search'), 'nothing')
-    expect(screen.getByRole('region', { name: 'Problems' })).toHaveTextContent(
-      'No problems match these filters',
-    )
+    await waitFor(() => expect(window.location.hash).toBe('#/coding?search=nothing&status=new'))
+    expect(screen.getByText('No problems match these filters')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Start a random one' })).toBeDisabled()
     await userEvent.click(
       within(screen.getByRole('region', { name: 'Problems' })).getByRole('button', {
@@ -336,7 +335,33 @@ describe('App', () => {
       }),
     )
     expect(window.location.hash).toBe('#/coding')
+    expect(screen.getByLabelText('Search')).toHaveValue('')
     expect(problemRow('First problem')).toBeInTheDocument()
+  })
+
+  it('ignores a topic or area in the address that no longer applies', async () => {
+    const questionsOnly: TopicFile = {
+      ...quizTopic,
+      topic: { ...quizTopic.topic, id: 'q', name: 'Questions' },
+      problems: [],
+    }
+    renderApp(
+      fakeRunner(),
+      { topics: [topicFromFile(topic, 0), topicFromFile(questionsOnly, 1)] },
+      {
+        page: 'problems',
+        filter: { topic: 'gone', area: 'G', difficulty: 'Easy' },
+      },
+    )
+    expect(screen.getByRole('region', { name: 'Filters' })).toHaveTextContent('2 of 2 problems')
+    expect(screen.getByLabelText('Area')).toHaveValue('G')
+    expect(
+      within(screen.getByLabelText('Topic'))
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['All topics', 'Topic'])
+    await userEvent.click(screen.getByRole('button', { name: 'Medium' }))
+    expect(window.location.hash).toBe('#/coding?area=G&difficulty=Medium')
   })
 
   it('keeps an area only while the chosen topic has it', async () => {

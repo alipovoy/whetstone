@@ -25,9 +25,9 @@ test('filter the problems, keep the filter, start a random match', async ({ page
   await expect(list).toHaveCount(titles('Easy').length)
 
   await page.getByRole('button', { name: 'Start a random one' }).click()
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    new RegExp(titles('Easy').join('|')),
-  )
+  await expect(page).toHaveURL(/#\/coding\/algorithms\//)
+  const heading = await page.getByRole('heading', { level: 1 }).innerText()
+  expect(titles('Easy').some((t) => heading.startsWith(t))).toBe(true)
 
   // Filter changes replace the address, so Back returns to the list as it was left.
   await page.goBack()

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { TopicFile } from '@/content/schema'
 import { gradeAttempt, startAttempt, type Attempt } from './attempt'
-import { filterProblems, problemAreas, problemEntries, problemStatus } from './problems'
+import {
+  applicableFilter,
+  filterProblems,
+  problemAreas,
+  problemEntries,
+  problemStatus,
+} from './problems'
 
 const problem = (id: string, concept: string, difficulty: 'Easy' | 'Medium', title: string) => ({
   id,
@@ -118,6 +124,17 @@ describe('problem list', () => {
     expect(titles({ search: 'count graphs' })).toEqual(['Count the islands'])
     expect(titles({ search: '  stacks  ' })).toEqual(['Balanced brackets'])
     expect(titles({ search: 'Algorithms' })).toEqual([])
+  })
+
+  it('drops a topic or an area that no problem has, or that do not go together', () => {
+    expect(applicableFilter({ topic: 'gone', area: 'Linear', status: 'new' }, entries)).toEqual({
+      area: 'Linear',
+      status: 'new',
+    })
+    expect(applicableFilter({ topic: 'str', area: 'Trees and graphs' }, entries)).toEqual({
+      topic: 'str',
+    })
+    expect(applicableFilter({ area: 'Questions only' }, entries)).toEqual({})
   })
 
   it('offers the areas that have problems, once each, for a topic or all', () => {

@@ -68,3 +68,14 @@ export function filterProblems(entries: ProblemEntry[], filter: ProblemFilter): 
 export function problemAreas(entries: ProblemEntry[], topic?: string): string[] {
   return [...new Set(entries.filter((e) => !topic || e.topic.id === topic).map((e) => e.area))]
 }
+
+// A topic or area from an old address may be gone, or not go together; either would hide every
+// problem while its field reads "All", so it is dropped.
+export function applicableFilter(filter: ProblemFilter, entries: ProblemEntry[]): ProblemFilter {
+  const topic = entries.some((e) => e.topic.id === filter.topic) ? filter.topic : undefined
+  const area =
+    filter.area !== undefined && problemAreas(entries, topic).includes(filter.area)
+      ? filter.area
+      : undefined
+  return { ...filter, topic, area }
+}

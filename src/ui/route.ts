@@ -79,11 +79,12 @@ export function href(route: Route): string {
   }
 }
 
-const FILTER_KEYS = ['search', 'topic', 'area', 'difficulty', 'status'] as const
+const TEXT_FILTERS = ['search', 'topic', 'area'] as const
+const FILTER_KEYS = [...TEXT_FILTERS, 'difficulty', 'status'] as const
 
 function withFilter(params: URLSearchParams): Route {
   const filter: ProblemFilter = {}
-  for (const key of ['search', 'topic', 'area'] as const) {
+  for (const key of TEXT_FILTERS) {
     const value = params.get(key)
     if (value) filter[key] = value
   }

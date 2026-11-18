@@ -672,7 +672,6 @@ a[aria-disabled='true'] {
 .ws-difficulty[data-level='Hard'] {
   color: var(--ws-hard);
 }
-/* One mark per test of the last grade: filled passed, hollow failed. */
 .ws-marks {
   display: flex;
   flex-wrap: wrap;
