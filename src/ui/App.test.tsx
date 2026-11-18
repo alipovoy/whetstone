@@ -633,7 +633,7 @@ describe('Layout', () => {
     expect(screen.getByRole('radio', { name: /Slate/ })).toBeChecked()
   })
 
-  it('shows Reports with a side menu', async () => {
+  it('shows Reports with a menu of its reports', async () => {
     renderApp(fakeRunner(), {}, { page: 'reports', section: 'coding' })
     const side = within(screen.getByRole('navigation', { name: 'Reports' }))
     await userEvent.click(side.getByRole('link', { name: 'Quizzes' }))

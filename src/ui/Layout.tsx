@@ -74,17 +74,18 @@ function ThemeSwitch() {
   )
 }
 
-interface SideMenuPageProps {
+interface SubMenuPageProps {
   label: string
   items: { label: string; to: Route; current: boolean }[]
+  placement: 'side' | 'top'
   held?: boolean
   children: ReactNode
 }
 
-export function SideMenuPage({ label, items, held = false, children }: SideMenuPageProps) {
+export function SubMenuPage({ label, items, placement, held = false, children }: SubMenuPageProps) {
   return (
-    <div className="ws-with-side">
-      <nav className="ws-side" aria-label={label}>
+    <div className="ws-sub" data-placement={placement}>
+      <nav className="ws-sub-menu" aria-label={label}>
         {items.map((item) => (
           <Link
             key={item.label}
@@ -96,7 +97,7 @@ export function SideMenuPage({ label, items, held = false, children }: SideMenuP
           </Link>
         ))}
       </nav>
-      <div className="ws-side-content">{children}</div>
+      <div className="ws-sub-content">{children}</div>
     </div>
   )
 }

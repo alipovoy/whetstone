@@ -7,7 +7,7 @@ import type { Problem, Topic } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
 import type { Records } from '@/storage/database'
 import { HomePage } from './HomePage'
-import { SideMenuPage, TopBar } from './Layout'
+import { SubMenuPage, TopBar } from './Layout'
 import { ProblemPage } from './ProblemPage'
 import { ProblemsPage } from './ProblemsPage'
 import { QuizPage } from './QuizPage'
@@ -183,8 +183,9 @@ export function App({ runner, storage }: Props) {
 
   const settings = (children: ReactNode) => (
     <div className="ws-page">
-      <SideMenuPage
+      <SubMenuPage
         label="Settings"
+        placement="side"
         held={busy}
         items={[
           { label: 'Appearance', to: { page: 'appearance' }, current: route.page === 'appearance' },
@@ -196,7 +197,7 @@ export function App({ runner, storage }: Props) {
         ]}
       >
         {children}
-      </SideMenuPage>
+      </SubMenuPage>
     </div>
   )
 
@@ -287,8 +288,9 @@ export function App({ runner, storage }: Props) {
         )}
         {(route.page === 'reports' || route.page === 'attempt') && (
           <div className="ws-page">
-            <SideMenuPage
+            <SubMenuPage
               label="Reports"
+              placement="top"
               items={[
                 {
                   label: 'Coding problems',
@@ -330,7 +332,7 @@ export function App({ runner, storage }: Props) {
                     why="Only graded attempts are kept in the report."
                   />
                 ))}
-            </SideMenuPage>
+            </SubMenuPage>
           </div>
         )}
         {route.page === 'appearance' && settings(<AppearancePage />)}
