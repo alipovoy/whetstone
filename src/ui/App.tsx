@@ -22,7 +22,7 @@ export type AppRunner = Pick<PyodideRunner, 'run' | 'test' | 'warmUp' | 'status'
 
 export interface AppStorage {
   store: {
-    attempts: Pick<Records<Attempt>, 'put'>
+    attempts: Pick<Records<Attempt>, 'put' | 'delete'>
     topics: Pick<Records<TopicRecord>, 'put' | 'delete'>
     quizzes: Pick<Records<Quiz>, 'put' | 'delete'>
   } | null
@@ -142,6 +142,17 @@ export function App({ runner, storage }: Props) {
   }
   const resume = (topic: Topic, problem: Problem) =>
     navigate({ page: 'solve', topic: topic.id, problem: problem.id })
+  // Every open attempt goes: Start over, before Discard replaced it, left one behind the latest.
+  const discard = (topic: Topic, problem: Problem) => {
+    const ids = attempts
+      .filter((a) => a.topic === topic.id && a.problem === problem.id && !a.grade)
+      .map((a) => a.id)
+    setAttempts((list) => list.filter((a) => !ids.includes(a.id)))
+    if (store)
+      Promise.all(ids.map((id) => store.attempts.delete(id))).catch((error: unknown) =>
+        setSaveError(message(error)),
+      )
+  }
 
   const owner = route.page === 'solve' ? enabled.find((f) => f.topic.id === route.topic) : undefined
   const target =
@@ -231,6 +242,7 @@ export function App({ runner, storage }: Props) {
               onFilter={(filter) => replaceRoute({ page: 'problems', filter })}
               onStart={start}
               onResume={resume}
+              onDiscard={discard}
             />
           </div>
         )}

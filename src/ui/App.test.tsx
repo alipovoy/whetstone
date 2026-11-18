@@ -107,6 +107,7 @@ function renderApp(
 ) {
   window.history.replaceState(null, '', href(at))
   const put = vi.fn<(attempt: Attempt) => Promise<void>>(async () => undefined)
+  const deleteAttempt = vi.fn<(id: string) => Promise<void>>(async () => undefined)
   const topics = {
     put: vi.fn<(topic: TopicRecord) => Promise<void>>(async () => undefined),
     delete: vi.fn<(id: string) => Promise<void>>(async () => undefined),
@@ -119,7 +120,7 @@ function renderApp(
     <App
       runner={runner}
       storage={{
-        store: { attempts: { put }, topics, quizzes },
+        store: { attempts: { put, delete: deleteAttempt }, topics, quizzes },
         attempts: [],
         topics: [topicFromFile(topic, 0)],
         quizzes: [],
@@ -128,7 +129,7 @@ function renderApp(
       }}
     />,
   )
-  return Object.assign(put, { topics, quizzes })
+  return Object.assign(put, { topics, quizzes, deleteAttempt })
 }
 
 async function startFirst(runner: AppRunner = fakeRunner()) {
@@ -281,7 +282,7 @@ describe('App', () => {
     expect(AttemptSchema.safeParse(put.mock.lastCall![0]).success).toBe(true)
   })
 
-  it('resumes an unfinished attempt with its code and hints, or starts afresh', async () => {
+  it('resumes an unfinished attempt with its code and hints', async () => {
     const open = {
       ...startAttempt(crypto.randomUUID(), 't', topic.problems[1], 'def f(x):\n    return 2', 5),
       hints_used: 1,
@@ -301,11 +302,41 @@ describe('App', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Resume Second problem' }))
     expect(screen.getByRole('textbox', { name: 'Solution code' })).toHaveTextContent('return 2')
     expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('Hint 1.')
+  })
 
-    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Start over Second problem' }))
+  it('discards every open attempt after a confirm, back to the status of the last grade', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const at = (index: number, time: number) =>
+      startAttempt(crypto.randomUUID(), 't', topic.problems[index], '', time)
+    const done = gradeAttempt(
+      at(1, 1),
+      topic.topic,
+      topic.problems[1],
+      { tests: graded.tests, loaded: true },
+      2,
+    )
+    const left = [at(0, 3), at(1, 3), at(1, 4)]
+    const store = renderApp(fakeRunner(), { attempts: [done, ...left] })
+    expect(screen.queryByRole('button', { name: 'Start First problem' })).toBeNull()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Discard Second problem' }))
+    expect(confirm).toHaveBeenCalledWith('Discard your work on "Second problem"?')
+    expect(problemRow('Second problem')).toHaveTextContent('In progress')
+    expect(store.deleteAttempt).not.toHaveBeenCalled()
+
+    confirm.mockReturnValue(true)
+    await userEvent.click(screen.getByRole('button', { name: 'Discard Second problem' }))
+    expect(problemRow('Second problem')).toHaveTextContent('Needs work')
+    expect(problemRow('Second problem')).toHaveTextContent('Last score 50')
+    expect(screen.queryByRole('button', { name: 'Discard Second problem' })).toBeNull()
+    expect(store.deleteAttempt.mock.calls.map(([id]) => id).toSorted()).toEqual(
+      [left[1].id, left[2].id].toSorted(),
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Discard First problem' }))
+    expect(problemRow('First problem')).toHaveTextContent('New')
+    await userEvent.click(screen.getByRole('button', { name: 'Start First problem' }))
     expect(screen.getByRole('textbox', { name: 'Solution code' })).toHaveTextContent('pass')
-    expect(screen.getByRole('region', { name: 'Hints' })).not.toHaveTextContent('Hint 1.')
   })
 
   it('filters the problems, keeps the filter in the address and starts a random match', async () => {

@@ -30,6 +30,7 @@ interface Props {
   onFilter: (filter: ProblemFilter) => void
   onStart: (topic: Topic, problem: Problem) => void
   onResume: (topic: Topic, problem: Problem) => void
+  onDiscard: (topic: Topic, problem: Problem) => void
 }
 
 // Typing writes the address after a pause: browsers limit how often a page may replace it.
@@ -42,6 +43,7 @@ export function ProblemsPage({
   onFilter,
   onStart,
   onResume,
+  onDiscard,
 }: Props) {
   const entries = useMemo(() => problemEntries(topics, attempts), [topics, attempts])
   const filter = applicableFilter(asked, entries)
@@ -107,6 +109,10 @@ export function ProblemsPage({
                     entry={e}
                     onStart={() => onStart(e.topic, e.problem)}
                     onResume={() => onResume(e.topic, e.problem)}
+                    onDiscard={() => {
+                      if (confirm(`Discard your work on "${e.title}"?`))
+                        onDiscard(e.topic, e.problem)
+                    }}
                   />
                 ))}
               </ul>
@@ -239,9 +245,10 @@ interface ProblemRowProps {
   entry: ProblemEntry
   onStart: () => void
   onResume: () => void
+  onDiscard: () => void
 }
 
-function ProblemRow({ entry, onStart, onResume }: ProblemRowProps) {
+function ProblemRow({ entry, onStart, onResume, onDiscard }: ProblemRowProps) {
   const { topic, problem, title, concept, graded, status } = entry
   const unfinished = status === 'in-progress'
   return (
@@ -266,19 +273,30 @@ function ProblemRow({ entry, onStart, onResume }: ProblemRowProps) {
       </span>
       <StatusPill status={status} />
       <div className="ws-problem-actions">
-        {unfinished && (
-          <Button size="sm" aria-label={`Resume ${title}`} onClick={onResume}>
-            Resume
+        {unfinished ? (
+          <>
+            <Button size="sm" aria-label={`Resume ${title}`} onClick={onResume}>
+              Resume
+            </Button>
+            <Button
+              size="sm"
+              variant="outline-secondary"
+              aria-label={`Discard ${title}`}
+              onClick={onDiscard}
+            >
+              Discard
+            </Button>
+          </>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline-primary"
+            aria-label={`Start ${title}`}
+            onClick={onStart}
+          >
+            Start
           </Button>
         )}
-        <Button
-          size="sm"
-          variant={unfinished ? 'outline-secondary' : 'outline-primary'}
-          aria-label={`${unfinished ? 'Start over' : 'Start'} ${title}`}
-          onClick={onStart}
-        >
-          {unfinished ? 'Start over' : 'Start'}
-        </Button>
       </div>
     </li>
   )
