@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { DIFFICULTIES } from '@/content/schema'
+import { PROBLEM_STATUSES, type ProblemFilter } from '@/core/problems'
 
 // Hash addresses need no server rewrite on GitHub Pages.
 export type Route =
   | { page: 'home' }
-  | { page: 'problems' }
+  | { page: 'problems'; filter?: ProblemFilter }
   | { page: 'solve'; topic: string; problem: string }
   | { page: 'quizzes' }
   | { page: 'quiz'; id: string }
@@ -16,7 +18,10 @@ export type ReportSection = 'coding' | 'quizzes'
 export type Section = 'home' | 'coding' | 'quizzes' | 'reports' | 'settings'
 
 export function parseRoute(hash: string): Route {
-  const parts = hash
+  const mark = hash.indexOf('?')
+  const address = mark < 0 ? hash : hash.slice(0, mark)
+  const query = mark < 0 ? '' : hash.slice(mark + 1)
+  const parts = address
     .replace(/^#\/?/, '')
     .split('/')
     .filter(Boolean)
@@ -32,7 +37,8 @@ export function parseRoute(hash: string): Route {
   switch (first) {
     case 'coding':
       if (second && third) return { page: 'solve', topic: second, problem: third }
-      return second ? { page: 'home' } : { page: 'problems' }
+      if (second) return { page: 'home' }
+      return withFilter(new URLSearchParams(query))
     case 'quizzes':
       if (third) return { page: 'home' }
       return second ? { page: 'quiz', id: second } : { page: 'quizzes' }
@@ -55,7 +61,7 @@ export function href(route: Route): string {
     case 'home':
       return '#/'
     case 'problems':
-      return path('coding')
+      return path('coding') + filterQuery(route.filter)
     case 'solve':
       return path('coding', route.topic, route.problem)
     case 'quizzes':
@@ -71,6 +77,32 @@ export function href(route: Route): string {
     case 'topic':
       return path('settings', 'topics', route.id)
   }
+}
+
+const TEXT_FILTERS = ['search', 'topic', 'area'] as const
+const FILTER_KEYS = [...TEXT_FILTERS, 'difficulty', 'status'] as const
+
+function withFilter(params: URLSearchParams): Route {
+  const filter: ProblemFilter = {}
+  for (const key of TEXT_FILTERS) {
+    const value = params.get(key)
+    if (value) filter[key] = value
+  }
+  const difficulty = DIFFICULTIES.find((d) => d === params.get('difficulty'))
+  if (difficulty) filter.difficulty = difficulty
+  const status = PROBLEM_STATUSES.find((s) => s === params.get('status'))
+  if (status) filter.status = status
+  return Object.keys(filter).length ? { page: 'problems', filter } : { page: 'problems' }
+}
+
+function filterQuery(filter: ProblemFilter = {}): string {
+  const params = new URLSearchParams()
+  for (const key of FILTER_KEYS) {
+    const value = filter[key]
+    if (value) params.set(key, value)
+  }
+  const query = params.toString()
+  return query && '?' + query
 }
 
 export function sectionOf(route: Route): Section {
@@ -97,6 +129,12 @@ const listeners = new Set<() => void>()
 // Shows the page at once; the browser's hashchange arrives later and finds it shown.
 export function navigate(route: Route): void {
   window.location.hash = href(route)
+  listeners.forEach((l) => l())
+}
+
+// For changes within a page, such as a filter: Back skips them. replaceState fires no hashchange.
+export function replaceRoute(route: Route): void {
+  window.history.replaceState(null, '', href(route))
   listeners.forEach((l) => l())
 }
 

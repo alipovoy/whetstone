@@ -6,10 +6,7 @@ const problem = topic.problems[0]
 
 test('solve a problem: run the visible tests, then grade to 100', async ({ page }) => {
   await page.goto('./#/coding')
-  await page
-    .getByRole('button', { name: /^Start / })
-    .first()
-    .click()
+  await page.getByRole('button', { name: `Start ${problem.wordings[0].title}` }).click()
   await expect(page.getByRole('heading', { level: 1 })).toContainText(problem.wordings[0].title)
   await expect(page.getByText('Python is ready')).toBeVisible({ timeout: 90_000 })
 

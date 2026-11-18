@@ -22,7 +22,8 @@ const WordingSchema = z.object({
   constraints: z.array(text),
 })
 
-const DifficultySchema = z.enum(['Easy', 'Medium', 'Hard'])
+export const DIFFICULTIES = ['Easy', 'Medium', 'Hard'] as const
+const DifficultySchema = z.enum(DIFFICULTIES)
 
 export const ProblemSchema = z.object({
   id,

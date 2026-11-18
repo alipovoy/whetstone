@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Alert, Badge, Button, ListGroup, Stack } from 'react-bootstrap'
-import { lastGraded, latestAttempt, startAttempt, type Attempt } from '@/core/attempt'
+import { Alert } from 'react-bootstrap'
+import { latestAttempt, startAttempt, type Attempt } from '@/core/attempt'
 import { startQuiz, submitQuiz, type Quiz, type QuizSetup } from '@/core/quiz'
 import { newTopic, served, type TopicRecord } from '@/core/topics'
-import type { Problem, Topic, TopicFile } from '@/content/schema'
+import type { Problem, Topic } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
 import type { Records } from '@/storage/database'
 import { HomePage } from './HomePage'
 import { SideMenuPage, TopBar } from './Layout'
 import { ProblemPage } from './ProblemPage'
+import { ProblemsPage } from './ProblemsPage'
 import { QuizPage } from './QuizPage'
 import { QuizzesPage } from './QuizzesPage'
 import { TopicPage } from './TopicPage'
 import { TopicsPage } from './TopicsPage'
 import { Link } from './Link'
-import { navigate, sectionOf, useRoute, type Route } from './route'
+import { navigate, replaceRoute, sectionOf, useRoute, type Route } from './route'
 import { AppearancePage, ReportPage } from './SectionPages'
 
 export type AppRunner = Pick<PyodideRunner, 'run' | 'test' | 'warmUp' | 'status' | 'subscribe'>
@@ -217,7 +218,14 @@ export function App({ runner, storage }: Props) {
         )}
         {route.page === 'problems' && (
           <div className="ws-page">
-            <ProblemList topics={enabled} attempts={attempts} onStart={start} onResume={resume} />
+            <ProblemsPage
+              topics={enabled}
+              attempts={attempts}
+              filter={route.filter ?? {}}
+              onFilter={(filter) => replaceRoute({ page: 'problems', filter })}
+              onStart={start}
+              onResume={resume}
+            />
           </div>
         )}
         {route.page === 'quizzes' && (
@@ -308,83 +316,4 @@ function Missing({ what, back }: { what: string; back: Route }) {
 
 function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
-}
-
-interface ProblemListProps {
-  topics: TopicFile[]
-  attempts: Attempt[]
-  onStart: (topic: Topic, problem: Problem) => void
-  onResume: (topic: Topic, problem: Problem) => void
-}
-
-function ProblemList({ topics, attempts, onStart, onResume }: ProblemListProps) {
-  const shown = topics.filter((t) => t.problems.length > 0)
-  return (
-    <section aria-label="Problems">
-      <h1 className="h3">Coding problems</h1>
-      {shown.length === 0 && (
-        <p>
-          No problems to practise. Add problems to a topic, or enable one, in{' '}
-          <Link to={{ page: 'topics' }}>Settings, Topics</Link>.
-        </p>
-      )}
-      {shown.map(({ topic, problems }) => (
-        <section key={topic.id} aria-label={topic.name} className="mb-3">
-          <h2 className="h5">{topic.name}</h2>
-          <ListGroup as="ul">
-            {problems.map((problem) => (
-              <ProblemRow
-                key={problem.id}
-                problem={problem}
-                latest={latestAttempt(attempts, topic.id, problem.id)}
-                graded={lastGraded(attempts, topic.id, problem.id)}
-                onStart={() => onStart(topic, problem)}
-                onResume={() => onResume(topic, problem)}
-              />
-            ))}
-          </ListGroup>
-        </section>
-      ))}
-    </section>
-  )
-}
-
-interface ProblemRowProps {
-  problem: Problem
-  latest?: Attempt
-  graded?: Attempt
-  onStart: () => void
-  onResume: () => void
-}
-
-function ProblemRow({ problem, latest, graded, onStart, onResume }: ProblemRowProps) {
-  const title = problem.wordings[0].title
-  const unfinished = latest && !latest.grade ? latest : undefined
-  return (
-    <ListGroup.Item as="li" aria-label={title}>
-      <Stack direction="horizontal" gap={2} className="flex-wrap">
-        <span className="fw-semibold">{title}</span>
-        <Badge bg="secondary">{problem.difficulty}</Badge>
-        {graded?.grade && (
-          <span className="text-body-secondary">Last score {graded.grade.score}</span>
-        )}
-        {unfinished && <Badge bg="info">In progress</Badge>}
-        <Stack direction="horizontal" gap={2} className="ms-auto">
-          {unfinished && (
-            <Button size="sm" variant="primary" aria-label={`Resume ${title}`} onClick={onResume}>
-              Resume
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant={unfinished ? 'outline-primary' : 'primary'}
-            aria-label={`${unfinished ? 'Start over' : 'Start'} ${title}`}
-            onClick={onStart}
-          >
-            {unfinished ? 'Start over' : 'Start'}
-          </Button>
-        </Stack>
-      </Stack>
-    </ListGroup.Item>
-  )
 }
