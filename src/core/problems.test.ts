@@ -3,8 +3,8 @@ import type { TopicFile } from '@/content/schema'
 import { gradeAttempt, startAttempt, type Attempt } from './attempt'
 import {
   applicableFilter,
-  filterProblems,
-  problemAreas,
+  filterEntries,
+  entryAreas,
   problemEntries,
   problemStatus,
 } from './problems'
@@ -97,8 +97,8 @@ describe('problem list', () => {
     open('c', 'algo', 'islands', 2),
   ]
   const entries = problemEntries(files, attempts)
-  const titles = (filter: Parameters<typeof filterProblems>[1]) =>
-    filterProblems(entries, filter).map((e) => e.title)
+  const titles = (filter: Parameters<typeof filterEntries>[1]) =>
+    filterEntries(entries, filter).map((e) => e.title)
 
   it('lists every problem in topic order with its concept, area and status', () => {
     expect(entries.map((e) => [e.title, e.concept, e.area, e.status])).toEqual([
@@ -138,7 +138,7 @@ describe('problem list', () => {
   })
 
   it('offers the areas that have problems, once each, for a topic or all', () => {
-    expect(problemAreas(entries)).toEqual(['Linear', 'Trees and graphs'])
-    expect(problemAreas(entries, 'str')).toEqual(['Linear'])
+    expect(entryAreas(entries)).toEqual(['Linear', 'Trees and graphs'])
+    expect(entryAreas(entries, 'str')).toEqual(['Linear'])
   })
 })

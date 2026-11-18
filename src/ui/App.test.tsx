@@ -641,6 +641,68 @@ describe('Layout', () => {
     expect(screen.getByRole('link', { name: 'Build a quiz' })).toBeInTheDocument()
   })
 
+  it('reports graded attempts, filtered in the address, and opens one read-only', async () => {
+    const grade = (index: number, code: string, at: number) =>
+      gradeAttempt(
+        {
+          ...startAttempt(crypto.randomUUID(), 't', topic.problems[index], code, at),
+          hints_used: 1,
+        },
+        topic.topic,
+        topic.problems[index],
+        { tests: graded.tests, loaded: true },
+        at,
+      )
+    const first = grade(0, 'return 1', 1)
+    const second = grade(1, 'return 2', 2)
+    const open = startAttempt(crypto.randomUUID(), 't', topic.problems[0], '', 3)
+    renderApp(
+      fakeRunner(),
+      { attempts: [first, open, second] },
+      {
+        page: 'reports',
+        section: 'coding',
+      },
+    )
+    const list = screen.getByRole('region', { name: 'Graded attempts' })
+    expect(
+      within(list)
+        .getAllByRole('link')
+        .map((l) => l.textContent),
+    ).toEqual(['Second problem', 'First problem'])
+    expect(screen.getByRole('region', { name: 'Filters' })).toHaveTextContent('2 graded attempts')
+
+    await userEvent.type(screen.getByLabelText('Search'), 'first')
+    await waitFor(() => expect(window.location.hash).toBe('#/reports/coding?search=first'))
+    expect(
+      within(list)
+        .getAllByRole('link')
+        .map((l) => l.textContent),
+    ).toEqual(['First problem'])
+
+    await userEvent.click(within(list).getByRole('link', { name: 'First problem' }))
+    expect(window.location.hash).toBe(`#/reports/coding/${first.id}`)
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('First problem')
+    expect(screen.getByRole('region', { name: 'Code' })).toHaveTextContent('return 1')
+    expect(screen.getByRole('region', { name: 'Test results' })).toHaveTextContent(
+      '1 of 2 tests passed',
+    )
+    expect(screen.getByRole('link', { name: 'Open the problem' })).toHaveAttribute(
+      'href',
+      '#/coding/t/one',
+    )
+    await userEvent.click(screen.getByRole('link', { name: 'Back to graded attempts' }))
+    expect(window.location.hash).toBe('#/reports/coding?search=first')
+  })
+
+  it('says an attempt that is not graded is not in the report', () => {
+    const open = startAttempt(crypto.randomUUID(), 't', topic.problems[0], '', 3)
+    renderApp(fakeRunner(), { attempts: [open] }, { page: 'attempt', id: open.id })
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'This attempt is not available',
+    )
+  })
+
   it('stays on the page while Python runs, from the menu and from Back', async () => {
     const runner = fakeRunner()
     let finish = () => {}
@@ -959,6 +1021,7 @@ describe('Topics', () => {
       await userEvent.click(screen.getByRole('link', { name: 'Build another quiz' }))
       expect(screen.getByRole('form', { name: 'New quiz' })).toBeInTheDocument()
 
+      await userEvent.click(screen.getByRole('link', { name: 'Reports, Quizzes' }))
       expect(screen.getByRole('region', { name: 'Past quizzes' })).toHaveTextContent(
         'Topic, 2 questions',
       )
@@ -1059,8 +1122,10 @@ describe('Topics', () => {
         60_000,
       )
       withQuestions([old])
-      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
-      await userEvent.click(screen.getByRole('button', { name: /^Open quiz/ }))
+      await userEvent.click(screen.getByRole('link', { name: 'Reports' }))
+      const menu = screen.getByRole('navigation', { name: 'Reports' })
+      await userEvent.click(within(menu).getByRole('link', { name: 'Quizzes' }))
+      await userEvent.click(screen.getByRole('link', { name: /^Open quiz/ }))
       const report = screen.getByRole('region', { name: 'Quiz result' })
       expect(report).toHaveTextContent('Time usedNo time limit')
       expect(report).toHaveTextContent('0 correct, 0 partly correct, 1 wrong or not answered')

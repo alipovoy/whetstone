@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from 'react'
-import { Alert, Badge, Button, Form, ListGroup, Stack } from 'react-bootstrap'
+import { Alert, Button, Form, Stack } from 'react-bootstrap'
 import { DIFFICULTIES, type TopicFile } from '@/content/schema'
 import {
   candidates,
@@ -30,7 +30,6 @@ interface Props {
 
 export function QuizzesPage({ topics, quizzes, onStart, onOpen, onDiscard }: Props) {
   const running = quizzes.find((q) => !q.result)
-  const past = quizzes.filter((q) => q.result).toSorted((a, b) => b.started_at - a.started_at)
   return (
     <section aria-label="Quizzes">
       <h1 className="h3">Quizzes</h1>
@@ -65,36 +64,10 @@ export function QuizzesPage({ topics, quizzes, onStart, onOpen, onDiscard }: Pro
           onStart(setup)
         }}
       />
-      <section aria-label="Past quizzes" className="mt-4">
-        <h2 className="h5">Past quizzes</h2>
-        {past.length === 0 && <p className="text-body-secondary">None yet.</p>}
-        <ListGroup as="ul">
-          {past.map((quiz) => {
-            const when = new Date(quiz.started_at).toLocaleString()
-            const names = [...new Set(quiz.questions.map((q) => q.topic_name))].join(', ')
-            return (
-              <ListGroup.Item as="li" key={quiz.id} aria-label={when}>
-                <Stack direction="horizontal" gap={2} className="flex-wrap">
-                  <span className="fw-semibold">{when}</span>
-                  <span className="text-body-secondary">
-                    {names}, {quiz.questions.length} questions
-                  </span>
-                  <Badge bg="secondary">Score {quiz.result?.score}</Badge>
-                  <Button
-                    size="sm"
-                    variant="outline-primary"
-                    className="ms-auto"
-                    aria-label={`Open quiz of ${when}`}
-                    onClick={() => onOpen(quiz.id)}
-                  >
-                    Open
-                  </Button>
-                </Stack>
-              </ListGroup.Item>
-            )
-          })}
-        </ListGroup>
-      </section>
+      <p className="mt-3 text-body-secondary">
+        Your past quizzes are in{' '}
+        <Link to={{ page: 'reports', section: 'quizzes' }}>Reports, Quizzes</Link>.
+      </p>
     </section>
   )
 }

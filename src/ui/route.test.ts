@@ -11,7 +11,9 @@ describe('routes', () => {
     { page: 'quizzes' },
     { page: 'quiz', id: 'q1' },
     { page: 'reports', section: 'coding' },
+    { page: 'reports', section: 'coding', filter: { topic: 't', status: 'solved' } },
     { page: 'reports', section: 'quizzes' },
+    { page: 'attempt', id: 'a/1' },
     { page: 'appearance' },
     { page: 'topics' },
     { page: 'topic', id: 't1' },
@@ -29,6 +31,7 @@ describe('routes', () => {
       '#/nowhere',
       '#/coding/only-topic',
       '#/quizzes/a/b',
+      '#/reports/quizzes/a',
       '#/%E0',
     ])
       expect(parseRoute(hash)).toEqual({ page: 'home' })
@@ -57,6 +60,8 @@ describe('routes', () => {
       'coding',
       'quizzes',
       'quizzes',
+      'reports',
+      'reports',
       'reports',
       'reports',
       'settings',

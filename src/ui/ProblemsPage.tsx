@@ -1,27 +1,21 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Button, Form } from 'react-bootstrap'
-import { DIFFICULTIES, type Problem, type Topic, type TopicFile } from '@/content/schema'
+import { useMemo } from 'react'
+import { Button } from 'react-bootstrap'
+import type { Problem, Topic, TopicFile } from '@/content/schema'
 import type { Attempt } from '@/core/attempt'
 import {
   applicableFilter,
-  filterProblems,
-  problemAreas,
+  filterEntries,
   problemEntries,
   PROBLEM_STATUSES,
-  SOLVED_SCORE,
   type ProblemEntry,
   type ProblemFilter,
-  type ProblemStatus,
 } from '@/core/problems'
+import { Filters } from './Filters'
 import { Icon } from './icons'
 import { Link } from './Link'
-import { STATUS_LABEL, StatusPill, TestMarks } from './progress'
+import { statusOptions, StatusPill, TestMarks } from './progress'
 
-const STATUS_OPTION: Record<ProblemStatus, string> = {
-  ...STATUS_LABEL,
-  solved: `Solved (score ${SOLVED_SCORE} or more)`,
-  'needs-work': `Needs work (score under ${SOLVED_SCORE})`,
-}
+const STATUSES = statusOptions(PROBLEM_STATUSES)
 
 interface Props {
   topics: TopicFile[]
@@ -32,9 +26,6 @@ interface Props {
   onResume: (topic: Topic, problem: Problem) => void
   onDiscard: (topic: Topic, problem: Problem) => void
 }
-
-// Typing writes the address after a pause: browsers limit how often a page may replace it.
-const SEARCH_DELAY_MS = 300
 
 export function ProblemsPage({
   topics,
@@ -47,7 +38,7 @@ export function ProblemsPage({
 }: Props) {
   const entries = useMemo(() => problemEntries(topics, attempts), [topics, attempts])
   const filter = applicableFilter(asked, entries)
-  const shown = filterProblems(entries, filter)
+  const shown = filterEntries(entries, filter)
   const filtered = Object.values(filter).some(Boolean)
 
   const open = (e: ProblemEntry) =>
@@ -69,8 +60,8 @@ export function ProblemsPage({
       ) : (
         <>
           <Filters
-            topics={topics.filter((t) => t.problems.length > 0)}
             entries={entries}
+            statuses={STATUSES}
             filter={filter}
             onFilter={(f) => onFilter(applicableFilter(f, entries))}
           >
@@ -121,123 +112,6 @@ export function ProblemsPage({
         </>
       )}
     </>
-  )
-}
-
-interface FiltersProps {
-  topics: TopicFile[]
-  entries: ProblemEntry[]
-  filter: ProblemFilter
-  onFilter: (filter: ProblemFilter) => void
-  children: ReactNode
-}
-
-function Filters({ topics, entries, filter, onFilter, children }: FiltersProps) {
-  const id = useId()
-  const areas = problemAreas(entries, filter.topic)
-  const set = (change: ProblemFilter) => onFilter({ ...filter, ...change })
-
-  return (
-    <section className="ws-panel ws-filters" aria-label="Filters">
-      <div className="ws-filter-fields">
-        <Form.Group className="ws-filter-search" controlId={`${id}-search`}>
-          <Form.Label>Search</Form.Label>
-          <SearchField value={filter.search ?? ''} onChange={(search) => set({ search })} />
-        </Form.Group>
-        <Form.Group controlId={`${id}-topic`}>
-          <Form.Label>Topic</Form.Label>
-          <Form.Select
-            value={filter.topic ?? ''}
-            onChange={(e) => set({ topic: e.target.value || undefined })}
-          >
-            <option value="">All topics</option>
-            {topics.map((t) => (
-              <option key={t.topic.id} value={t.topic.id}>
-                {t.topic.name}
-              </option>
-            ))}
-          </Form.Select>
-        </Form.Group>
-        <Form.Group controlId={`${id}-area`}>
-          <Form.Label>Area</Form.Label>
-          <Form.Select
-            value={filter.area ?? ''}
-            onChange={(e) => set({ area: e.target.value || undefined })}
-          >
-            <option value="">All areas</option>
-            {areas.map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </Form.Select>
-        </Form.Group>
-        <div>
-          <span className="form-label d-block" id={`${id}-difficulty`}>
-            Difficulty
-          </span>
-          <div className="ws-seg ws-seg-text" role="group" aria-labelledby={`${id}-difficulty`}>
-            {[undefined, ...DIFFICULTIES].map((d) => (
-              <button
-                key={d ?? 'any'}
-                type="button"
-                aria-pressed={filter.difficulty === d}
-                onClick={() => set({ difficulty: d })}
-              >
-                {d ?? 'Any'}
-              </button>
-            ))}
-          </div>
-        </div>
-        <Form.Group controlId={`${id}-status`}>
-          <Form.Label>Status</Form.Label>
-          <Form.Select
-            value={filter.status ?? ''}
-            onChange={(e) => set({ status: PROBLEM_STATUSES.find((s) => s === e.target.value) })}
-          >
-            <option value="">Any status</option>
-            {PROBLEM_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_OPTION[s]}
-              </option>
-            ))}
-          </Form.Select>
-        </Form.Group>
-      </div>
-      <div className="ws-filter-foot">{children}</div>
-    </section>
-  )
-}
-
-interface SearchFieldProps {
-  value: string
-  onChange: (search?: string) => void
-}
-
-function SearchField({ value, onChange }: SearchFieldProps) {
-  const [text, setText] = useState(value)
-  // A change from outside, such as Clear filters or Back, replaces what was typed.
-  const [outside, setOutside] = useState(value)
-  if (value !== outside) {
-    setOutside(value)
-    setText(value)
-  }
-  const latest = useRef(onChange)
-  useEffect(() => {
-    latest.current = onChange
-  })
-  useEffect(() => {
-    if (text === value) return
-    const timer = setTimeout(() => latest.current(text || undefined), SEARCH_DELAY_MS)
-    return () => clearTimeout(timer)
-  }, [text, value])
-  return (
-    <Form.Control
-      type="search"
-      placeholder="Title or concept"
-      value={text}
-      onChange={(e) => setText(e.target.value)}
-    />
   )
 }
 
