@@ -559,6 +559,7 @@
     {
       "id": "q-two-pointers-precondition",
       "type": "single",
+      "difficulty": "Easy",
       "concept": "two-pointers",
       "wordings": [
         {
@@ -590,6 +591,7 @@
     {
       "id": "q-two-pointers-move",
       "type": "single",
+      "difficulty": "Easy",
       "concept": "two-pointers",
       "wordings": [
         {
@@ -612,6 +614,7 @@
     {
       "id": "q-sliding-window-cost",
       "type": "single",
+      "difficulty": "Medium",
       "concept": "sliding-window",
       "wordings": [
         {
@@ -643,6 +646,7 @@
     {
       "id": "q-sliding-window-fit",
       "type": "multiple",
+      "difficulty": "Medium",
       "concept": "sliding-window",
       "wordings": [
         {
@@ -668,6 +672,7 @@
     {
       "id": "q-sliding-window-negatives",
       "type": "single",
+      "difficulty": "Hard",
       "concept": "sliding-window",
       "wordings": [
         {
@@ -690,6 +695,7 @@
     {
       "id": "q-prefix-sums-range",
       "type": "single",
+      "difficulty": "Medium",
       "concept": "prefix-sums",
       "wordings": [
         {
@@ -712,6 +718,7 @@
     {
       "id": "q-hash-maps-lookup",
       "type": "single",
+      "difficulty": "Easy",
       "concept": "hash-maps",
       "wordings": [
         {
@@ -734,6 +741,7 @@
     {
       "id": "q-hash-maps-keys",
       "type": "multiple",
+      "difficulty": "Easy",
       "concept": "hash-maps",
       "wordings": [
         {
@@ -769,6 +777,7 @@
     {
       "id": "q-hash-maps-worst-case",
       "type": "single",
+      "difficulty": "Hard",
       "concept": "hash-maps",
       "wordings": [
         {
@@ -791,6 +800,7 @@
     {
       "id": "q-stacks-order",
       "type": "single",
+      "difficulty": "Easy",
       "concept": "stacks",
       "wordings": [
         {
@@ -813,6 +823,7 @@
     {
       "id": "q-stacks-next-greater",
       "type": "single",
+      "difficulty": "Hard",
       "concept": "stacks",
       "wordings": [
         {
@@ -835,6 +846,7 @@
     {
       "id": "q-queues-deque",
       "type": "single",
+      "difficulty": "Easy",
       "concept": "queues",
       "wordings": [
         {
@@ -866,6 +878,7 @@
     {
       "id": "q-queues-window-maximum",
       "type": "single",
+      "difficulty": "Hard",
       "concept": "queues",
       "wordings": [
         {
@@ -888,6 +901,7 @@
     {
       "id": "q-binary-search-steps",
       "type": "single",
+      "difficulty": "Easy",
       "concept": "binary-search",
       "wordings": [
         {
@@ -919,6 +933,7 @@
     {
       "id": "q-binary-search-infinite-loop",
       "type": "single",
+      "difficulty": "Hard",
       "concept": "binary-search",
       "wordings": [
         {
@@ -941,6 +956,7 @@
     {
       "id": "q-binary-search-applicability",
       "type": "multiple",
+      "difficulty": "Medium",
       "concept": "binary-search",
       "wordings": [
         {
@@ -966,6 +982,7 @@
     {
       "id": "q-sorting-python-worst-case",
       "type": "single",
+      "difficulty": "Medium",
       "concept": "sorting",
       "wordings": [
         {
@@ -988,6 +1005,7 @@
     {
       "id": "q-sorting-stable",
       "type": "single",
+      "difficulty": "Easy",
       "concept": "sorting",
       "wordings": [
         {
@@ -1010,6 +1028,7 @@
     {
       "id": "q-sorting-python-facts",
       "type": "multiple",
+      "difficulty": "Medium",
       "concept": "sorting",
       "wordings": [
         {
@@ -1035,6 +1054,7 @@
     {
       "id": "q-linked-lists-insert",
       "type": "single",
+      "difficulty": "Easy",
       "concept": "linked-lists",
       "wordings": [
         {
@@ -1057,6 +1077,7 @@
     {
       "id": "q-linked-lists-cycle",
       "type": "single",
+      "difficulty": "Hard",
       "concept": "linked-lists",
       "wordings": [
         {
@@ -1088,6 +1109,7 @@
     {
       "id": "q-trees-inorder",
       "type": "single",
+      "difficulty": "Easy",
       "concept": "trees",
       "wordings": [
         {
@@ -1110,6 +1132,7 @@
     {
       "id": "q-trees-bst-worst-case",
       "type": "single",
+      "difficulty": "Medium",
       "concept": "trees",
       "wordings": [
         {
@@ -1141,6 +1164,7 @@
     {
       "id": "q-trees-depth-first",
       "type": "multiple",
+      "difficulty": "Medium",
       "concept": "trees",
       "wordings": [
         {
@@ -1165,6 +1189,7 @@
     {
       "id": "q-graphs-shortest-unweighted",
       "type": "single",
+      "difficulty": "Easy",
       "concept": "graphs",
       "wordings": [
         {
@@ -1187,6 +1212,7 @@
     {
       "id": "q-graphs-traversal-cost",
       "type": "single",
+      "difficulty": "Medium",
       "concept": "graphs",
       "wordings": [
         {
@@ -1209,6 +1235,7 @@
     {
       "id": "q-heaps-min-operations",
       "type": "single",
+      "difficulty": "Medium",
       "concept": "heaps",
       "wordings": [
         {
@@ -1231,6 +1258,7 @@
     {
       "id": "q-heaps-top-k",
       "type": "single",
+      "difficulty": "Medium",
       "concept": "heaps",
       "wordings": [
         {
@@ -1262,6 +1290,7 @@
     {
       "id": "q-heaps-heapify",
       "type": "single",
+      "difficulty": "Hard",
       "concept": "heaps",
       "wordings": [
         {
@@ -1284,6 +1313,7 @@
     {
       "id": "q-dp-properties",
       "type": "single",
+      "difficulty": "Medium",
       "concept": "dynamic-programming",
       "wordings": [
         {
@@ -1306,6 +1336,7 @@
     {
       "id": "q-dp-stairs",
       "type": "single",
+      "difficulty": "Easy",
       "concept": "dynamic-programming",
       "wordings": [
         {
@@ -1328,6 +1359,7 @@
     {
       "id": "q-dp-memo-vs-table",
       "type": "multiple",
+      "difficulty": "Hard",
       "concept": "dynamic-programming",
       "wordings": [
         {
@@ -1353,6 +1385,7 @@
     {
       "id": "q-complexity-triangular-loop",
       "type": "single",
+      "difficulty": "Medium",
       "concept": "complexity",
       "wordings": [
         {
@@ -1375,6 +1408,7 @@
     {
       "id": "q-complexity-amortised-append",
       "type": "single",
+      "difficulty": "Medium",
       "concept": "complexity",
       "wordings": [
         {
@@ -1406,6 +1440,7 @@
     {
       "id": "q-complexity-list-operations",
       "type": "multiple",
+      "difficulty": "Medium",
       "concept": "complexity",
       "wordings": [
         {

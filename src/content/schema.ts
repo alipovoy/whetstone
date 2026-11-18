@@ -23,7 +23,7 @@ const WordingSchema = z.object({
 })
 
 export const DIFFICULTIES = ['Easy', 'Medium', 'Hard'] as const
-const DifficultySchema = z.enum(DIFFICULTIES)
+export const DifficultySchema = z.enum(DIFFICULTIES)
 
 export const ProblemSchema = z.object({
   id,
@@ -53,6 +53,7 @@ const QuestionWordingSchema = z.object({
 export const QuestionSchema = z.object({
   id,
   type: z.enum(['single', 'multiple']),
+  difficulty: DifficultySchema,
   concept: id,
   wordings: z.array(QuestionWordingSchema).min(1, 'needs at least one wording'),
   // Indexes into the options; every wording lists its options in the same order.
@@ -83,6 +84,11 @@ export type Difficulty = z.infer<typeof DifficultySchema>
 // A concept missing from its topic is shown by its id.
 export function conceptName(topic: Topic, concept: string): string {
   return topic.concepts.find((c) => c.id === concept)?.name ?? concept
+}
+
+// Areas are concept groups; a concept missing from its topic has none.
+export function conceptArea(topic: Topic, concept: string): string {
+  return topic.concepts.find((c) => c.id === concept)?.group ?? ''
 }
 
 export type Validation = { ok: true; file: TopicFile } | { ok: false; errors: string[] }

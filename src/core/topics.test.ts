@@ -30,6 +30,7 @@ const problem: Problem = {
 const question: Question = {
   id: 'q1',
   type: 'single',
+  difficulty: 'Easy',
   concept: 'two-pointers',
   wordings: [{ text: 'Which?', options: ['a', 'b'] }],
   answers: [1],

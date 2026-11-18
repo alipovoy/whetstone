@@ -64,7 +64,7 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
   const questions: Row[] = file.questions.map((q) => ({
     id: q.id,
     title: q.summary,
-    badge: q.type === 'single' ? 'Single choice' : 'Multiple choice',
+    badge: `${q.difficulty}, ${q.type === 'single' ? 'single choice' : 'multiple choice'}`,
     concept: conceptName(q.concept),
     text: itemText(q, topic.concepts),
   }))

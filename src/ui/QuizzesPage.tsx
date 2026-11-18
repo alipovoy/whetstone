@@ -1,10 +1,20 @@
-import { useState } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { Alert, Badge, Button, Form, ListGroup, Stack } from 'react-bootstrap'
-import type { TopicFile } from '@/content/schema'
-import { candidates, type QuestionType, type Quiz, type QuizSetup } from '@/core/quiz'
+import { DIFFICULTIES, type TopicFile } from '@/content/schema'
+import {
+  candidates,
+  drawQuestions,
+  QUESTION_MINUTES,
+  quizAreas,
+  timeLimit,
+  type QuestionType,
+  type Quiz,
+  type QuizFilter,
+  type QuizSetup,
+} from '@/core/quiz'
+import { Link } from './Link'
 
-const SIZES = [5, 10, 20]
-const MINUTES = [10, 20, 30]
+const DEFAULT_SIZE = 10
 const TYPES: { type: QuestionType; label: string }[] = [
   { type: 'single', label: 'Single choice' },
   { type: 'multiple', label: 'Multiple choice' },
@@ -90,86 +100,228 @@ export function QuizzesPage({ topics, quizzes, onStart, onOpen, onDiscard }: Pro
 }
 
 function NewQuiz({ topics, onStart }: Pick<Props, 'topics' | 'onStart'>) {
+  const id = useId()
   const offered = topics.filter((t) => t.questions.length > 0)
-  const [chosen, setChosen] = useState(() => offered.map((t) => t.topic.id))
-  const [types, setTypes] = useState<QuestionType[]>(TYPES.map((t) => t.type))
-  const [size, setSize] = useState(10)
-  const [minutes, setMinutes] = useState(0)
-  const picked = offered.filter((t) => chosen.includes(t.topic.id))
-  const available = candidates(picked, types).length
-  const toggle = <T,>(list: T[], item: T) =>
-    list.includes(item) ? list.filter((i) => i !== item) : [...list, item]
+  const [filter, setFilter] = useState<QuizFilter>(() => ({
+    topics: offered.map((t) => t.topic.id),
+    offAreas: [],
+    types: TYPES.map((t) => t.type),
+    difficulties: [...DIFFICULTIES],
+  }))
+  const [size, setSize] = useState(DEFAULT_SIZE)
+  const [timed, setTimed] = useState(true)
+  const [seed] = useState(() => Math.random())
+
+  const shown = {
+    ...filter,
+    topics: filter.topics.filter((t) => offered.some((o) => o.topic.id === t)),
+  }
+  const matching = candidates(offered, shown)
+  const count = Math.max(1, Math.min(size, matching.length))
+  const questions = drawQuestions(matching, count, seed)
+  const limit = timeLimit(questions.map((c) => c.question))
+  const change = (update: (f: QuizFilter) => Partial<QuizFilter>) =>
+    setFilter((f) => ({ ...f, ...update(f) }))
+  // While the count is typed it may be empty or out of range; it settles on blur.
+  const [typed, setTyped] = useState<string | null>(null)
+  const typeCount = (text: string) => {
+    setTyped(text)
+    const n = Math.trunc(Number(text))
+    if (text.trim() !== '' && n >= 1) setSize(Math.min(n, matching.length))
+  }
 
   if (offered.length === 0)
-    return <p>No questions to quiz on. Add questions to a topic, or enable one, under Settings.</p>
+    return (
+      <div className="ws-panel ws-empty">
+        <h2 className="h5 mb-0">No questions to quiz on</h2>
+        <p className="text-body-secondary">Add questions to a topic, or enable one.</p>
+        <Link className="btn btn-primary" to={{ page: 'topics' }}>
+          Open Settings, Topics
+        </Link>
+      </div>
+    )
 
   return (
     <Form
+      noValidate
+      className="ws-panel ws-builder"
       aria-label="New quiz"
       onSubmit={(event) => {
         event.preventDefault()
-        onStart({ topics: picked, types, size, minutes: minutes || undefined })
+        onStart({ questions, timed })
       }}
     >
-      <h2 className="h5">New quiz</h2>
-      <Form.Group className="mb-3">
-        <Form.Label as="div">Topics</Form.Label>
-        {offered.map(({ topic, questions }) => (
-          <Form.Check
-            key={topic.id}
-            id={`quiz-topic-${topic.id}`}
-            label={`${topic.name} (${questions.length})`}
-            checked={chosen.includes(topic.id)}
-            onChange={() => setChosen((list) => toggle(list, topic.id))}
-          />
+      <h2 className="h4">New quiz</h2>
+      <Choices label="Topics">
+        <div className="ws-tiles">
+          {offered.map(({ topic, questions: inTopic }) => (
+            <button
+              key={topic.id}
+              type="button"
+              className="ws-tile"
+              aria-pressed={filter.topics.includes(topic.id)}
+              onClick={() => change((f) => ({ topics: toggled(f.topics, topic.id) }))}
+            >
+              <span className="ws-tile-name">{topic.name}</span>
+              <span className="ws-tile-count">{plural(inTopic.length, 'question')}</span>
+            </button>
+          ))}
+        </div>
+      </Choices>
+      <Choices label="Areas">
+        {quizAreas(offered, shown.topics).map((area) => (
+          <Chip
+            key={area}
+            on={!filter.offAreas.includes(area)}
+            onClick={() => change((f) => ({ offAreas: toggled(f.offAreas, area) }))}
+          >
+            {area}
+          </Chip>
         ))}
-      </Form.Group>
-      <Form.Group className="mb-3">
-        <Form.Label as="div">Types</Form.Label>
-        {TYPES.map(({ type, label }) => (
+        {shown.topics.length === 0 && (
+          <span className="text-body-secondary">Choose a topic to see its areas.</span>
+        )}
+      </Choices>
+      <div className="ws-builder-row">
+        <Choices label="Question types">
+          {TYPES.map(({ type, label }) => (
+            <Chip
+              key={type}
+              on={filter.types.includes(type)}
+              onClick={() => change((f) => ({ types: toggled(f.types, type) }))}
+            >
+              {label}
+            </Chip>
+          ))}
+        </Choices>
+        <Choices label="Difficulty">
+          {DIFFICULTIES.map((d) => (
+            <Chip
+              key={d}
+              on={filter.difficulties.includes(d)}
+              onClick={() => change((f) => ({ difficulties: toggled(f.difficulties, d) }))}
+            >
+              {d}
+            </Chip>
+          ))}
+        </Choices>
+      </div>
+      <div className="ws-builder-row">
+        <Form.Group controlId={`${id}-count`}>
+          <Form.Label>Number of questions</Form.Label>
+          <div className="ws-stepper">
+            <Button
+              variant="outline-secondary"
+              aria-label="Fewer questions"
+              disabled={matching.length === 0 || count <= 1}
+              onClick={() => {
+                setTyped(null)
+                setSize(count - 1)
+              }}
+            >
+              −
+            </Button>
+            <Form.Control
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={matching.length}
+              step={1}
+              value={matching.length === 0 ? 0 : (typed ?? count)}
+              disabled={matching.length === 0}
+              onChange={(event) => typeCount(event.target.value)}
+              onBlur={() => setTyped(null)}
+            />
+            <Button
+              variant="outline-secondary"
+              aria-label="More questions"
+              disabled={count >= matching.length}
+              onClick={() => {
+                setTyped(null)
+                setSize(count + 1)
+              }}
+            >
+              +
+            </Button>
+          </div>
+          <Form.Text>{plural(matching.length, 'question')} match</Form.Text>
+        </Form.Group>
+        <div className="ws-limit">
           <Form.Check
-            inline
-            key={type}
-            id={`quiz-type-${type}`}
-            label={label}
-            checked={types.includes(type)}
-            onChange={() => setTypes((list) => toggle(list, type))}
+            type="switch"
+            role="switch"
+            id={`${id}-timed`}
+            label="Time limit"
+            checked={timed}
+            onChange={() => setTimed((t) => !t)}
           />
-        ))}
-      </Form.Group>
-      <Stack direction="horizontal" gap={3} className="mb-3 flex-wrap">
-        <Form.Group controlId="quiz-size">
-          <Form.Label>Questions</Form.Label>
-          <Form.Select value={size} onChange={(event) => setSize(Number(event.target.value))}>
-            {SIZES.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </Form.Select>
-        </Form.Group>
-        <Form.Group controlId="quiz-timer">
-          <Form.Label>Timer</Form.Label>
-          <Form.Select value={minutes} onChange={(event) => setMinutes(Number(event.target.value))}>
-            <option value={0}>Off</option>
-            {MINUTES.map((n) => (
-              <option key={n} value={n}>
-                {n} minutes
-              </option>
-            ))}
-          </Form.Select>
-        </Form.Group>
-      </Stack>
-      {available < size && (
-        <p className="text-body-secondary">
-          {available === 0
-            ? 'No questions match.'
-            : `Only ${available} questions match; the quiz will have ${available}.`}
-        </p>
-      )}
-      <Button type="submit" disabled={available === 0}>
-        Start quiz
-      </Button>
+          {matching.length > 0 && (
+            <output className="d-block" aria-label="Time limit breakdown">
+              {timed ? (
+                <>
+                  <strong>{limit.minutes} min</strong>:{' '}
+                  {DIFFICULTIES.filter((d) => limit.counts[d] > 0)
+                    .map(
+                      (d) =>
+                        `${limit.counts[d]} ${d.toLowerCase()} × ${QUESTION_MINUTES[d]}\u00a0min`,
+                    )
+                    .join(' + ')}
+                </>
+              ) : (
+                <span className="text-body-secondary">
+                  No time limit. Take as long as you need.
+                </span>
+              )}
+            </output>
+          )}
+        </div>
+      </div>
+      <div className="ws-builder-foot">
+        {matching.length === 0 && (
+          <span className="text-body-secondary">
+            No questions match. Choose more topics, areas, types or difficulties.
+          </span>
+        )}
+        <Button type="submit" size="lg" className="ms-auto" disabled={matching.length === 0}>
+          Start quiz
+        </Button>
+      </div>
     </Form>
   )
+}
+
+function Choices({ label, children }: { label: string; children: ReactNode }) {
+  const id = useId()
+  return (
+    <div className="ws-choices-group" role="group" aria-labelledby={id}>
+      <span className="form-label d-block" id={id}>
+        {label}
+      </span>
+      <div className="ws-chips">{children}</div>
+    </div>
+  )
+}
+
+function Chip({
+  on,
+  onClick,
+  children,
+}: {
+  on: boolean
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button type="button" className="ws-chip" aria-pressed={on} onClick={onClick}>
+      {children}
+    </button>
+  )
+}
+
+function toggled<T>(list: T[], item: T): T[] {
+  return list.includes(item) ? list.filter((i) => i !== item) : [...list, item]
+}
+
+function plural(n: number, noun: string): string {
+  return `${n} ${noun}${n === 1 ? '' : 's'}`
 }

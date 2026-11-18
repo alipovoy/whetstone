@@ -6,7 +6,7 @@ import type { TopicFile } from '@/content/schema'
 import type { RunnerStatus, RunResult, TestResult } from '@/runner/types'
 import { AttemptSchema, gradeAttempt, startAttempt, type Attempt } from '@/core/attempt'
 import { PROBLEM_TEMPLATE } from '@/core/bridge'
-import { startQuiz, submitQuiz, type Quiz } from '@/core/quiz'
+import { candidates, startQuiz, submitQuiz, type Quiz } from '@/core/quiz'
 import { itemText, topicFromFile, type TopicRecord } from '@/core/topics'
 import { App, type AppRunner, type AppStorage } from './App'
 import { href, type Route } from './route'
@@ -45,9 +45,11 @@ const choiceQuestion = (
   type: 'single' | 'multiple',
   options: string[],
   answers: number[],
+  difficulty: 'Easy' | 'Medium' | 'Hard' = 'Easy',
 ): TopicFile['questions'][number] => ({
   id,
   type,
+  difficulty,
   concept: 'c',
   wordings: [{ text: `Text of ${id}`, options }],
   answers,
@@ -59,9 +61,18 @@ const quizTopic: TopicFile = {
   ...topic,
   questions: [
     choiceQuestion('pick-one', 'single', ['wrong', 'right'], [1]),
-    choiceQuestion('pick-all', 'multiple', ['a', 'b', 'c', 'd'], [0, 2]),
+    choiceQuestion('pick-all', 'multiple', ['a', 'b', 'c', 'd'], [0, 2], 'Hard'),
   ],
 }
+const quizOf = (types: ('single' | 'multiple')[], timed = false) => ({
+  questions: candidates([quizTopic], {
+    topics: ['t'],
+    offAreas: [],
+    types,
+    difficulties: ['Easy', 'Medium', 'Hard'],
+  }),
+  timed,
+})
 
 const graded: TestResult = {
   stdout: '',
@@ -482,10 +493,7 @@ describe('Layout', () => {
       { tests: graded.tests, loaded: true },
       2,
     )
-    const quiz = submitQuiz(
-      startQuiz(crypto.randomUUID(), { topics: [quizTopic], types: ['single'], size: 5 }, 3),
-      4,
-    )
+    const quiz = submitQuiz(startQuiz(crypto.randomUUID(), quizOf(['single']), 3), 4)
     renderApp(fakeRunner(), { attempts: [done, open], quizzes: [quiz] }, { page: 'home' })
     const recent = screen.getByRole('region', { name: 'Recent' })
     expect(
@@ -737,6 +745,7 @@ describe('Topics', () => {
     const question = (summary: string) => ({
       concept: { name: 'C', group: 'G' },
       type: 'multiple',
+      difficulty: 'Medium',
       wordings: [{ text: 'Pick', options: ['a', 'b', 'c'] }],
       answers: [0, 2],
       explanation: 'Because',
@@ -763,7 +772,7 @@ describe('Topics', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add' }))
     const questions = screen.getByRole('region', { name: 'Topic questions' })
     expect(within(questions).getByRole('listitem', { name: 'Good' })).toHaveTextContent(
-      'Multiple choice',
+      'Medium, multiple choice',
     )
     expect(runner.test).not.toHaveBeenCalled()
 
@@ -819,8 +828,13 @@ describe('Topics', () => {
       vi.spyOn(Math, 'random').mockReturnValue(0.99)
       const put = withQuestions()
       await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
-      expect(screen.getByText('Only 2 questions match; the quiz will have 2.')).toBeInTheDocument()
+      expect(screen.getByLabelText('Number of questions')).toHaveValue(2)
+      expect(screen.getByLabelText('Time limit breakdown')).toHaveTextContent(
+        '4 min: 1 easy × 1 min + 1 hard × 3 min',
+      )
+      const before = Date.now()
       await userEvent.click(screen.getByRole('button', { name: 'Start quiz' }))
+      expect(lastSaved(put).deadline).toBeGreaterThanOrEqual(before + 4 * 60_000)
 
       expect(screen.getByText('Text of pick-one')).toBeInTheDocument()
       await userEvent.click(screen.getByRole('radio', { name: 'right' }))
@@ -854,12 +868,76 @@ describe('Topics', () => {
       )
     })
 
-    it('resumes a quiz in progress, or discards it to start another', async () => {
-      const running = startQuiz(
-        crypto.randomUUID(),
-        { topics: [quizTopic], types: ['single'], size: 5 },
-        0,
+    it('builds a quiz from topics, areas, types, difficulty and a count, timed or not', async () => {
+      const other: TopicFile = {
+        topic: { id: 'u', name: 'Other', concepts: [{ id: 'c', name: 'C', group: 'H' }] },
+        problems: [],
+        questions: [
+          choiceQuestion('u1', 'single', ['x', 'y'], [0], 'Medium'),
+          choiceQuestion('u2', 'single', ['x', 'y'], [1], 'Medium'),
+          choiceQuestion('u3', 'multiple', ['x', 'y', 'z'], [0, 1], 'Easy'),
+        ],
+      }
+      const put = renderApp(fakeRunner(), {
+        topics: [topicFromFile(quizTopic, 0), topicFromFile(other, 1)],
+      })
+      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
+      const form = within(screen.getByRole('form', { name: 'New quiz' }))
+      const count = form.getByLabelText('Number of questions')
+      const breakdown = () => form.getByLabelText('Time limit breakdown')
+      expect(form.getByText('5 questions match')).toBeInTheDocument()
+      expect(count).toHaveValue(5)
+      expect(breakdown()).toHaveTextContent(
+        '9 min: 2 easy × 1 min + 2 medium × 2 min + 1 hard × 3 min',
       )
+
+      const chip = (group: string, name: string | RegExp) =>
+        within(form.getByRole('group', { name: group })).getByRole('button', { name })
+      await userEvent.click(chip('Areas', 'G'))
+      expect(form.getByText('3 questions match')).toBeInTheDocument()
+      await userEvent.click(chip('Difficulty', 'Medium'))
+      expect(form.getByText('1 question match')).toBeInTheDocument()
+      await userEvent.click(chip('Topics', /Other/))
+      expect(form.getByText(/No questions match/)).toBeInTheDocument()
+      expect(form.getByRole('button', { name: 'Start quiz' })).toBeDisabled()
+      await userEvent.click(chip('Topics', /Other/))
+      await userEvent.click(chip('Difficulty', 'Medium'))
+      await userEvent.click(chip('Question types', 'Multiple choice'))
+      expect(form.getByText('2 questions match')).toBeInTheDocument()
+
+      await userEvent.clear(count)
+      await userEvent.type(count, '99')
+      expect(form.getByRole('button', { name: 'More questions' })).toBeDisabled()
+      await userEvent.tab()
+      expect(count).toHaveValue(2)
+      await userEvent.click(form.getByRole('button', { name: 'Fewer questions' }))
+      expect(count).toHaveValue(1)
+      expect(form.getByRole('button', { name: 'Fewer questions' })).toBeDisabled()
+      expect(breakdown()).toHaveTextContent('2 min: 1 medium × 2 min')
+      await userEvent.click(form.getByRole('switch', { name: 'Time limit' }))
+      expect(breakdown()).toHaveTextContent('No time limit')
+      await userEvent.click(form.getByRole('button', { name: 'Start quiz' }))
+      expect(lastSaved(put).questions).toHaveLength(1)
+      expect(lastSaved(put).deadline).toBeUndefined()
+    })
+
+    it('gives a timed quiz of some of the matching questions the limit it showed', async () => {
+      const put = withQuestions()
+      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
+      const form = within(screen.getByRole('form', { name: 'New quiz' }))
+      await userEvent.click(form.getByRole('button', { name: 'Fewer questions' }))
+      const minutes = Number(
+        /^(\d+) min/.exec(form.getByLabelText('Time limit breakdown').textContent!)![1],
+      )
+      await userEvent.click(form.getByRole('button', { name: 'Start quiz' }))
+      const quiz = lastSaved(put)
+      expect(quiz.questions).toHaveLength(1)
+      expect(minutes).toBe(quiz.questions[0].difficulty === 'Hard' ? 3 : 1)
+      expect(quiz.deadline! - quiz.started_at).toBe(minutes * 60_000)
+    })
+
+    it('resumes a quiz in progress, or discards it to start another', async () => {
+      const running = startQuiz(crypto.randomUUID(), quizOf(['single']), 0)
       const put = withQuestions([running])
       await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
       expect(screen.getByText(/Quiz in progress: 0 of 1 answered/)).toBeInTheDocument()
@@ -874,19 +952,21 @@ describe('Topics', () => {
     })
 
     it('submits a quiz whose deadline has passed', async () => {
-      const setup = { topics: [quizTopic], types: ['single' as const], size: 5, minutes: 10 }
-      const expired = startQuiz(crypto.randomUUID(), setup, Date.now() - 11 * 60_000)
+      const expired = startQuiz(
+        crypto.randomUUID(),
+        quizOf(['single'], true),
+        Date.now() - 2 * 60_000,
+      )
       const put = withQuestions([expired])
       await vi.waitFor(() => expect(lastSaved(put).result).toMatchObject({ score: 0 }))
     })
 
     it('submits a timed quiz while another, untimed, runs too (started in another tab)', async () => {
-      const setup = { topics: [quizTopic], types: ['single' as const], size: 5 }
-      const untimed = startQuiz(crypto.randomUUID(), setup, Date.now())
+      const untimed = startQuiz(crypto.randomUUID(), quizOf(['single']), Date.now())
       const expired = startQuiz(
         crypto.randomUUID(),
-        { ...setup, minutes: 10 },
-        Date.now() - 11 * 60_000,
+        quizOf(['single'], true),
+        Date.now() - 2 * 60_000,
       )
       const put = withQuestions([untimed, expired])
       await vi.waitFor(() =>

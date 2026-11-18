@@ -39,6 +39,7 @@ const PROBLEM = {
 const QUESTION = {
   concept: { name: 'Two pointers', group: 'Arrays and strings' },
   type: 'single',
+  difficulty: 'Easy',
   wordings: [
     {
       text: 'Moving one index from each end of a list towards the middle finds a pair with a given sum. What must be true of the list?',
@@ -72,11 +73,12 @@ export function problemRequest({ topic, concepts, existing }: PromptRequest): st
 
 export function questionRequest({ topic, concepts, existing }: PromptRequest): string {
   return [
-    `Write 5 new interview quiz questions for the topic "${topic}", single and multiple choice.`,
+    `Write 5 new interview quiz questions for the topic "${topic}", single and multiple choice, from Easy to Hard.`,
     ...shape('questions', QUESTION),
     'Rules:',
     '- `concept` names the idea the question checks; reuse an existing concept when one fits.',
     '- `type` is `single` (exactly one correct option) or `multiple` (one or more correct options).',
+    '- `difficulty` is Easy, Medium or Hard: about 1, 2 or 3 minutes to answer.',
     '- `answers` lists the indexes of the correct options, counted from 0. At least one option is wrong.',
     '- Extra `wordings` may ask the same question in other words; they keep the same options in the same order.',
     '- `text`, `options` and `explanation` are Markdown. The explanation says why each answer is right or wrong.',

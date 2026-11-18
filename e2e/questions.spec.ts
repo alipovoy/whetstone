@@ -23,6 +23,7 @@ ${JSON.stringify({
     {
       concept: { name: 'Hash maps', group: 'Lookup' },
       type: 'single',
+      difficulty: 'Easy',
       wordings: [
         {
           text: 'What is the average cost of a lookup in a Python `dict`?',
