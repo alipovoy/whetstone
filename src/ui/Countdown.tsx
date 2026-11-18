@@ -1,14 +1,13 @@
-import { Badge } from 'react-bootstrap'
 import { formatClock } from '@/core/attempt'
 
 export function Countdown({ ms }: { ms: number }) {
   return ms > 0 ? (
-    <Badge bg="light" text="dark" className="border fs-6" title="Time left">
+    <span className="ws-clock" title="Time left">
       {formatClock(ms)}
-    </Badge>
+    </span>
   ) : (
-    <Badge bg="warning" text="dark" className="fs-6">
+    <span className="ws-clock" data-over>
       Time is up
-    </Badge>
+    </span>
   )
 }

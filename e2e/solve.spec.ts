@@ -20,6 +20,8 @@ test('solve a problem: run the visible tests, then grade to 100', async ({ page 
   await page.keyboard.press('ControlOrMeta+a')
   // Pasted, not typed: typing would add the editor's auto-indent to the solution's own.
   await page.keyboard.insertText(problem.reference_solution)
+  // The completion list may open over the buttons below the editor.
+  await page.keyboard.press('Escape')
 
   await page.getByRole('button', { name: 'Run tests' }).click()
   const visible = problem.visible_tests.length
@@ -31,4 +33,10 @@ test('solve a problem: run the visible tests, then grade to 100', async ({ page 
   const grade = page.getByRole('region', { name: 'Grade' })
   await expect(grade).toContainText('Score: 100 / 100')
   await expect(grade).toContainText('Hidden test')
+
+  await page.getByRole('link', { name: 'Back to problems' }).click()
+  await expect(page).toHaveURL(/#\/coding$/)
+  await expect(page.getByRole('listitem', { name: problem.wordings[0].title })).toContainText(
+    'Solved',
+  )
 })

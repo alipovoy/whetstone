@@ -80,6 +80,11 @@ export type Wording = z.infer<typeof WordingSchema>
 export type Question = z.infer<typeof QuestionSchema>
 export type Difficulty = z.infer<typeof DifficultySchema>
 
+// A concept missing from its topic is shown by its id.
+export function conceptName(topic: Topic, concept: string): string {
+  return topic.concepts.find((c) => c.id === concept)?.name ?? concept
+}
+
 export type Validation = { ok: true; file: TopicFile } | { ok: false; errors: string[] }
 
 export function validateTopicFile(input: unknown): Validation {

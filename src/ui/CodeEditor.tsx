@@ -15,6 +15,7 @@ interface Props {
   label: string
   readOnly?: boolean
   language?: keyof typeof LANGUAGES
+  className?: string
 }
 
 const LANGUAGES = {
@@ -34,6 +35,7 @@ export function CodeEditor({
   label,
   readOnly = false,
   language = 'python',
+  className,
 }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const [view, setView] = useState<EditorView | null>(null)
@@ -74,7 +76,7 @@ export function CodeEditor({
   }, [view, editable, readOnly])
 
   return (
-    <div>
+    <div className={className}>
       <div ref={host} className="border rounded" />
       <div id={hintId} className="form-text">
         Tab indents. Press Esc, then Tab, to leave the editor.
