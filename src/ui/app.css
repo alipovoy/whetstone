@@ -1476,39 +1476,59 @@ a[aria-disabled='true'] {
   margin-bottom: 0;
 }
 
-/* Side menu of Reports and Settings */
-.ws-with-side {
+/* Menu of Reports and Settings: tabs above the content, or a side menu on wide screens */
+.ws-sub {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 2rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
   align-items: start;
 }
-.ws-side {
+.ws-sub-menu {
   display: flex;
-  flex-direction: column;
   gap: 2px;
-  position: sticky;
-  top: calc(var(--ws-bar-height) + 1.75rem);
+  overflow-x: auto;
+  /* Inset, so the current tab's underline covers it. */
+  box-shadow: inset 0 -1px var(--bs-border-color);
 }
-.ws-side a {
+.ws-sub-menu a {
   padding: 0.45rem 0.65rem;
-  border-left: 3px solid transparent;
-  border-radius: var(--ws-radius);
+  border-bottom: 3px solid transparent;
   color: var(--bs-body-color);
   text-decoration: none;
+  white-space: nowrap;
 }
-.ws-side a:hover {
-  background: var(--bs-body-bg);
-}
-.ws-side a[aria-current='page'] {
-  background: var(--bs-body-bg);
-  border-left-color: var(--ws-accent);
+.ws-sub-menu a[aria-current='page'] {
+  border-bottom-color: var(--ws-accent);
   font-weight: 600;
 }
-.ws-side-content {
+.ws-sub-content {
   display: grid;
   gap: 1.5rem;
   min-width: 0;
+}
+@media (min-width: 901px) {
+  .ws-sub[data-placement='side'] {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 2rem;
+  }
+  [data-placement='side'] .ws-sub-menu {
+    flex-direction: column;
+    position: sticky;
+    top: calc(var(--ws-bar-height) + 1.75rem);
+    box-shadow: none;
+  }
+  [data-placement='side'] .ws-sub-menu a {
+    border-bottom: 0;
+    border-left: 3px solid transparent;
+    border-radius: var(--ws-radius);
+  }
+  [data-placement='side'] .ws-sub-menu a:hover,
+  [data-placement='side'] .ws-sub-menu a[aria-current='page'] {
+    background: var(--bs-body-bg);
+  }
+  [data-placement='side'] .ws-sub-menu a[aria-current='page'] {
+    border-left-color: var(--ws-accent);
+  }
 }
 
 /* Appearance */
@@ -1632,25 +1652,6 @@ a[aria-disabled='true'] {
   }
   .ws-home {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .ws-with-side {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 1rem;
-  }
-  .ws-side {
-    position: static;
-    flex-direction: row;
-    overflow-x: auto;
-  }
-  .ws-side a {
-    border-left: 0;
-    border-bottom: 3px solid transparent;
-    border-radius: 0;
-    white-space: nowrap;
-  }
-  .ws-side a[aria-current='page'] {
-    background: transparent;
-    border-bottom-color: var(--ws-accent);
   }
 }
 
