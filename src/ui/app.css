@@ -5,6 +5,7 @@
 [data-bs-theme='light'] {
   --ws-radius: 6px;
   --ws-radius-panel: 10px;
+  --ws-bar-height: 56px;
   --ws-ring-alpha: 0.3;
 
   --bs-body-font-family:
@@ -404,7 +405,7 @@ h3,
   display: flex;
   align-items: center;
   gap: 1rem;
-  min-height: 56px;
+  min-height: var(--ws-bar-height);
   padding: 0 1.25rem;
   background: var(--bs-body-bg);
   border-bottom: 1px solid var(--bs-border-color);
@@ -897,7 +898,8 @@ a[aria-disabled='true'] {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.ws-clock[data-over] {
+.ws-clock[data-over],
+.ws-clock[data-low] {
   color: var(--bs-warning-text-emphasis);
   background: var(--bs-warning-bg-subtle);
   box-shadow: none;
@@ -1048,6 +1050,179 @@ a[aria-disabled='true'] {
   border-top: 1px solid var(--bs-border-color);
 }
 
+/* Taking a quiz */
+.ws-quiz {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 17rem;
+  gap: 1.5rem;
+  align-items: start;
+}
+.ws-question {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.5rem 1.75rem;
+}
+.ws-question-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 1rem;
+  font-size: 0.875rem;
+}
+.ws-flagged {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--ws-medium);
+  font-weight: 700;
+}
+.ws-flagged .ws-icon {
+  width: 15px;
+  height: 15px;
+}
+.ws-question-text {
+  max-width: 70ch;
+  font-size: 1.0625rem;
+}
+.ws-question-text > :last-child {
+  margin-bottom: 0;
+}
+.ws-options {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 70ch;
+  margin: 0;
+}
+.ws-options legend {
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+}
+.ws-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--ws-radius);
+  cursor: pointer;
+}
+.ws-option:hover {
+  border-color: var(--ws-muted);
+}
+.ws-option:has(input:checked) {
+  background: var(--ws-accent-soft);
+  border-color: var(--ws-accent);
+}
+.ws-option input {
+  flex: none;
+  margin-top: 0.2rem;
+}
+.ws-question-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--bs-border-color);
+}
+.ws-question-actions .btn[aria-pressed='true'] {
+  --bs-btn-color: var(--ws-medium);
+  --bs-btn-border-color: var(--ws-medium);
+  --bs-btn-hover-border-color: var(--ws-medium);
+}
+.ws-question {
+  scroll-margin-top: calc(var(--ws-bar-height) + 1rem);
+}
+.ws-question-clock {
+  display: none;
+  margin-left: auto;
+}
+.ws-quiz-status {
+  max-height: calc(100vh - var(--ws-bar-height) - 3.5rem);
+  overflow-y: auto;
+  position: sticky;
+  top: calc(var(--ws-bar-height) + 1.75rem);
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.25rem;
+}
+.ws-quiz-clock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.ws-quiz-clock .ws-clock {
+  font-size: 1.375rem;
+}
+.ws-numbers {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.4rem;
+}
+.ws-number,
+.ws-legend i {
+  position: relative;
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--ws-radius);
+}
+.ws-number {
+  height: 2.4rem;
+  color: var(--bs-body-color);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ws-number:hover {
+  border-color: var(--ws-muted);
+}
+.ws-number[data-answered],
+.ws-legend i[data-answered] {
+  background: var(--ws-accent-soft);
+  border-color: var(--ws-accent);
+}
+.ws-number[data-answered] {
+  color: var(--ws-accent-strong);
+}
+/* A flagged question gets a corner mark, so its answered state still shows. */
+.ws-number[data-flagged]::after,
+.ws-legend i[data-flagged]::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  border-style: solid;
+  border-width: 0 12px 12px 0;
+  border-color: transparent var(--ws-medium) transparent transparent;
+  border-top-right-radius: var(--ws-radius);
+}
+.ws-number[aria-current='step'] {
+  border-color: var(--bs-body-color);
+  box-shadow: inset 0 0 0 1px var(--bs-body-color);
+}
+.ws-legend {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ws-muted);
+  font-size: 0.875rem;
+}
+.ws-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.ws-legend i {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+.ws-legend strong {
+  margin-left: auto;
+  color: var(--bs-body-color);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Side menu of Reports and Settings */
 .ws-with-side {
   display: grid;
@@ -1060,7 +1235,7 @@ a[aria-disabled='true'] {
   flex-direction: column;
   gap: 2px;
   position: sticky;
-  top: calc(56px + 1.75rem);
+  top: calc(var(--ws-bar-height) + 1.75rem);
 }
 .ws-side a {
   padding: 0.45rem 0.65rem;
@@ -1145,6 +1320,23 @@ a[aria-disabled='true'] {
 }
 
 @media (max-width: 900px) {
+  .ws-quiz {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ws-quiz-status {
+    position: static;
+    max-height: none;
+  }
+  .ws-question-clock {
+    display: inline-block;
+  }
+  /* The top bar wraps to two rows here. */
+  .ws-question {
+    scroll-margin-top: 7rem;
+  }
+  .ws-numbers {
+    grid-template-columns: repeat(auto-fill, minmax(2.6rem, 1fr));
+  }
   .ws-app:has(.ws-solve) {
     height: auto;
   }

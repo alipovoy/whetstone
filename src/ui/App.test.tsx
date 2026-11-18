@@ -837,23 +837,39 @@ describe('Topics', () => {
       expect(lastSaved(put).deadline).toBeGreaterThanOrEqual(before + 4 * 60_000)
 
       expect(screen.getByText('Text of pick-one')).toBeInTheDocument()
+      const status = within(screen.getByRole('complementary', { name: 'Quiz status' }))
+      expect(status.getByText('Time left')).toBeInTheDocument()
       await userEvent.click(screen.getByRole('radio', { name: 'right' }))
-      await userEvent.click(screen.getByRole('button', { name: 'Flag' }))
+      const flag = screen.getByRole('button', { name: 'Flag for review' })
+      await userEvent.click(flag)
+      expect(flag).toHaveAttribute('aria-pressed', 'true')
       expect(lastSaved(put)).toMatchObject({ picks: [[1], []], flagged: [true, false] })
+      expect(status.getByRole('button', { name: 'Question 1, answered, flagged' })).toHaveAttribute(
+        'aria-current',
+        'step',
+      )
       await userEvent.click(screen.getByRole('button', { name: 'Next' }))
       expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
       await userEvent.click(screen.getByRole('checkbox', { name: 'a' }))
+      const panel = screen.getByRole('complementary', { name: 'Quiz status' })
+      expect(panel).toHaveTextContent('Answered 2')
+      expect(panel).toHaveTextContent('Not answered 0')
+      expect(panel).toHaveTextContent('Flagged 1')
 
-      await userEvent.click(screen.getByRole('button', { name: 'Review and submit' }))
-      const flagged = screen.getByRole('region', { name: 'Flagged' })
-      expect(screen.queryByRole('region', { name: 'Unanswered' })).toBeNull()
-      await userEvent.click(within(flagged).getByRole('button', { name: 'Question 1' }))
-      await userEvent.click(screen.getByRole('button', { name: 'Unflag' }))
-      await userEvent.click(screen.getByRole('button', { name: 'Review and submit' }))
+      await userEvent.click(status.getByRole('button', { name: 'Submit quiz' }))
+      const dialog = within(screen.getByRole('dialog', { name: 'Submit the quiz?' }))
+      expect(dialog.getByText('1 question flagged for review.')).toBeInTheDocument()
+      await userEvent.click(dialog.getByRole('button', { name: 'Keep working' }))
+      await userEvent.click(status.getByRole('button', { name: 'Question 1, answered, flagged' }))
+      expect(screen.getByText('Text of pick-one')).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Flag for review' }))
+      await userEvent.click(status.getByRole('button', { name: 'Submit quiz' }))
       expect(
         screen.getByText('Every question is answered and none is flagged.'),
       ).toBeInTheDocument()
-      await userEvent.click(screen.getByRole('button', { name: 'Submit' }))
+      await userEvent.click(
+        within(screen.getByRole('dialog')).getByRole('button', { name: 'Submit quiz' }),
+      )
 
       // A single choice weighs 1, a multiple choice 2: (100 + 2 × 50) / 3.
       expect(screen.getByRole('region', { name: 'Quiz result' })).toHaveTextContent('Score 67')
@@ -943,12 +959,30 @@ describe('Topics', () => {
       expect(screen.getByText(/Quiz in progress: 0 of 1 answered/)).toBeInTheDocument()
       await userEvent.click(screen.getByRole('button', { name: 'Resume' }))
       expect(screen.getByText('Question 1 of 1')).toBeInTheDocument()
+      const status = screen.getByRole('complementary', { name: 'Quiz status' })
+      expect(status).toHaveTextContent('No time limit')
+      await userEvent.click(within(status).getByRole('button', { name: 'Submit quiz' }))
+      expect(screen.getByRole('dialog')).toHaveTextContent('1 question not answered.')
+      await userEvent.click(screen.getByRole('button', { name: 'Keep working' }))
 
       vi.spyOn(window, 'confirm').mockReturnValue(true)
       await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
       await userEvent.click(screen.getByRole('button', { name: 'Start quiz' }))
       expect(put.quizzes.delete).toHaveBeenCalledWith(running.id)
       expect(lastSaved(put).questions).toHaveLength(2)
+    })
+
+    it('closes the submit dialog when time runs out and shows the result', async () => {
+      const quiz = startQuiz(crypto.randomUUID(), quizOf(['single'], true), Date.now())
+      const soon = { ...quiz, deadline: Date.now() + 300 }
+      withQuestions([soon])
+      await userEvent.click(screen.getByRole('link', { name: 'Quizzes' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Resume' }))
+      await userEvent.click(screen.getByRole('button', { name: 'Submit quiz' }))
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(await screen.findByRole('region', { name: 'Quiz result' })).toBeInTheDocument()
+      await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(document.body).not.toHaveClass('modal-open')
     })
 
     it('submits a quiz whose deadline has passed', async () => {

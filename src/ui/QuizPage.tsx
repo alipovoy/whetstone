@@ -1,8 +1,13 @@
-import { useEffect, useState } from 'react'
-import { Badge, Button, Card, Form, ListGroup, Stack } from 'react-bootstrap'
+import { useEffect, useId, useRef, useState } from 'react'
+import { formatClock } from '@/core/attempt'
+import { Badge, Button, Card, ListGroup, Modal, Stack } from 'react-bootstrap'
 import { choose, submitQuiz, timeLeft, toggleFlag, type Quiz, type Shown } from '@/core/quiz'
 import { Markdown } from './Markdown'
 import { Countdown } from './Countdown'
+import { Icon } from './icons'
+
+// The clock turns to a warning in the last minute.
+const LOW_MS = 60_000
 
 interface Props {
   quiz: Quiz
@@ -21,124 +26,206 @@ function Taking({ quiz, onChange }: Props) {
       quiz.picks.findIndex((p) => !p.length),
     ),
   )
-  const [reviewing, setReviewing] = useState(false)
-  const now = useNow(quiz.deadline !== undefined)
-  const left = timeLeft(quiz, now)
-
-  const header = (
-    <Stack direction="horizontal" gap={2} className="mb-3">
-      <h1 className="h3 mb-0">Quiz</h1>
-      {left !== undefined && (
-        <span className="ms-auto">
-          <Countdown ms={left} />
-        </span>
-      )}
-    </Stack>
-  )
-
-  if (reviewing) {
-    const unanswered = quiz.picks.flatMap((p, i) => (p.length ? [] : [i]))
-    const flagged = quiz.flagged.flatMap((f, i) => (f ? [i] : []))
-    const goTo = (i: number) => {
-      setIndex(i)
-      setReviewing(false)
-    }
-    return (
-      <section aria-label="Review">
-        {header}
-        <h2 className="h5">Review</h2>
-        {unanswered.length === 0 && flagged.length === 0 && (
-          <p>Every question is answered and none is flagged.</p>
-        )}
-        <QuestionLinks label="Unanswered" indexes={unanswered} onGo={goTo} />
-        <QuestionLinks label="Flagged" indexes={flagged} onGo={goTo} />
-        <Stack direction="horizontal" gap={2} className="mt-3">
-          <Button variant="outline-secondary" onClick={() => setReviewing(false)}>
-            Back to questions
-          </Button>
-          <Button onClick={() => onChange((q) => submitQuiz(q, Date.now()))}>Submit</Button>
-        </Stack>
-      </section>
-    )
+  const [confirming, setConfirming] = useState(false)
+  const titleId = useId()
+  // Inside the page, so the dialog takes the section's colours.
+  const page = useRef<HTMLDivElement>(null)
+  const question = useRef<HTMLElement>(null)
+  // On narrow screens the panel is below the question, which a jump then brings into view.
+  const jump = (i: number) => {
+    setIndex(i)
+    const box = question.current?.getBoundingClientRect()
+    if (box && box.top < 0) question.current?.scrollIntoView({ block: 'start' })
   }
 
   const shown = quiz.questions[index]
   const picks = quiz.picks[index]
   const flagged = quiz.flagged[index]
+  const unanswered = quiz.picks.filter((p) => p.length === 0).length
+  const flags = quiz.flagged.filter(Boolean).length
+  const submit = () => onChange((q) => submitQuiz(q, Date.now()))
+
   return (
-    <section aria-label={`Question ${index + 1} of ${total}`}>
-      {header}
-      <Stack direction="horizontal" gap={2} className="mb-2">
-        <span className="fw-semibold">
-          Question {index + 1} of {total}
-        </span>
-        <span className="text-body-secondary">{shown.topic_name}</span>
-        {flagged && (
-          <Badge bg="warning" text="dark">
-            Flagged
-          </Badge>
-        )}
-      </Stack>
-      <Markdown source={shown.text} />
-      <Form.Group className="my-3">
-        <Form.Label as="div" className="text-body-secondary">
-          {shown.type === 'single' ? 'Choose one.' : 'Choose all that apply.'}
-        </Form.Label>
-        {shown.options.map((option, o) => (
-          <Form.Check
-            key={o}
-            type={shown.type === 'single' ? 'radio' : 'checkbox'}
-            id={`option-${index}-${o}`}
-            name={`question-${index}`}
-            label={option}
-            checked={picks.includes(o)}
-            onChange={() => onChange((q) => choose(q, index, o, Date.now()))}
-          />
-        ))}
-      </Form.Group>
-      <Stack direction="horizontal" gap={2} className="flex-wrap">
-        <Button
-          variant="outline-secondary"
-          disabled={index === 0}
-          onClick={() => setIndex(index - 1)}
-        >
-          Previous
+    <div className="ws-quiz" ref={page}>
+      <section
+        ref={question}
+        className="ws-panel ws-question"
+        aria-label={`Question ${index + 1} of ${total}`}
+      >
+        <div className="ws-question-head">
+          <h1 className="h5 mb-0">
+            Question {index + 1} of {total}
+          </h1>
+          <span className="text-body-secondary">{shown.topic_name}</span>
+          {shown.difficulty && (
+            <span className="ws-difficulty" data-level={shown.difficulty}>
+              {shown.difficulty}
+            </span>
+          )}
+          {flagged && (
+            <span className="ws-flagged">
+              <Icon name="flag" />
+              Flagged
+            </span>
+          )}
+          <QuizClock quiz={quiz} compact />
+        </div>
+        <div className="ws-question-text">
+          <Markdown source={shown.text} />
+        </div>
+        <fieldset className="ws-options">
+          <legend className="text-body-secondary">
+            {shown.type === 'single' ? 'Choose one.' : 'Choose all that apply.'}
+          </legend>
+          {shown.options.map((option, o) => (
+            <label key={o} className="ws-option">
+              <input
+                type={shown.type === 'single' ? 'radio' : 'checkbox'}
+                className="form-check-input"
+                name={`question-${index}`}
+                checked={picks.includes(o)}
+                onChange={() => onChange((q) => choose(q, index, o, Date.now()))}
+              />
+              <span>{option}</span>
+            </label>
+          ))}
+        </fieldset>
+        <div className="ws-question-actions">
+          <Button
+            variant="outline-secondary"
+            disabled={index === 0}
+            onClick={() => setIndex(index - 1)}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outline-secondary"
+            disabled={index === total - 1}
+            onClick={() => setIndex(index + 1)}
+          >
+            Next
+          </Button>
+          <Button
+            variant="outline-secondary"
+            className="ms-auto"
+            aria-pressed={flagged}
+            onClick={() => onChange((q) => toggleFlag(q, index, Date.now()))}
+          >
+            <Icon name="flag" />
+            Flag for review
+          </Button>
+        </div>
+      </section>
+      <aside className="ws-panel ws-quiz-status" aria-label="Quiz status">
+        <div className="ws-quiz-clock">
+          <QuizClock quiz={quiz} />
+        </div>
+        <nav className="ws-numbers" aria-label="Questions">
+          {quiz.questions.map((_, i) => {
+            const answered = quiz.picks[i].length > 0
+            const state = [answered ? 'answered' : 'not answered', quiz.flagged[i] && 'flagged']
+              .filter(Boolean)
+              .join(', ')
+            return (
+              <button
+                key={i}
+                type="button"
+                className="ws-number"
+                data-answered={answered || undefined}
+                data-flagged={quiz.flagged[i] || undefined}
+                aria-current={i === index ? 'step' : undefined}
+                aria-label={`Question ${i + 1}, ${state}`}
+                title={`Question ${i + 1}, ${state}`}
+                onClick={() => jump(i)}
+              >
+                {i + 1}
+              </button>
+            )
+          })}
+        </nav>
+        <ul className="ws-legend">
+          <li>
+            <i data-answered />
+            Answered <strong>{total - unanswered}</strong>
+          </li>
+          <li>
+            <i />
+            Not answered <strong>{unanswered}</strong>
+          </li>
+          <li>
+            <i data-flagged />
+            Flagged <strong>{flags}</strong>
+          </li>
+        </ul>
+        <Button className="w-100" onClick={() => setConfirming(true)}>
+          Submit quiz
         </Button>
-        <Button
-          variant="outline-secondary"
-          disabled={index === total - 1}
-          onClick={() => setIndex(index + 1)}
-        >
-          Next
-        </Button>
-        <Button
-          variant="outline-warning"
-          aria-pressed={flagged}
-          onClick={() => onChange((q) => toggleFlag(q, index, Date.now()))}
-        >
-          {flagged ? 'Unflag' : 'Flag'}
-        </Button>
-        <Button className="ms-auto" onClick={() => setReviewing(true)}>
-          Review and submit
-        </Button>
-      </Stack>
-    </section>
+      </aside>
+      <Modal
+        show={confirming}
+        onHide={() => setConfirming(false)}
+        centered
+        aria-labelledby={titleId}
+        container={page}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title as="h2" className="h5" id={titleId}>
+            Submit the quiz?
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {unanswered === 0 && flags === 0 ? (
+            <p>Every question is answered and none is flagged.</p>
+          ) : (
+            <p>
+              {[
+                unanswered > 0 && `${count(unanswered)} not answered`,
+                flags > 0 && `${count(flags)} flagged for review`,
+              ]
+                .filter(Boolean)
+                .join(', ')}
+              .
+            </p>
+          )}
+          <p className="mb-0 text-body-secondary">Answers cannot be changed after submitting.</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={() => setConfirming(false)}>
+            Keep working
+          </Button>
+          <Button onClick={submit}>Submit quiz</Button>
+        </Modal.Footer>
+      </Modal>
+    </div>
   )
 }
 
-function QuestionLinks(props: { label: string; indexes: number[]; onGo: (i: number) => void }) {
-  if (props.indexes.length === 0) return null
+function count(n: number): string {
+  return n === 1 ? '1 question' : `${n} questions`
+}
+
+// Its own component, so only the clock re-renders every second. The compact copy shows on narrow
+// screens, where the panel is below the question; screen readers have the panel's.
+function QuizClock({ quiz, compact = false }: { quiz: Quiz; compact?: boolean }) {
+  const now = useNow(quiz.deadline !== undefined)
+  const left = timeLeft(quiz, now)
+  if (left === undefined)
+    return compact ? null : <span className="text-body-secondary">No time limit</span>
+  if (compact)
+    return (
+      <span
+        className="ws-clock ws-question-clock"
+        data-low={left < LOW_MS || undefined}
+        aria-hidden="true"
+      >
+        {left > 0 ? formatClock(left) : 'Time is up'}
+      </span>
+    )
   return (
-    <section aria-label={props.label} className="mb-2">
-      <h3 className="h6">{props.label}</h3>
-      <Stack direction="horizontal" gap={2} className="flex-wrap">
-        {props.indexes.map((i) => (
-          <Button key={i} size="sm" variant="outline-primary" onClick={() => props.onGo(i)}>
-            Question {i + 1}
-          </Button>
-        ))}
-      </Stack>
-    </section>
+    <>
+      <span className="text-body-secondary">Time left</span>
+      <Countdown ms={left} low={left < LOW_MS} />
+    </>
   )
 }
 

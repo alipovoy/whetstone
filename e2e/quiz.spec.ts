@@ -75,7 +75,7 @@ test('take a ten-question quiz on two topics, reload and resume it, read the res
   await answerCurrent(page)
   await page.getByRole('button', { name: 'Next' }).click()
   await answerCurrent(page)
-  await page.getByRole('button', { name: 'Flag' }).click()
+  await page.getByRole('button', { name: 'Flag for review' }).click()
   await expect.poll(() => savedAnswers(page)).toBe(2)
 
   await page.reload()
@@ -84,12 +84,15 @@ test('take a ten-question quiz on two topics, reload and resume it, read the res
   await page.getByRole('button', { name: 'Resume' }).click()
   await expect(page.getByText('Question 3 of 10')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Review and submit' }).click()
-  await expect(page.getByRole('region', { name: 'Unanswered' }).getByRole('button')).toHaveCount(8)
-  await expect(page.getByRole('region', { name: 'Flagged' }).getByRole('button')).toHaveText([
-    'Question 2',
-  ])
-  await page.getByRole('button', { name: 'Submit' }).click()
+  const status = page.getByRole('complementary', { name: 'Quiz status' })
+  await expect(status.getByRole('button', { name: /not answered/ })).toHaveCount(8)
+  await expect(status.getByRole('button', { name: /flagged/ })).toHaveText(['2'])
+  await status.getByRole('button', { name: 'Question 2, answered, flagged' }).click()
+  await expect(page.getByText('Question 2 of 10')).toBeVisible()
+  await status.getByRole('button', { name: 'Submit quiz' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Submit the quiz?' })
+  await expect(dialog).toContainText('8 questions not answered, 1 question flagged for review.')
+  await dialog.getByRole('button', { name: 'Submit quiz' }).click()
 
   const result = page.getByRole('region', { name: 'Quiz result' })
   await expect(result).toContainText(/Score \d+/)
@@ -101,4 +104,24 @@ test('take a ten-question quiz on two topics, reload and resume it, read the res
   await expect(
     page.getByRole('region', { name: 'Past quizzes' }).getByRole('listitem'),
   ).toHaveCount(1)
+})
+
+test('show the quiz status below the question on a narrow screen', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 })
+  await page.goto('./#/quizzes')
+  await page.getByRole('button', { name: 'Start quiz' }).click()
+  const question = (await page.getByRole('region', { name: /^Question 1 of/ }).boundingBox())!
+  const status = (await page.getByRole('complementary', { name: 'Quiz status' }).boundingBox())!
+  expect(status.y).toBeGreaterThan(question.y + question.height - 1)
+  await expect(page.locator('.ws-question-clock')).toBeVisible()
+
+  const panel = page.getByRole('complementary', { name: 'Quiz status' })
+  await panel.getByRole('button', { name: /^Question 3,/ }).click()
+  await expect(page.getByRole('heading', { name: 'Question 3 of 10' })).toBeInViewport()
+  // The jump scrolls smoothly, so the heading settles below the top bar after a moment.
+  const bar = (await page.getByRole('banner').boundingBox())!
+  const heading = page.getByRole('heading', { name: 'Question 3 of 10' })
+  await expect
+    .poll(async () => (await heading.boundingBox())!.y)
+    .toBeGreaterThanOrEqual(bar.y + bar.height)
 })
