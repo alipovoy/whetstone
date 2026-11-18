@@ -76,7 +76,7 @@ describe('openDatabase', () => {
   it('closes its connection when a newer version opens the database', async () => {
     const name = freshName()
     const { attempts } = await openDatabase(name)
-    const newer = await openDB(name, 6)
+    const newer = await openDB(name, 7)
     newer.close()
     await expect(attempts.put(startAttempt(ID, 't', problem, '', 1))).rejects.toThrow(
       'updated in another tab',
@@ -147,6 +147,48 @@ describe('openDatabase', () => {
     expect(byId('own').map((q) => q.difficulty)).toEqual(['Easy', 'Easy'])
   })
 
+  it('gives stored items a list of concepts and resets saved work, which copies one', async () => {
+    const name = freshName()
+    const single = <T extends { concepts: string[] }>({ concepts, ...rest }: T) => ({
+      ...rest,
+      concept: concepts[0],
+    })
+    const builtIn = topicFromFile(builtInTopic, 1)
+    const [first, second] = builtInTopic.problems.filter((p) => p.concepts.length > 1)
+    const own = {
+      ...topicFromFile({ ...builtInTopic, topic: { ...builtInTopic.topic, id: 'own' } }, 2),
+    }
+    const old = await openDB(name, 5, {
+      upgrade(db) {
+        for (const store of ['attempts', 'topics', 'quizzes'])
+          db.createObjectStore(store, { keyPath: 'id' })
+      },
+    })
+    await old.put('topics', {
+      ...builtIn,
+      // The second concept of `second` was deleted from the topic.
+      concepts: builtIn.concepts.filter((c) => c.id !== second.concepts[1]),
+      problems: [first, second].map(single),
+      questions: builtInTopic.questions.slice(0, 2).map(single),
+    })
+    await old.put('topics', { ...own, problems: [first].map(single), questions: [] })
+    await old.put('attempts', { id: 'a' })
+    await old.put('quizzes', { id: 'q' })
+    old.close()
+
+    const db = await openDatabase(name)
+    const topics = (await db.topics.all()).records
+    const byId = (id: string) => topics.find((t) => t.id === id)!
+    expect(byId(builtInTopic.topic.id).problems).toEqual([
+      first,
+      { ...second, concepts: [second.concepts[0]] },
+    ])
+    expect(byId(builtInTopic.topic.id).questions).toEqual(builtInTopic.questions.slice(0, 2))
+    expect(byId('own').problems).toEqual([{ ...first, concepts: [first.concepts[0]] }])
+    expect(await db.attempts.all()).toEqual({ records: [], skipped: 0 })
+    expect(await db.quizzes.all()).toEqual({ records: [], skipped: 0 })
+  })
+
   it('opens past a stored topic of another shape, leaving it for the schema to skip', async () => {
     const name = freshName()
     const old = await openDB(name, 4, {
@@ -168,7 +210,7 @@ describe('openDatabase', () => {
     expect((await db.topics.all()).skipped).toBe(2)
   })
 
-  it('adds topics to a database of the previous version and keeps its attempts', async () => {
+  it('adds topics to a database of version 1 and resets its attempts', async () => {
     const name = freshName()
     const old = await openDB(name, 1, {
       upgrade: (db) => void db.createObjectStore('attempts', { keyPath: 'id' }),
@@ -177,7 +219,7 @@ describe('openDatabase', () => {
     old.close()
 
     const db = await openDatabase(name)
-    expect((await db.attempts.all()).records[0].code).toBe('kept')
+    expect((await db.attempts.all()).records).toEqual([])
     expect((await db.topics.all()).records.map((t) => t.id)).toEqual([builtInTopic.topic.id])
   })
 
@@ -193,7 +235,7 @@ describe('openDatabase', () => {
     const questions = builtInTopic.questions.slice(0, 5).map((question) => ({
       topic: builtInTopic.topic,
       question,
-      area: '',
+      areas: [],
     }))
     const quiz = startQuiz(ID, { questions, timed: false }, 1)
     await (await openDatabase(name)).quizzes.put(quiz)

@@ -6,7 +6,7 @@ import { QuizSchema, type Quiz } from '@/core/quiz'
 import { topicFromFile, TopicRecordSchema, type TopicRecord } from '@/core/topics'
 
 export const DATABASE_NAME = 'whetstone'
-const DATABASE_VERSION = 5
+const DATABASE_VERSION = 6
 
 interface Schema extends DBSchema {
   attempts: { key: string; value: unknown }
@@ -45,6 +45,12 @@ export async function openDatabase(name = DATABASE_NAME): Promise<Database> {
       if (oldVersion < 3) changes = changes.then(() => addBuiltInQuestions(topics()))
       if (oldVersion < 4) database.createObjectStore('quizzes', { keyPath: 'id' })
       if (oldVersion < 5) changes = changes.then(() => addQuestionDifficulty(topics()))
+      if (oldVersion < 6) {
+        changes = changes.then(() => listConcepts(topics()))
+        // Saved work copies one concept per item; resetting it is allowed while the format settles.
+        if (oldVersion >= 1) void transaction.objectStore('attempts').clear()
+        if (oldVersion >= 4) void transaction.objectStore('quizzes').clear()
+      }
       changes.catch(() => transaction.abort())
     },
     // A newer version of the app opened in another tab: let its upgrade through.
@@ -93,8 +99,45 @@ async function addQuestionDifficulty(
   }
 }
 
+// Items got a list of concepts: built-in ones take the built-in list, all others a list of one.
+async function listConcepts(
+  topics: IDBPObjectStore<Schema, StoreName[], 'topics', 'versionchange'>,
+) {
+  const builtIn = new Map(
+    [...builtInTopic.problems, ...builtInTopic.questions].map((item) => [item.id, item.concepts]),
+  )
+  const single = (item: unknown): item is { id?: unknown; concept: unknown } =>
+    typeof item === 'object' && item !== null && 'concept' in item
+  for (const stored of (await topics.getAll()) as StoredTopic[]) {
+    // A record of another shape is left for the schema to skip, not allowed to fail the upgrade.
+    if (typeof stored !== 'object' || stored === null) continue
+    const own = stored.id === builtInTopic.topic.id ? builtIn : new Map<unknown, string[]>()
+    const known = new Set(Array.isArray(stored.concepts) ? stored.concepts.map((c) => c?.id) : [])
+    // A built-in item keeps the built-in list as far as the topic still has those concepts.
+    const listed = (items: unknown) =>
+      Array.isArray(items)
+        ? items.map((item: unknown) => {
+            if (!single(item)) return item
+            const { concept, ...rest } = item
+            const builtInList = own.get(rest.id)?.filter((c) => known.has(c))
+            const concepts = builtInList?.includes(concept as string) ? builtInList : [concept]
+            return { ...rest, concepts }
+          })
+        : items
+    const lists = [stored.problems, stored.questions]
+    if (!lists.some((items) => Array.isArray(items) && items.some(single))) continue
+    await topics.put({
+      ...stored,
+      problems: listed(stored.problems),
+      questions: listed(stored.questions),
+    })
+  }
+}
+
 interface StoredTopic {
   id: string
+  concepts?: { id?: unknown }[]
+  problems?: unknown
   questions?: unknown
 }
 

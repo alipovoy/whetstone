@@ -78,7 +78,7 @@
   "problems": [
     {
       "id": "pair-with-sum",
-      "concept": "two-pointers",
+      "concepts": ["two-pointers"],
       "difficulty": "Easy",
       "language": "python",
       "wordings": [
@@ -140,7 +140,7 @@
     },
     {
       "id": "longest-unique-substring",
-      "concept": "sliding-window",
+      "concepts": ["sliding-window", "hash-maps"],
       "difficulty": "Medium",
       "language": "python",
       "wordings": [
@@ -211,7 +211,7 @@
     },
     {
       "id": "group-anagrams",
-      "concept": "hash-maps",
+      "concepts": ["hash-maps", "sorting"],
       "difficulty": "Medium",
       "language": "python",
       "wordings": [
@@ -251,7 +251,7 @@
     },
     {
       "id": "balanced-brackets",
-      "concept": "stacks",
+      "concepts": ["stacks"],
       "difficulty": "Easy",
       "language": "python",
       "wordings": [
@@ -319,7 +319,7 @@
     },
     {
       "id": "search-rotated",
-      "concept": "binary-search",
+      "concepts": ["binary-search"],
       "difficulty": "Medium",
       "language": "python",
       "wordings": [
@@ -364,7 +364,7 @@
     },
     {
       "id": "count-islands",
-      "concept": "graphs",
+      "concepts": ["graphs"],
       "difficulty": "Medium",
       "language": "python",
       "wordings": [
@@ -425,7 +425,7 @@
     },
     {
       "id": "min-coins",
-      "concept": "dynamic-programming",
+      "concepts": ["dynamic-programming"],
       "difficulty": "Medium",
       "language": "python",
       "wordings": [
@@ -498,7 +498,7 @@
     },
     {
       "id": "merge-intervals",
-      "concept": "sorting",
+      "concepts": ["sorting"],
       "difficulty": "Medium",
       "language": "python",
       "wordings": [
@@ -560,7 +560,7 @@
       "id": "q-two-pointers-precondition",
       "type": "single",
       "difficulty": "Easy",
-      "concept": "two-pointers",
+      "concepts": ["two-pointers"],
       "wordings": [
         {
           "text": "You look for two numbers with a given sum by moving one index from the start of a list and one from the end towards each other. What must be true of the list for this to work?",
@@ -592,7 +592,7 @@
       "id": "q-two-pointers-move",
       "type": "single",
       "difficulty": "Easy",
-      "concept": "two-pointers",
+      "concepts": ["two-pointers"],
       "wordings": [
         {
           "text": "In the inward two-pointer search on an ascending list, the sum of the two current values is smaller than the target. What is the correct next step?",
@@ -615,7 +615,7 @@
       "id": "q-sliding-window-cost",
       "type": "single",
       "difficulty": "Medium",
-      "concept": "sliding-window",
+      "concepts": ["sliding-window"],
       "wordings": [
         {
           "text": "A sliding window over n elements has a left end and a right end, and neither ever moves backwards. How much work do the two ends do in total?",
@@ -647,7 +647,7 @@
       "id": "q-sliding-window-fit",
       "type": "multiple",
       "difficulty": "Medium",
-      "concept": "sliding-window",
+      "concepts": ["sliding-window"],
       "wordings": [
         {
           "text": "Which of these problems are a natural fit for a sliding window?",
@@ -673,7 +673,7 @@
       "id": "q-sliding-window-negatives",
       "type": "single",
       "difficulty": "Hard",
-      "concept": "sliding-window",
+      "concepts": ["sliding-window"],
       "wordings": [
         {
           "text": "For positive numbers, the shortest subarray with a sum of at least S can be found by growing a window and shrinking it while the sum is large enough. Why does this stop working when negative numbers are allowed?",
@@ -696,7 +696,7 @@
       "id": "q-prefix-sums-range",
       "type": "single",
       "difficulty": "Medium",
-      "concept": "prefix-sums",
+      "concepts": ["prefix-sums"],
       "wordings": [
         {
           "text": "prefix[i] holds the sum of the first i elements of nums, so prefix[0] is 0. Which expression gives the sum of nums[l] through nums[r], both included?",
@@ -719,7 +719,7 @@
       "id": "q-hash-maps-lookup",
       "type": "single",
       "difficulty": "Easy",
-      "concept": "hash-maps",
+      "concepts": ["hash-maps"],
       "wordings": [
         {
           "text": "What is the average time of looking up a key in a Python dict with n entries?",
@@ -742,7 +742,7 @@
       "id": "q-hash-maps-keys",
       "type": "multiple",
       "difficulty": "Easy",
-      "concept": "hash-maps",
+      "concepts": ["hash-maps"],
       "wordings": [
         {
           "text": "Which of these can be used as a key of a Python dict?",
@@ -778,7 +778,7 @@
       "id": "q-hash-maps-worst-case",
       "type": "single",
       "difficulty": "Hard",
-      "concept": "hash-maps",
+      "concepts": ["hash-maps", "complexity"],
       "wordings": [
         {
           "text": "What is the worst-case time of a lookup in a hash table with n entries when most keys collide?",
@@ -801,7 +801,7 @@
       "id": "q-stacks-order",
       "type": "single",
       "difficulty": "Easy",
-      "concept": "stacks",
+      "concepts": ["stacks"],
       "wordings": [
         {
           "text": "In which order does a stack give back the elements put on it?",
@@ -824,7 +824,7 @@
       "id": "q-stacks-next-greater",
       "type": "single",
       "difficulty": "Hard",
-      "concept": "stacks",
+      "concepts": ["stacks"],
       "wordings": [
         {
           "text": "For every element of a list you need the next element to its right that is larger. Which structure gives all answers in O(n) in total?",
@@ -847,7 +847,7 @@
       "id": "q-queues-deque",
       "type": "single",
       "difficulty": "Easy",
-      "concept": "queues",
+      "concepts": ["queues"],
       "wordings": [
         {
           "text": "Why is collections.deque preferred over a list for a first-in, first-out queue in Python?",
@@ -879,7 +879,7 @@
       "id": "q-queues-window-maximum",
       "type": "single",
       "difficulty": "Hard",
-      "concept": "queues",
+      "concepts": ["queues", "sliding-window"],
       "wordings": [
         {
           "text": "You need the maximum of every window of k consecutive elements, in O(n) in total. Which structure makes this possible?",
@@ -902,7 +902,7 @@
       "id": "q-binary-search-steps",
       "type": "single",
       "difficulty": "Easy",
-      "concept": "binary-search",
+      "concepts": ["binary-search", "complexity"],
       "wordings": [
         {
           "text": "About how many elements does a binary search look at, at most, in a sorted list of 1,000,000 elements?",
@@ -934,7 +934,7 @@
       "id": "q-binary-search-infinite-loop",
       "type": "single",
       "difficulty": "Hard",
-      "concept": "binary-search",
+      "concepts": ["binary-search"],
       "wordings": [
         {
           "text": "A binary search runs `while lo < hi:` with `mid = (lo + hi) // 2`. Which update can make it loop forever?",
@@ -957,7 +957,7 @@
       "id": "q-binary-search-applicability",
       "type": "multiple",
       "difficulty": "Medium",
-      "concept": "binary-search",
+      "concepts": ["binary-search"],
       "wordings": [
         {
           "text": "In which of these situations can binary search be used?",
@@ -983,7 +983,7 @@
       "id": "q-sorting-python-worst-case",
       "type": "single",
       "difficulty": "Medium",
-      "concept": "sorting",
+      "concepts": ["sorting", "complexity"],
       "wordings": [
         {
           "text": "What is the worst-case time of sorting n elements with Python's built-in sorted()?",
@@ -1006,7 +1006,7 @@
       "id": "q-sorting-stable",
       "type": "single",
       "difficulty": "Easy",
-      "concept": "sorting",
+      "concepts": ["sorting"],
       "wordings": [
         {
           "text": "What does it mean for a sorting algorithm to be stable?",
@@ -1029,7 +1029,7 @@
       "id": "q-sorting-python-facts",
       "type": "multiple",
       "difficulty": "Medium",
-      "concept": "sorting",
+      "concepts": ["sorting"],
       "wordings": [
         {
           "text": "Which statements about sorting in Python are true?",
@@ -1055,7 +1055,7 @@
       "id": "q-linked-lists-insert",
       "type": "single",
       "difficulty": "Easy",
-      "concept": "linked-lists",
+      "concepts": ["linked-lists"],
       "wordings": [
         {
           "text": "You hold a reference to a node of a singly linked list with n nodes. What is the cost of inserting a new node right after it?",
@@ -1078,7 +1078,7 @@
       "id": "q-linked-lists-cycle",
       "type": "single",
       "difficulty": "Hard",
-      "concept": "linked-lists",
+      "concepts": ["linked-lists", "two-pointers"],
       "wordings": [
         {
           "text": "One pointer moves one node per step and another moves two. Why does this detect a cycle in a linked list?",
@@ -1110,7 +1110,7 @@
       "id": "q-trees-inorder",
       "type": "single",
       "difficulty": "Easy",
-      "concept": "trees",
+      "concepts": ["trees"],
       "wordings": [
         {
           "text": "Which traversal of a binary search tree visits the keys in ascending order?",
@@ -1133,7 +1133,7 @@
       "id": "q-trees-bst-worst-case",
       "type": "single",
       "difficulty": "Medium",
-      "concept": "trees",
+      "concepts": ["trees", "complexity"],
       "wordings": [
         {
           "text": "What is the worst-case time of searching a binary search tree with n nodes that is not kept balanced?",
@@ -1165,7 +1165,7 @@
       "id": "q-trees-depth-first",
       "type": "multiple",
       "difficulty": "Medium",
-      "concept": "trees",
+      "concepts": ["trees"],
       "wordings": [
         {
           "text": "Which of these traversals of a binary tree are depth-first?",
@@ -1190,7 +1190,7 @@
       "id": "q-graphs-shortest-unweighted",
       "type": "single",
       "difficulty": "Easy",
-      "concept": "graphs",
+      "concepts": ["graphs"],
       "wordings": [
         {
           "text": "Which traversal finds a path with the fewest edges between two nodes of an unweighted graph?",
@@ -1213,7 +1213,7 @@
       "id": "q-graphs-traversal-cost",
       "type": "single",
       "difficulty": "Medium",
-      "concept": "graphs",
+      "concepts": ["graphs", "complexity"],
       "wordings": [
         {
           "text": "A graph with V nodes and E edges is stored as adjacency lists. What is the tightest bound on the time of a breadth-first or depth-first search over the whole graph?",
@@ -1236,7 +1236,7 @@
       "id": "q-heaps-min-operations",
       "type": "single",
       "difficulty": "Medium",
-      "concept": "heaps",
+      "concepts": ["heaps", "complexity"],
       "wordings": [
         {
           "text": "In a binary min-heap with n elements, what do reading the smallest element and removing it cost?",
@@ -1259,7 +1259,7 @@
       "id": "q-heaps-top-k",
       "type": "single",
       "difficulty": "Medium",
-      "concept": "heaps",
+      "concepts": ["heaps", "complexity"],
       "wordings": [
         {
           "text": "You find the k largest of n numbers by keeping a min-heap of at most k elements. What is the running time?",
@@ -1291,7 +1291,7 @@
       "id": "q-heaps-heapify",
       "type": "single",
       "difficulty": "Hard",
-      "concept": "heaps",
+      "concepts": ["heaps", "complexity"],
       "wordings": [
         {
           "text": "What does it cost to turn a list of n unordered items into a heap with heapify?",
@@ -1314,7 +1314,7 @@
       "id": "q-dp-properties",
       "type": "single",
       "difficulty": "Medium",
-      "concept": "dynamic-programming",
+      "concepts": ["dynamic-programming"],
       "wordings": [
         {
           "text": "Which two properties make a problem suitable for dynamic programming?",
@@ -1337,7 +1337,7 @@
       "id": "q-dp-stairs",
       "type": "single",
       "difficulty": "Easy",
-      "concept": "dynamic-programming",
+      "concepts": ["dynamic-programming"],
       "wordings": [
         {
           "text": "You climb n stairs taking one or two stairs at a time. Which recurrence gives the number of different ways?",
@@ -1360,7 +1360,7 @@
       "id": "q-dp-memo-vs-table",
       "type": "multiple",
       "difficulty": "Hard",
-      "concept": "dynamic-programming",
+      "concepts": ["dynamic-programming"],
       "wordings": [
         {
           "text": "Which statements about memoisation (top-down) and tabulation (bottom-up) are true?",
@@ -1386,7 +1386,7 @@
       "id": "q-complexity-triangular-loop",
       "type": "single",
       "difficulty": "Medium",
-      "concept": "complexity",
+      "concepts": ["complexity"],
       "wordings": [
         {
           "text": "What is the running time of this code?\n\n```python\nfor i in range(n):\n    for j in range(i):\n        total += 1\n```",
@@ -1409,7 +1409,7 @@
       "id": "q-complexity-amortised-append",
       "type": "single",
       "difficulty": "Medium",
-      "concept": "complexity",
+      "concepts": ["complexity"],
       "wordings": [
         {
           "text": "Appending to a Python list takes amortised O(1) time. What does \"amortised\" mean here?",
@@ -1441,7 +1441,7 @@
       "id": "q-complexity-list-operations",
       "type": "multiple",
       "difficulty": "Medium",
-      "concept": "complexity",
+      "concepts": ["complexity"],
       "wordings": [
         {
           "text": "Which of these operations take O(n) time on a Python list of n elements?",

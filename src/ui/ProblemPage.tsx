@@ -11,7 +11,7 @@ import {
 } from '@/core/attempt'
 import { problemStatus } from '@/core/problems'
 import { failureText, hintCap, MAX_HINTS } from '@/core/scoring'
-import { conceptName, type Problem, type Topic } from '@/content/schema'
+import { conceptNames, type Problem, type Topic } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
 import { RUN_LIMIT_MS, type RunnerStatus, type RunResult, type TestResult } from '@/runner/types'
 import { CodeEditor } from './CodeEditor'
@@ -19,7 +19,7 @@ import { Countdown } from './Countdown'
 import { Icon } from './icons'
 import { Link } from './Link'
 import { Markdown } from './Markdown'
-import { StatusPill, TestMarks } from './progress'
+import { ConceptTags, StatusPill, TestMarks } from './progress'
 import type { Route } from './route'
 import { SplitView } from './SplitView'
 
@@ -152,7 +152,7 @@ export function ProblemPage({
       )
     })
 
-  const concept = conceptName(topic, problem.concept)
+  const concepts = conceptNames(topic, problem.concepts)
   const status = problemStatus(attempt, attempt)
 
   const statement = (
@@ -162,8 +162,9 @@ export function ProblemPage({
         <span className="ws-difficulty" data-level={problem.difficulty}>
           {problem.difficulty}
         </span>
-        {concept}, {topic.name}
+        {topic.name}
       </p>
+      <ConceptTags names={concepts} />
       <Markdown source={wording.statement} />
       {wording.examples.map((example, i) => (
         <div key={i}>

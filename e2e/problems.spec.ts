@@ -10,7 +10,7 @@ const titles = (difficulty: string): string[] =>
 test('filter the problems, keep the filter, start a random match', async ({ page }) => {
   await page.goto('./#/')
   await page.getByRole('link', { name: 'Coding problems' }).click()
-  const list = page.getByRole('region', { name: 'Problems' }).getByRole('listitem')
+  const list = page.getByRole('region', { name: 'Problems' }).locator(':scope > ul > li')
   await expect(list).toHaveCount(topic.problems.length)
 
   await page.getByRole('button', { name: 'Easy' }).click()

@@ -12,7 +12,7 @@ const topic: Topic = {
 
 const problem: Problem = {
   id: 'brackets',
-  concept: 'stacks',
+  concepts: ['stacks'],
   difficulty: 'Easy',
   language: 'python',
   wordings: [{ title: 'Balanced brackets', statement: 's', examples: [], constraints: [] }],
@@ -45,15 +45,15 @@ describe('historyEntries', () => {
     expect(entries[0]).toMatchObject({
       topic: { id: 'algo', name: 'Algorithms' },
       title: 'Balanced brackets',
-      concept: 'Stacks',
-      area: 'Linear',
+      concepts: ['Stacks'],
+      areas: ['Linear'],
       difficulty: 'Easy',
     })
   })
 
   it('reads a deleted topic from the grade, without an area', () => {
     const [entry] = historyEntries([], [graded('a', true, 1)])
-    expect(entry).toMatchObject({ topic: { id: 'algo', name: 'Algorithms' }, area: '' })
+    expect(entry).toMatchObject({ topic: { id: 'algo', name: 'Algorithms' }, areas: [] })
   })
 
   it('takes the problem filters', () => {

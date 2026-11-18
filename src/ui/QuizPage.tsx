@@ -16,6 +16,7 @@ import { Countdown } from './Countdown'
 import { formatWhen } from './format'
 import { Icon } from './icons'
 import { Link } from './Link'
+import { ConceptTags } from './progress'
 
 // The clock turns to a warning in the last minute.
 const LOW_MS = 60_000
@@ -359,9 +360,8 @@ function Answer({ index, shown, picks, score }: AnswerProps) {
     <section className="ws-panel ws-answer" aria-label={`Question ${index + 1}`}>
       <div className="ws-answer-head">
         <span className="fw-bold">Question {index + 1}</span>
-        <span className="text-body-secondary">
-          {shown.topic_name}, {shown.concept_name}
-        </span>
+        <span className="text-body-secondary">{shown.topic_name}</span>
+        <ConceptTags names={shown.concepts.map((c) => c.name)} />
         <span className="ws-answer-score" data-grade={answerGrade(score)}>
           Score {score}
         </span>
