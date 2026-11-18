@@ -14,7 +14,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:harness": "python3 -m unittest discover -s src/runner/python",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run build && playwright test",
     "validate:content": "python3 scripts/validate_content.py"
   },
   "dependencies": {
