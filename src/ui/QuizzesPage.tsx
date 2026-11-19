@@ -1,25 +1,21 @@
 import { useId, useState, type ReactNode } from 'react'
 import { Alert, Button, Form, Stack } from 'react-bootstrap'
-import { DIFFICULTIES, type TopicFile } from '@/content/schema'
+import { DIFFICULTIES, QUESTION_TYPES, type TopicFile } from '@/content/schema'
 import {
   candidates,
   drawQuestions,
   QUESTION_MINUTES,
   quizAreas,
   timeLimit,
-  type QuestionType,
   type Quiz,
   type QuizFilter,
   type QuizSetup,
 } from '@/core/quiz'
 import { plural } from './format'
 import { Link } from './Link'
+import { TYPE_LABEL } from './progress'
 
 const DEFAULT_SIZE = 10
-const TYPES: { type: QuestionType; label: string }[] = [
-  { type: 'single', label: 'Single choice' },
-  { type: 'multiple', label: 'Multiple choice' },
-]
 
 interface Props {
   topics: TopicFile[]
@@ -79,7 +75,7 @@ function NewQuiz({ topics, onStart }: Pick<Props, 'topics' | 'onStart'>) {
   const [filter, setFilter] = useState<QuizFilter>(() => ({
     topics: offered.map((t) => t.topic.id),
     offAreas: [],
-    types: TYPES.map((t) => t.type),
+    types: [...QUESTION_TYPES],
     difficulties: [...DIFFICULTIES],
   }))
   const [size, setSize] = useState(DEFAULT_SIZE)
@@ -158,13 +154,13 @@ function NewQuiz({ topics, onStart }: Pick<Props, 'topics' | 'onStart'>) {
       </Choices>
       <div className="ws-builder-row">
         <Choices label="Question types">
-          {TYPES.map(({ type, label }) => (
+          {QUESTION_TYPES.map((type) => (
             <Chip
               key={type}
               on={filter.types.includes(type)}
               onClick={() => change((f) => ({ types: toggled(f.types, type) }))}
             >
-              {label}
+              {TYPE_LABEL[type]}
             </Chip>
           ))}
         </Choices>

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Button, Form, ListGroup, Stack } from 'react-bootstrap'
-import type { TopicFile } from '@/content/schema'
 import {
   addConcept,
   conceptMap,
@@ -8,32 +7,36 @@ import {
   deleteConcept,
   editConcept,
   type ConceptChange,
+  type ItemList,
   type TopicRecord,
 } from '@/core/topics'
 import { conceptGroups } from '@/core/problems'
-import { libraryEntries } from '@/core/library'
+import { problemLibrary, questionLibrary } from '@/core/library'
 import { capital, plural } from './format'
 import { Link } from './Link'
 import type { Route } from './route'
 
 interface Props {
   topic: TopicRecord
-  file: TopicFile
   locked: boolean
   onChange: (change: (topic: TopicRecord) => TopicRecord) => void
 }
 
 const AREAS = 'concept-areas'
 
-export function TopicConcepts({ topic, file, locked, onChange }: Props) {
+export function TopicConcepts({ topic, locked, onChange }: Props) {
   const [editing, setEditing] = useState<string | null>(null)
   const areas = [...new Set(topic.concepts.map((c) => c.group))]
-  // The library lists every stored problem, served or not, and filters by the concepts left
-  // unchecked, including those a broken problem names but the topic no longer has.
-  const named = conceptGroups(libraryEntries([topic])).flatMap((g) => g.names)
-  const problemsOf = (name: string): Route => ({
+  // A library lists every stored item, served or not, and filters by the concepts left
+  // unchecked, including those a broken item names but the topic no longer has.
+  const named: Record<ItemList, string[]> = {
+    problems: conceptGroups(problemLibrary([topic])).flatMap((g) => g.names),
+    questions: conceptGroups(questionLibrary([topic])).flatMap((g) => g.names),
+  }
+  const itemsOf = (list: ItemList, name: string): Route => ({
     page: 'library',
-    filter: { topic: topic.id, offConcepts: named.filter((n) => n !== name) },
+    list,
+    filter: { topic: topic.id, offConcepts: named[list].filter((n) => n !== name) },
     disabled: !topic.enabled || undefined,
   })
 
@@ -78,12 +81,12 @@ export function TopicConcepts({ topic, file, locked, onChange }: Props) {
           None yet: adding a problem or question adds its concepts.
         </p>
       ) : (
-        conceptMap(file).map(({ area, concepts }) => (
+        conceptMap(topic.concepts).map(({ area, concepts }) => (
           <section key={area} aria-label={area} className="ws-concept-area">
             <h3 className="h6">{area}</h3>
             <ListGroup as="ul">
               {concepts.map((c) => {
-                const problemCount = conceptUsage(topic, c.id).problems
+                const used = conceptUsage(topic, c.id)
                 return (
                   <ListGroup.Item as="li" key={c.id} aria-label={c.name}>
                     {editing === c.id ? (
@@ -103,16 +106,27 @@ export function TopicConcepts({ topic, file, locked, onChange }: Props) {
                       <Stack direction="horizontal" gap={2} className="flex-wrap">
                         <span>{c.name}</span>
                         <span className="text-body-secondary small ms-auto">
-                          <ProblemCount
-                            count={problemCount}
+                          <Count
+                            count={used.problems}
+                            noun="problem"
                             name={c.name}
                             to={
-                              problemCount
-                                ? problemsOf(c.name)
+                              used.problems
+                                ? itemsOf('problems', c.name)
                                 : { page: 'add-problems', topic: topic.id, concepts: [c.name] }
                             }
                           />
-                          , {plural(c.questions, 'question')}
+                          ,{' '}
+                          {used.questions ? (
+                            <Count
+                              count={used.questions}
+                              noun="question"
+                              name={c.name}
+                              to={itemsOf('questions', c.name)}
+                            />
+                          ) : (
+                            plural(0, 'question')
+                          )}
                         </span>
                         <Stack direction="horizontal" gap={2}>
                           <Button
@@ -147,14 +161,21 @@ export function TopicConcepts({ topic, file, locked, onChange }: Props) {
   )
 }
 
-// A count links to the problems, or to adding the first ones.
-function ProblemCount({ count, name, to }: { count: number; name: string; to: Route }) {
+interface CountProps {
+  count: number
+  noun: string
+  name: string
+  to: Route
+}
+
+// A count links to the items, or to adding the first ones.
+function Count({ count, noun, name, to }: CountProps) {
   return (
     <Link
       to={to}
-      aria-label={count ? `${plural(count, 'problem')} of ${name}` : `Add problems of ${name}`}
+      aria-label={count ? `${plural(count, noun)} of ${name}` : `Add ${noun}s of ${name}`}
     >
-      {plural(count, 'problem')}
+      {plural(count, noun)}
     </Link>
   )
 }

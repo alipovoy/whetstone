@@ -83,24 +83,13 @@ describe('served', () => {
 })
 
 describe('conceptMap', () => {
-  it('groups concepts by area in topic order, A–Z inside, with their served uses', () => {
-    const concepts = [
-      { id: 'two-pointers', name: 'Two pointers', group: 'Arrays' },
-      { id: 'graphs', name: 'Graphs', group: 'Trees' },
-      { id: 'hashing', name: 'Hashing', group: 'Arrays' },
-    ]
-    const both = { ...problem, id: 'b', concepts: ['hashing', 'two-pointers'] }
-    const broken = { ...problem, id: 'x', concepts: ['graphs'], hints: [] }
-    const { file } = served({ ...topic, concepts, problems: [problem, both, broken] })
-    expect(conceptMap(file)).toEqual([
-      {
-        area: 'Arrays',
-        concepts: [
-          { id: 'hashing', name: 'Hashing', problems: 1, questions: 0 },
-          { id: 'two-pointers', name: 'Two pointers', problems: 2, questions: 1 },
-        ],
-      },
-      { area: 'Trees', concepts: [{ id: 'graphs', name: 'Graphs', problems: 0, questions: 0 }] },
+  it('groups concepts by area in topic order, A–Z inside', () => {
+    const twoPointers = { id: 'two-pointers', name: 'Two pointers', group: 'Arrays' }
+    const graphs = { id: 'graphs', name: 'Graphs', group: 'Trees' }
+    const hashing = { id: 'hashing', name: 'Hashing', group: 'Arrays' }
+    expect(conceptMap([twoPointers, graphs, hashing])).toEqual([
+      { area: 'Arrays', concepts: [hashing, twoPointers] },
+      { area: 'Trees', concepts: [graphs] },
     ])
   })
 })

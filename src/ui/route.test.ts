@@ -20,9 +20,11 @@ describe('routes', () => {
     { page: 'appearance' },
     { page: 'topics' },
     { page: 'topic', id: 't1' },
-    { page: 'library' },
-    { page: 'library', filter: { topic: 't', source: 'user' }, disabled: true },
-    { page: 'library-problem', topic: 'my topic', problem: 'a/b' },
+    { page: 'library', list: 'problems' },
+    { page: 'library', list: 'problems', filter: { topic: 't', source: 'user' }, disabled: true },
+    { page: 'library-item', list: 'problems', topic: 'my topic', item: 'a/b' },
+    { page: 'library', list: 'questions', filter: { type: 'multiple', difficulty: 'Hard' } },
+    { page: 'library-item', list: 'questions', topic: 'my topic', item: 'a/b' },
     { page: 'add-problems' },
     { page: 'edit-problem', topic: 'my topic', problem: 'a/b' },
     { page: 'add-problems', topic: 'a&b', concepts: ['X, y', 'Z'], difficulty: 'Medium' },
@@ -46,6 +48,8 @@ describe('routes', () => {
       '#/coding/a/b/c',
       '#/settings/problems/t/p/view',
       '#/settings/problems/t/p/edit/more',
+      '#/settings/questions/add',
+      '#/settings/questions/t/q/edit',
       '#/%E0',
     ])
       expect(parseRoute(hash)).toEqual({ page: 'home' })
@@ -59,10 +63,13 @@ describe('routes', () => {
   it('drops unknown or empty filter values', () => {
     expect(
       parseRoute(
-        '#/coding?difficulty=Insane&status=done&source=me&search=&area=X&without=&without=Y',
+        '#/coding?difficulty=Insane&status=done&source=me&type=open&search=&area=X&without=&without=Y',
       ),
     ).toEqual({ page: 'problems', filter: { offConcepts: ['Y'] } })
-    expect(parseRoute('#/settings/problems?disabled=yes')).toEqual({ page: 'library' })
+    expect(parseRoute('#/settings/problems?disabled=yes')).toEqual({
+      page: 'library',
+      list: 'problems',
+    })
     expect(parseRoute('#/coding?')).toEqual({ page: 'problems' })
     expect(href({ page: 'problems', filter: {} })).toBe('#/coding')
   })
@@ -80,6 +87,8 @@ describe('routes', () => {
       'reports',
       'reports',
       'reports',
+      'settings',
+      'settings',
       'settings',
       'settings',
       'settings',

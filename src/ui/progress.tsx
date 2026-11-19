@@ -1,3 +1,4 @@
+import type { QuestionType } from '@/content/schema'
 import type { Grade } from '@/core/attempt'
 import { SOLVED_SCORE, type ProblemStatus } from '@/core/problems'
 
@@ -12,6 +13,11 @@ const STATUS_OPTION: Record<ProblemStatus, string> = {
   ...STATUS_LABEL,
   solved: `Solved (score ${SOLVED_SCORE} or more)`,
   'needs-work': `Needs work (score under ${SOLVED_SCORE})`,
+}
+
+export const TYPE_LABEL: Record<QuestionType, string> = {
+  single: 'Single choice',
+  multiple: 'Multiple choice',
 }
 
 export const statusOptions = (statuses: readonly ProblemStatus[]) =>

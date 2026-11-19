@@ -6,14 +6,13 @@ import {
   DifficultySchema,
   type Difficulty,
   type Question,
+  type QuestionType,
   type TopicFile,
 } from '@/content/schema'
 import { choiceScore, quizScore } from './scoring'
 
 // Bumped when the stored shape changes; records of another version are skipped, not migrated.
 export const QUIZ_VERSION = 2
-
-export type QuestionType = Question['type']
 
 // The stored shape is frozen per version and deliberately looser than the content rules, so a
 // change to what can be served never makes a saved quiz unreadable.

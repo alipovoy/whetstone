@@ -8,7 +8,7 @@ import {
   problemEntries,
   PROBLEM_STATUSES,
   type ProblemEntry,
-  type ProblemFilter,
+  type ItemFilter,
 } from '@/core/problems'
 import { Filters } from './Filters'
 import { Icon } from './icons'
@@ -21,8 +21,8 @@ const STATUSES = statusOptions(PROBLEM_STATUSES)
 interface Props {
   topics: TopicFile[]
   attempts: Attempt[]
-  filter: ProblemFilter
-  onFilter: (filter: ProblemFilter) => void
+  filter: ItemFilter
+  onFilter: (filter: ItemFilter) => void
   onStart: (topic: Topic, problem: Problem) => void
   onResume: (topic: Topic, problem: Problem) => void
   onDiscard: (topic: Topic, problem: Problem) => void

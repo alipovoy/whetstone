@@ -1,28 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
-import { DIFFICULTIES, SOURCES, type Difficulty } from '@/content/schema'
-import {
-  conceptGroups,
-  PROBLEM_STATUSES,
-  type Filterable,
-  type ProblemFilter,
-} from '@/core/problems'
+import { DIFFICULTIES, QUESTION_TYPES, SOURCES, type Difficulty } from '@/content/schema'
+import type { ItemList } from '@/core/topics'
+import { conceptGroups, PROBLEM_STATUSES, type Filterable, type ItemFilter } from '@/core/problems'
 
 // Hash addresses need no server rewrite on GitHub Pages.
 export type Route =
   | { page: 'home' }
-  | { page: 'problems'; filter?: ProblemFilter }
+  | { page: 'problems'; filter?: ItemFilter }
   | { page: 'solve'; topic: string; problem: string }
   | { page: 'quizzes' }
   | { page: 'quiz'; id: string }
-  | { page: 'reports'; section: 'coding'; filter?: ProblemFilter }
+  | { page: 'reports'; section: 'coding'; filter?: ItemFilter }
   | { page: 'reports'; section: 'quizzes' }
   | { page: 'attempt'; id: string }
   | { page: 'appearance' }
   | { page: 'topics' }
   | { page: 'topic'; id: string }
-  // Settings, Coding problems: every stored problem; those of disabled topics on request.
-  | { page: 'library'; filter?: ProblemFilter; disabled?: boolean }
-  | { page: 'library-problem'; topic: string; problem: string }
+  // Settings, Coding problems or Quiz questions: every stored item; those of disabled topics on
+  // request.
+  | { page: 'library'; list: ItemList; filter?: ItemFilter; disabled?: boolean }
+  | { page: 'library-item'; list: ItemList; topic: string; item: string }
   | { page: 'edit-problem'; topic: string; problem: string }
   // Prefilled from where it was opened: concepts by name.
   | { page: 'add-problems'; topic?: string; concepts?: string[]; difficulty?: Difficulty }
@@ -46,14 +43,15 @@ export function parseRoute(hash: string): Route {
     })
   const [first, second, third, fourth, fifth, ...rest] = parts
   if (rest.length > 0) return { page: 'home' }
-  if (first === 'settings' && second === 'problems') {
-    if (fifth === EDIT && third && fourth)
+  const list = LISTS.find((l) => first === 'settings' && second === l)
+  if (list) {
+    if (list === 'problems' && fifth === EDIT && third && fourth)
       return { page: 'edit-problem', topic: third, problem: fourth }
     if (fifth) return { page: 'home' }
-    if (third && fourth) return { page: 'library-problem', topic: third, problem: fourth }
-    if (third === ADD) return addRoute(query)
+    if (third && fourth) return { page: 'library-item', list, topic: third, item: fourth }
+    if (list === 'problems' && third === ADD) return addRoute(query)
     if (third) return { page: 'home' }
-    const library = withFilter({ page: 'library' }, query)
+    const library = withFilter({ page: 'library', list }, query)
     return new URLSearchParams(query).get(DISABLED) === SHOWN
       ? { ...library, disabled: true }
       : library
@@ -108,10 +106,10 @@ export function href(route: Route): string {
     case 'library': {
       const params = filterParams(route.filter)
       if (route.disabled) params.set(DISABLED, SHOWN)
-      return path('settings', 'problems') + queryText(params)
+      return path('settings', route.list) + queryText(params)
     }
-    case 'library-problem':
-      return path('settings', 'problems', route.topic, route.problem)
+    case 'library-item':
+      return path('settings', route.list, route.topic, route.item)
     case 'edit-problem':
       return path('settings', 'problems', route.topic, route.problem, EDIT)
     case 'add-problems': {
@@ -124,6 +122,7 @@ export function href(route: Route): string {
   }
 }
 
+const LISTS: ItemList[] = ['problems', 'questions']
 const TEXT_FILTERS = ['search', 'topic'] as const
 const OFF_CONCEPTS = 'without'
 const DISABLED = 'disabled'
@@ -132,9 +131,9 @@ const EDIT = 'edit'
 const CONCEPT = 'concept'
 const SHOWN = 'shown'
 
-function withFilter<R extends Route & { filter?: ProblemFilter }>(route: R, query: string): R {
+function withFilter<R extends Route & { filter?: ItemFilter }>(route: R, query: string): R {
   const params = new URLSearchParams(query)
-  const filter: ProblemFilter = {}
+  const filter: ItemFilter = {}
   for (const key of TEXT_FILTERS) {
     const value = params.get(key)
     if (value) filter[key] = value
@@ -147,6 +146,8 @@ function withFilter<R extends Route & { filter?: ProblemFilter }>(route: R, quer
   if (status) filter.status = status
   const source = SOURCES.find((s) => s === params.get('source'))
   if (source) filter.source = source
+  const type = QUESTION_TYPES.find((t) => t === params.get('type'))
+  if (type) filter.type = type
   return Object.keys(filter).length ? { ...route, filter } : route
 }
 
@@ -162,7 +163,7 @@ function addRoute(query: string): Route {
   return route
 }
 
-function filterQuery(filter?: ProblemFilter): string {
+function filterQuery(filter?: ItemFilter): string {
   return queryText(filterParams(filter))
 }
 
@@ -171,7 +172,7 @@ function queryText(params: URLSearchParams): string {
   return text && '?' + text
 }
 
-function filterParams(filter: ProblemFilter = {}): URLSearchParams {
+function filterParams(filter: ItemFilter = {}): URLSearchParams {
   const params = new URLSearchParams()
   for (const key of TEXT_FILTERS) {
     const value = filter[key]
@@ -181,12 +182,13 @@ function filterParams(filter: ProblemFilter = {}): URLSearchParams {
   if (filter.difficulty) params.set('difficulty', filter.difficulty)
   if (filter.status) params.set('status', filter.status)
   if (filter.source) params.set('source', filter.source)
+  if (filter.type) params.set('type', filter.type)
   return params
 }
 
 // Add problems, prefilled from a filter: its topic, the concepts it keeps of that topic, and
 // its difficulty.
-export function addProblemsFor(filter: ProblemFilter, entries: Filterable[]): Route {
+export function addProblemsFor(filter: ItemFilter, entries: Filterable[]): Route {
   const { topic, offConcepts, difficulty } = filter
   const kept =
     topic && offConcepts
@@ -219,7 +221,7 @@ export function sectionOf(route: Route): Section {
     case 'topics':
     case 'topic':
     case 'library':
-    case 'library-problem':
+    case 'library-item':
     case 'add-problems':
     case 'edit-problem':
       return 'settings'

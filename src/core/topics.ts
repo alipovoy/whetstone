@@ -57,38 +57,41 @@ export interface Served {
   unreadable: { problems: number; questions: number }
 }
 
-const known = (item: { concepts: string[] }, concepts: Set<string>) =>
-  item.concepts.every((c) => concepts.has(c))
-
 type Read<T> = { ok: true; item: T } | { ok: false; errors: string[] }
+export type ItemReader<T> = (raw: unknown, concepts: Set<string>) => Read<T>
 
-// A stored problem is served only while it follows the current rules.
-export function readProblem(raw: unknown, concepts: Set<string>): Read<Problem> {
-  const parsed = ProblemSchema.safeParse(raw)
-  if (!parsed.success) return { ok: false, errors: issues(parsed.error) }
-  const errors = [
-    ...parsed.data.concepts
-      .filter((c) => !concepts.has(c))
-      .map((c) => `concepts: “${c}” is not a concept of the topic`),
-    ...testErrors(parsed.data),
-  ]
-  return errors.length ? { ok: false, errors } : { ok: true, item: parsed.data }
+// A stored item is served only while it follows the current rules.
+function reader<T extends { concepts: string[] }>(
+  schema: z.ZodType<T>,
+  checks: (item: T) => string[],
+): ItemReader<T> {
+  return (raw, concepts) => {
+    const parsed = schema.safeParse(raw)
+    if (!parsed.success) return { ok: false, errors: issues(parsed.error) }
+    const errors = [
+      ...parsed.data.concepts
+        .filter((c) => !concepts.has(c))
+        .map((c) => `concepts: “${c}” is not a concept of the topic`),
+      ...checks(parsed.data),
+    ]
+    return errors.length ? { ok: false, errors } : { ok: true, item: parsed.data }
+  }
+}
+
+export const readProblem = reader(ProblemSchema, testErrors)
+export const readQuestion = reader(QuestionSchema, answerErrors)
+
+function servedItems<T>(items: unknown[], read: ItemReader<T>, concepts: Set<string>): T[] {
+  return items.flatMap((raw) => {
+    const reading = read(raw, concepts)
+    return reading.ok ? [reading.item] : []
+  })
 }
 
 export function served(record: TopicRecord): Served {
   const concepts = new Set(record.concepts.map((c) => c.id))
-  const problems: Problem[] = []
-  for (const raw of record.problems) {
-    const read = readProblem(raw, concepts)
-    if (read.ok) problems.push(read.item)
-  }
-  const questions: Question[] = []
-  for (const raw of record.questions) {
-    const parsed = QuestionSchema.safeParse(raw)
-    if (parsed.success && known(parsed.data, concepts) && !answerErrors(parsed.data).length) {
-      questions.push(parsed.data)
-    }
-  }
+  const problems = servedItems(record.problems, readProblem, concepts)
+  const questions = servedItems(record.questions, readQuestion, concepts)
   return {
     file: {
       topic: { id: record.id, name: record.name, concepts: record.concepts },
@@ -291,30 +294,14 @@ export function checkErrors(problem: Problem, reference: CheckRun, starter: Chec
   return errors
 }
 
-export interface ConceptUse {
-  id: string
-  name: string
-  problems: number
-  questions: number
-}
-
-export interface AreaUse {
-  area: string
-  concepts: ConceptUse[]
-}
-
 // Areas keep the topic's order; the concepts of an area go A–Z.
-export function conceptMap({ topic, problems, questions }: TopicFile): AreaUse[] {
-  const uses = (items: { concepts: string[] }[], id: string) =>
-    items.filter((item) => item.concepts.includes(id)).length
-  const areas = new Map<string, ConceptUse[]>()
-  for (const { id, name, group } of topic.concepts) {
-    const use = { id, name, problems: uses(problems, id), questions: uses(questions, id) }
-    areas.set(group, [...(areas.get(group) ?? []), use])
-  }
-  return [...areas].map(([area, concepts]) => ({
+export function conceptMap(concepts: Concept[]): { area: string; concepts: Concept[] }[] {
+  const areas = new Map<string, Concept[]>()
+  for (const concept of concepts)
+    areas.set(concept.group, [...(areas.get(concept.group) ?? []), concept])
+  return [...areas].map(([area, inArea]) => ({
     area,
-    concepts: concepts.toSorted((a, b) => a.name.localeCompare(b.name)),
+    concepts: inArea.toSorted((a, b) => a.name.localeCompare(b.name)),
   }))
 }
 

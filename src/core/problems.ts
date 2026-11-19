@@ -2,6 +2,7 @@ import {
   conceptNames,
   type Difficulty,
   type Problem,
+  type QuestionType,
   type Source,
   type Topic,
   type TopicFile,
@@ -13,7 +14,7 @@ export const SOLVED_SCORE = 90
 export const PROBLEM_STATUSES = ['new', 'in-progress', 'solved', 'needs-work'] as const
 export type ProblemStatus = (typeof PROBLEM_STATUSES)[number]
 
-export interface ProblemFilter {
+export interface ItemFilter {
   search?: string
   topic?: string
   // Concepts are unchecked by name, so a new concept starts checked.
@@ -21,9 +22,10 @@ export interface ProblemFilter {
   difficulty?: Difficulty
   status?: ProblemStatus
   source?: Source
+  type?: QuestionType
 }
 
-// What the filters read: the problems list, the history of graded attempts and the library have it.
+// What the filters read: the problems list, the history of graded attempts and the libraries have it.
 export interface Filterable {
   topic: { id: string; name: string }
   title: string
@@ -31,6 +33,7 @@ export interface Filterable {
   difficulty: string
   status?: ProblemStatus
   source?: Source
+  type?: QuestionType
 }
 
 // A concept no longer in its topic has no area.
@@ -78,7 +81,7 @@ export function problemEntries(topics: TopicFile[], attempts: Attempt[]): Proble
   )
 }
 
-export function filterEntries<T extends Filterable>(entries: T[], filter: ProblemFilter): T[] {
+export function filterEntries<T extends Filterable>(entries: T[], filter: ItemFilter): T[] {
   const words = (filter.search ?? '').toLowerCase().split(/\s+/).filter(Boolean)
   return entries.filter(
     (e) =>
@@ -87,6 +90,7 @@ export function filterEntries<T extends Filterable>(entries: T[], filter: Proble
       (!filter.difficulty || e.difficulty === filter.difficulty) &&
       (!filter.status || e.status === filter.status) &&
       (!filter.source || e.source === filter.source) &&
+      (!filter.type || e.type === filter.type) &&
       words.every((w) =>
         [e.title, ...e.concepts.map((c) => c.name)].join(' ').toLowerCase().includes(w),
       ),
@@ -115,14 +119,14 @@ export function conceptGroups(entries: Filterable[], topic?: string): ConceptGro
   }))
 }
 
-// A topic from an old address may be gone, and a status or a source may be one the list cannot
-// have; each would hide every entry while its field reads "All", so it is dropped. Unchecked
+// A topic from an old address may be gone, and a status, a source or a type may be one the list
+// cannot have; each would hide every entry while its field reads "All", so it is dropped. Unchecked
 // concepts are kept only while the topic offers them, so all checked always reads as no filter.
 export function applicableFilter(
-  filter: ProblemFilter,
+  filter: ItemFilter,
   entries: Filterable[],
   statuses: readonly ProblemStatus[] = PROBLEM_STATUSES,
-): ProblemFilter {
+): ItemFilter {
   const topic = entries.some((e) => e.topic.id === filter.topic) ? filter.topic : undefined
   const offered = new Set(conceptGroups(entries, topic).flatMap((g) => g.names))
   const off = [...new Set(filter.offConcepts)].filter((name) => offered.has(name))
@@ -130,5 +134,6 @@ export function applicableFilter(
   const source = entries.some((e) => e.source && e.source === filter.source)
     ? filter.source
     : undefined
-  return { ...filter, topic, offConcepts: off.length ? off : undefined, status, source }
+  const type = entries.some((e) => e.type && e.type === filter.type) ? filter.type : undefined
+  return { ...filter, topic, offConcepts: off.length ? off : undefined, status, source, type }
 }

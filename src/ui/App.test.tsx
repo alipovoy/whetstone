@@ -930,7 +930,11 @@ describe('Topics', () => {
   })
 
   it('reports text that is not JSON, and goes back to the list as it was filtered', async () => {
-    renderApp(fakeRunner(), {}, { page: 'library', filter: { difficulty: 'Easy' } })
+    renderApp(
+      fakeRunner(),
+      {},
+      { page: 'library', list: 'problems', filter: { difficulty: 'Easy' } },
+    )
     await userEvent.click(screen.getByRole('link', { name: 'Add problems' }))
     expect(window.location.hash).toBe('#/settings/problems/add?difficulty=Easy')
     expect(screen.getByRole('button', { name: 'Easy' })).toHaveAttribute('aria-pressed', 'true')
@@ -983,7 +987,11 @@ describe('Topics', () => {
       .mockResolvedValueOnce(graded)
       .mockResolvedValueOnce(allPass)
       .mockResolvedValueOnce(graded)
-    const put = renderApp(runner, {}, { page: 'library-problem', topic: 't', problem: 'one' })
+    const put = renderApp(
+      runner,
+      {},
+      { page: 'library-item', list: 'problems', topic: 't', item: 'one' },
+    )
     await userEvent.click(screen.getByRole('link', { name: 'Edit' }))
     expect(window.location.hash).toBe('#/settings/problems/t/one/edit')
     const preview = screen.getByRole('region', { name: 'Preview' })
@@ -1286,7 +1294,7 @@ describe('Topics', () => {
     })
 
     it('opens a problem as the solver sees it, with its hints, reference and tests, to try it', async () => {
-      renderApp(fakeRunner(), { topics: stored() }, { page: 'library' })
+      renderApp(fakeRunner(), { topics: stored() }, { page: 'library', list: 'problems' })
       await userEvent.click(screen.getByRole('link', { name: 'Twice worded' }))
       expect(window.location.hash).toBe('#/settings/problems/t/twice')
       expect(screen.getByRole('heading', { level: 1, name: 'Twice worded' })).toBeVisible()
@@ -1308,7 +1316,11 @@ describe('Topics', () => {
 
     it('shows why a problem is not served, and deletes it', async () => {
       vi.spyOn(window, 'confirm').mockReturnValue(true)
-      const put = renderApp(fakeRunner(), { topics: stored() }, { page: 'library' })
+      const put = renderApp(
+        fakeRunner(),
+        { topics: stored() },
+        { page: 'library', list: 'problems' },
+      )
       await userEvent.click(screen.getByRole('link', { name: 'Broken problem' }))
       expect(screen.getByRole('alert')).toHaveTextContent('hints: needs exactly three hints')
       expect(screen.getByRole('textbox', { name: 'Stored problem' })).toHaveTextContent(
@@ -1333,16 +1345,17 @@ describe('Topics', () => {
       renderApp(
         fakeRunner(),
         { topics: stored() },
-        {
-          page: 'library-problem',
-          topic: 'u',
-          problem: 'three',
-        },
+        { page: 'library-item', list: 'problems', topic: 'u', item: 'three' },
       )
       expect(screen.getByRole('heading', { level: 1, name: 'Third problem' })).toBeVisible()
       expect(screen.queryByRole('button', { name: 'Try it' })).toBeNull()
       act(() => {
-        window.location.hash = href({ page: 'library-problem', topic: 'u', problem: 'gone' })
+        window.location.hash = href({
+          page: 'library-item',
+          list: 'problems',
+          topic: 'u',
+          item: 'gone',
+        })
       })
       expect(await screen.findByText('This problem is not available')).toBeInTheDocument()
     })
@@ -1374,6 +1387,137 @@ describe('Topics', () => {
       await userEvent.click(area)
       expect(window.location.hash).toBe('#/settings/problems?topic=t&without=gone')
       expect(area).toHaveProperty('indeterminate', false)
+    })
+  })
+
+  describe('question library', () => {
+    const twice = {
+      ...choiceQuestion('twice', 'single', ['no', 'yes'], [1], 'Medium'),
+      wordings: [
+        { text: 'First wording', options: ['no', 'yes'] },
+        { text: 'Second wording', options: ['nope', 'yep'] },
+      ],
+      explanation: 'Because **yes**.',
+    }
+    const off: TopicFile = {
+      topic: { id: 'u', name: 'Off', concepts: [{ id: 'd', name: 'D', group: 'H' }] },
+      problems: [],
+      questions: [
+        { ...choiceQuestion('hidden', 'multiple', ['a', 'b', 'c'], [0]), concepts: ['d'] },
+      ],
+    }
+    const stored = (): TopicRecord[] => [
+      {
+        ...topicFromFile(quizTopic, 0),
+        questions: [
+          ...quizTopic.questions,
+          twice,
+          choiceQuestion('broken', 'single', ['a', 'b'], [0, 1]),
+        ],
+      },
+      { ...topicFromFile(off, 1), enabled: false },
+    ]
+    const rows = () =>
+      within(screen.getByRole('region', { name: 'Questions' }))
+        .getAllByRole('listitem')
+        .filter((li) => li.classList.contains('ws-problem'))
+        .map((li) => li.getAttribute('aria-label'))
+
+    it('lists every stored question, filtered by type in the address, disabled topics on request', async () => {
+      renderApp(fakeRunner(), { topics: stored() }, { page: 'appearance' })
+      await userEvent.click(screen.getByRole('link', { name: 'Quiz questions' }))
+      expect(window.location.hash).toBe('#/settings/questions')
+      expect(rows()).toEqual(['pick-one', 'pick-all', 'twice', 'broken'])
+      expect(screen.getByRole('listitem', { name: 'pick-all' })).toHaveTextContent(
+        'TopicCMultiple choiceHardAdded by you',
+      )
+      expect(screen.getByRole('listitem', { name: 'broken' })).toHaveTextContent(
+        'Not served: a single choice has exactly one answer',
+      )
+
+      await userEvent.selectOptions(screen.getByLabelText('Type'), 'Single choice')
+      expect(window.location.hash).toBe('#/settings/questions?type=single')
+      expect(rows()).toEqual(['pick-one', 'twice', 'broken'])
+      expect(screen.getByText('3 of 4 questions')).toBeInTheDocument()
+
+      await userEvent.click(screen.getByRole('switch', { name: 'Show disabled topics' }))
+      await userEvent.selectOptions(screen.getByLabelText('Type'), 'Multiple choice')
+      expect(window.location.hash).toBe('#/settings/questions?type=multiple&disabled=shown')
+      expect(rows()).toEqual(['pick-all', 'hidden'])
+
+      // Each library keeps its own filter.
+      const settingsLink = (name: string) =>
+        within(screen.getByRole('navigation', { name: 'Settings' })).getByRole('link', { name })
+      await userEvent.click(settingsLink('Coding problems'))
+      expect(window.location.hash).toBe('#/settings/problems')
+      await userEvent.click(settingsLink('Quiz questions'))
+      expect(window.location.hash).toBe('#/settings/questions?type=multiple&disabled=shown')
+    })
+
+    it('opens a question with every wording, its correct options and the explanation', async () => {
+      renderApp(fakeRunner(), { topics: stored() }, { page: 'library', list: 'questions' })
+      await userEvent.click(screen.getByRole('link', { name: 'twice' }))
+      expect(window.location.hash).toBe('#/settings/questions/t/twice')
+      expect(screen.getByRole('heading', { level: 1, name: 'twice' })).toBeVisible()
+      expect(screen.getByText('First wording')).toBeVisible()
+      // jsdom keeps both tabs' panels.
+      const correct = (wording: number) =>
+        within(screen.getAllByRole('list', { name: 'Options' })[wording])
+          .getAllByRole('listitem')
+          .filter((li) => li.hasAttribute('data-correct'))
+          .map((li) => li.textContent)
+      expect(correct(0)).toEqual(['yesCorrect'])
+      await userEvent.click(screen.getByRole('tab', { name: 'Wording 2' }))
+      expect(screen.getByText('Second wording')).toBeVisible()
+      expect(correct(1)).toEqual(['yepCorrect'])
+      expect(screen.getByRole('region', { name: 'Explanation' })).toHaveTextContent('Because yes.')
+      expect(screen.queryByRole('button', { name: 'Try it' })).toBeNull()
+
+      await userEvent.click(screen.getByRole('link', { name: 'Back to quiz questions' }))
+      expect(window.location.hash).toBe('#/settings/questions')
+    })
+
+    it('shows why a question is not served, and deletes it', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true)
+      const put = renderApp(
+        fakeRunner(),
+        { topics: stored() },
+        { page: 'library-item', list: 'questions', topic: 't', item: 'broken' },
+      )
+      expect(screen.getByRole('alert')).toHaveTextContent('a single choice has exactly one answer')
+      expect(screen.getByRole('alert')).not.toHaveTextContent('Edit it to fix it.')
+      expect(screen.getByRole('textbox', { name: 'Stored question' })).toHaveTextContent(
+        '"id": "broken"',
+      )
+      await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+      expect(window.confirm).toHaveBeenCalledWith('Delete "broken"?')
+      expect(put.topics.put.mock.lastCall![0].questions.map((q) => q.id)).toEqual([
+        'pick-one',
+        'pick-all',
+        'twice',
+      ])
+      expect(window.location.hash).toBe('#/settings/questions')
+
+      act(() => {
+        window.location.hash = href({
+          page: 'library-item',
+          list: 'questions',
+          topic: 't',
+          item: 'broken',
+        })
+      })
+      expect(await screen.findByText('This question is not available')).toBeInTheDocument()
+    })
+
+    it('opens from the question count of a concept on the topic page', async () => {
+      renderApp(fakeRunner(), { topics: stored() })
+      await userEvent.click(screen.getByRole('link', { name: 'Settings' }))
+      await userEvent.click(screen.getByRole('link', { name: 'Topics' }))
+      await userEvent.click(screen.getByRole('link', { name: 'Topic' }))
+      // Broken questions count too, as the library lists them.
+      await userEvent.click(screen.getByRole('link', { name: '4 questions of C' }))
+      expect(window.location.hash).toBe('#/settings/questions?topic=t')
+      expect(rows()).toHaveLength(4)
     })
   })
 
