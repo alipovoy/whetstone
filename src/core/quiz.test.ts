@@ -105,7 +105,6 @@ describe('choosing questions', () => {
     const key = (n: number, seed: number) => drawQuestions(list, n, seed).map((c) => c.question.id)
     expect(key(2, 0.5)).toEqual(key(2, 0.5))
     expect(key(3, 0.5).slice(0, 2)).toEqual(key(2, 0.5))
-    expect(key(2, 0.5).every((id) => key(3, 0.5).includes(id))).toBe(true)
     const seeds = new Set([0.1, 0.2, 0.3, 0.4, 0.5, 0.6].map((s) => key(3, s).join()))
     expect(seeds.size).toBeGreaterThan(1)
   })

@@ -8,7 +8,7 @@ import { AttemptSchema, gradeAttempt, startAttempt, type Attempt } from '@/core/
 import { candidates, startQuiz, submitQuiz, type Quiz } from '@/core/quiz'
 import { itemText, topicFromFile, type TopicRecord } from '@/core/topics'
 import { App, type AppRunner, type AppStorage } from './App'
-import { href, type Route } from './route'
+import { href, navigate, type Route } from './route'
 import { applyTheme, setScheme, setThemeChoice } from './theme'
 
 // Settings has a Coding problems entry too.
@@ -611,7 +611,7 @@ describe('Layout', () => {
         .getAllByRole('listitem')
         .map((li) => li.textContent),
     ).toEqual([
-      expect.stringMatching(/^Quiz: Topic.*1 questions.*0$/),
+      expect.stringMatching(/^Quiz: Topic.*1 question,.*0$/),
       expect.stringMatching(/^First problem.*Coding problem.*50$/),
     ])
 
@@ -644,6 +644,10 @@ describe('Layout', () => {
     renderApp(fakeRunner(), {}, { page: 'solve', topic: 't', problem: 'gone' })
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       'This problem is not available',
+    )
+    act(() => navigate({ page: 'quiz', id: 'gone' }))
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'This quiz is not available',
     )
   })
 

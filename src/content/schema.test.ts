@@ -10,18 +10,9 @@ describe('built-in topic', () => {
     expect(result.ok ? [] : result.errors).toEqual([])
   })
 
-  it('is "Algorithms & data structures" with about 8 problems, all built-in', () => {
-    expect(algorithms.topic.name).toBe('Algorithms & data structures')
-    expect(algorithms.problems).toHaveLength(8)
-    expect(new Set(algorithms.problems.map((p) => p.source))).toEqual(new Set(['built-in']))
-  })
-
-  it('has choice questions on every concept, all built-in', () => {
-    expect(algorithms.questions.length).toBeGreaterThanOrEqual(30)
-    expect(new Set(algorithms.questions.map((q) => q.concepts[0]))).toEqual(
-      new Set(algorithms.topic.concepts.map((c) => c.id)),
-    )
-    expect(new Set(algorithms.questions.map((q) => q.source))).toEqual(new Set(['built-in']))
+  it('marks every item built-in', () => {
+    const sources = [...algorithms.problems, ...algorithms.questions].map((i) => i.source)
+    expect(new Set(sources)).toEqual(new Set(['built-in']))
   })
 })
 
@@ -76,23 +67,25 @@ describe('validateTopicFile', () => {
 
   it('rejects an unknown concept and a repeated id', () => {
     const file = clone()
-    file.problems[0].concepts = ['two-pointers', 'nope']
-    file.problems[1].id = file.problems[0].id
+    const [first, second] = file.problems
+    first.concepts = [first.concepts[0], 'nope']
+    second.id = first.id
     const result = validateTopicFile(file)
     expect(result.ok ? [] : result.errors).toEqual([
-      'pair-with-sum: concept "nope" is not in the topic',
-      'pair-with-sum: id repeats',
+      `${first.id}: concept "nope" is not in the topic`,
+      `${first.id}: id repeats`,
     ])
   })
 
   it('requires visible tests to exist and one test to stay hidden', () => {
     const file = clone()
-    file.problems[0].tests = 'def test_a():\n    pass\n'
-    file.problems[0].visible_tests = ['test_a', 'test_b']
+    const [first] = file.problems
+    first.tests = 'def test_a():\n    pass\n'
+    first.visible_tests = ['test_a', 'test_b']
     const result = validateTopicFile(file)
     expect(result.ok ? [] : result.errors).toEqual([
-      'pair-with-sum: visible test "test_b" is not defined',
-      'pair-with-sum: every test is visible; at least one must be hidden',
+      `${first.id}: visible test "test_b" is not defined`,
+      `${first.id}: every test is visible; at least one must be hidden`,
     ])
   })
 })

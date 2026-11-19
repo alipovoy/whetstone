@@ -3,6 +3,7 @@ import { Button } from 'react-bootstrap'
 import type { Problem, Topic, TopicFile } from '@/content/schema'
 import { latestAttempt, type Attempt } from '@/core/attempt'
 import type { Quiz } from '@/core/quiz'
+import { plural } from './format'
 import { Icon } from './icons'
 import { Link } from './Link'
 
@@ -54,9 +55,7 @@ export function HomePage({ topics, attempts, quizzes, onStart, onResume }: Props
         {unfinished && (
           <div className="ws-resume">
             <div>
-              <h2 className="h5 mb-1">
-                Continue: {unfinished.problem.wordings[unfinished.attempt.wording]?.title}
-              </h2>
+              <h2 className="h5 mb-1">Continue: {unfinished.problem.wordings[0].title}</h2>
               <p className="text-body-secondary small mb-0">
                 {unfinished.problem.difficulty}, {minutes(unfinished.attempt.elapsed_ms)} spent
               </p>
@@ -131,7 +130,7 @@ function Recent({ attempts, quizzes, now, find }: RecentProps) {
               key: q.id,
               at: q.result.at,
               title: `Quiz: ${[...new Set(q.questions.map((s) => s.topic_name))].join(', ')}`,
-              kind: `${q.questions.length} questions`,
+              kind: plural(q.questions.length, 'question'),
               score: q.result.score,
               to: { page: 'quiz', id: q.id } as const,
             },

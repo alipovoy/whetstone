@@ -3,15 +3,7 @@ import { Alert } from 'react-bootstrap'
 import { latestAttempt, startAttempt, type Attempt, type Grade } from '@/core/attempt'
 import { startQuiz, submitQuiz, type Quiz, type QuizSetup } from '@/core/quiz'
 import { problemLibrary, questionLibrary, type LibraryEntry } from '@/core/library'
-import {
-  addProblems,
-  addQuestions,
-  deleteItem,
-  newTopic,
-  served,
-  type ItemList,
-  type TopicRecord,
-} from '@/core/topics'
+import { deleteItem, newTopic, served, type ItemList, type TopicRecord } from '@/core/topics'
 import type { Problem, Topic } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
 import type { Records } from '@/storage/database'
@@ -24,6 +16,7 @@ import { QuizzesPage } from './QuizzesPage'
 import { TopicPage } from './TopicPage'
 import { TopicsPage } from './TopicsPage'
 import { LibraryPage, LibraryProblem, LibraryQuestion, NOUN } from './LibraryPages'
+import { plural } from './format'
 import { Link } from './Link'
 import { href, navigate, replaceRoute, sectionOf, useRoute, type Route } from './route'
 import { AttemptReport, CodingReport, QuizReport } from './ReportsPages'
@@ -197,23 +190,15 @@ export function App({ runner, storage }: Props) {
   // Said on the library page it was left for, until that page changes.
   const [notice, setNotice] = useState<{ at: string; text: string } | null>(null)
   if (notice && href(route) !== notice.at) setNotice(null)
-  const addTo = (into: ItemList, id: string, items: unknown[]) => {
-    const record = topicsNow.current.find((t) => t.id === id)
-    const add = into === 'problems' ? addProblems : addQuestions
-    const added = record && add(record, items, () => crypto.randomUUID())
-    if (!record || !added?.ok) return
-    putTopic({ ...added.record, updated_at: Date.now() })
+  const addTo = (into: ItemList, record: TopicRecord, count: number) => {
+    putTopic({ ...record, updated_at: Date.now() })
     const to: Route = {
       page: 'library',
       list: into,
-      filter: { topic: id },
+      filter: { topic: record.id },
       disabled: !record.enabled || undefined,
     }
-    const count = added.added.length
-    setNotice({
-      at: href(to),
-      text: `Added ${count === 1 ? `1 ${NOUN[into]}` : `${count} ${NOUN[into]}s`} to ${record.name}.`,
-    })
+    setNotice({ at: href(to), text: `Added ${plural(count, NOUN[into])} to ${record.name}.` })
     navigate(to)
   }
 
@@ -487,7 +472,7 @@ export function App({ runner, storage }: Props) {
               runner={runner}
               back={libraries[route.list]}
               onBusy={setBusy}
-              onAdd={(id, items) => addTo(route.list, id, items)}
+              onAdd={(record, count) => addTo(route.list, record, count)}
             />,
           )}
         {route.page === 'library-item' &&

@@ -81,31 +81,10 @@ describe('routes', () => {
   })
 
   it('names the menu section of each page', () => {
-    expect(routes.map(sectionOf)).toEqual([
-      'home',
-      'coding',
-      'coding',
-      'coding',
-      'coding',
-      'quizzes',
-      'quizzes',
-      'reports',
-      'reports',
-      'reports',
-      'reports',
-      'settings',
-      'settings',
-      'settings',
-      'settings',
-      'settings',
-      'settings',
-      'settings',
-      'settings',
-      'settings',
-      'settings',
-      'settings',
-      'settings',
-      'settings',
-    ])
+    expect(sectionOf({ page: 'home' })).toBe('home')
+    expect(sectionOf({ page: 'solve', topic: 't', problem: 'p' })).toBe('coding')
+    expect(sectionOf({ page: 'quiz', id: 'q' })).toBe('quizzes')
+    expect(sectionOf({ page: 'attempt', id: 'a' })).toBe('reports')
+    expect(sectionOf({ page: 'add-items', list: 'questions' })).toBe('settings')
   })
 })

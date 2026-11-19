@@ -1,7 +1,11 @@
 import { expect, test } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+
+const { topic, problems } = JSON.parse(readFileSync('src/content/algorithms.json', 'utf8'))
+const address = `./#/coding/${topic.id}/${problems[0].id}`
 
 test('resize the panes, collapse one, keep the layout after reload', async ({ page }) => {
-  await page.goto('./#/coding/algorithms/pair-with-sum')
+  await page.goto(address)
   const problem = page.getByRole('region', { name: 'Problem' })
   const code = page.getByRole('region', { name: 'Code' })
   const separator = page.getByRole('separator', { name: 'Resize panes' })
@@ -32,7 +36,7 @@ test('resize the panes, collapse one, keep the layout after reload', async ({ pa
 
 test('stack the panes on a narrow screen', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 800 })
-  await page.goto('./#/coding/algorithms/pair-with-sum')
+  await page.goto(address)
   const problem = (await page.getByRole('region', { name: 'Problem' }).boundingBox())!
   const code = (await page.getByRole('region', { name: 'Code' }).boundingBox())!
   expect(code.y).toBeGreaterThan(problem.y + problem.height - 1)

@@ -13,7 +13,7 @@ import {
 } from '@/core/quiz'
 import { Markdown } from './Markdown'
 import { Countdown } from './Countdown'
-import { formatWhen } from './format'
+import { formatWhen, plural } from './format'
 import { Icon } from './icons'
 import { Link } from './Link'
 import { ConceptTags } from './progress'
@@ -191,8 +191,8 @@ function Taking({ quiz, onChange }: Props) {
           ) : (
             <p>
               {[
-                unanswered > 0 && `${count(unanswered)} not answered`,
-                flags > 0 && `${count(flags)} flagged for review`,
+                unanswered > 0 && `${plural(unanswered, 'question')} not answered`,
+                flags > 0 && `${plural(flags, 'question')} flagged for review`,
               ]
                 .filter(Boolean)
                 .join(', ')}
@@ -210,10 +210,6 @@ function Taking({ quiz, onChange }: Props) {
       </Modal>
     </div>
   )
-}
-
-function count(n: number): string {
-  return n === 1 ? '1 question' : `${n} questions`
 }
 
 // Its own component, so only the clock re-renders every second. The compact copy shows on narrow
@@ -274,7 +270,7 @@ function Results({ quiz }: { quiz: Quiz }) {
             Quiz result
           </h1>
           <p className="text-body-secondary mb-0">
-            {topics}, {quiz.questions.length} questions, {formatWhen(quiz.started_at)}
+            {topics}, {plural(quiz.questions.length, 'question')}, {formatWhen(quiz.started_at)}
           </p>
         </div>
         <p className="ws-report-score">
@@ -310,7 +306,7 @@ function Results({ quiz }: { quiz: Quiz }) {
               <span className="ws-concept-name">
                 {c.concept_name}
                 <small>
-                  {c.topic_name}, {c.questions === 1 ? '1 question' : `${c.questions} questions`}
+                  {c.topic_name}, {plural(c.questions, 'question')}
                 </small>
               </span>
               <span className="ws-meter" data-band={band(c.score)} aria-hidden="true">

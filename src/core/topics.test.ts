@@ -56,8 +56,11 @@ const authored = (change: object = {}) => ({
   ...JSON.parse(itemText(problem, topic.concepts)),
   ...change,
 })
-let n = 0
-const nextId = () => `new-${++n}`
+const ids = (prefix: string) => {
+  let i = 0
+  return () => `${prefix}${++i}`
+}
+const nextId = ids('new-')
 
 describe('served', () => {
   it('serves the problems that follow the content rules', () => {
@@ -148,43 +151,7 @@ describe('concepts', () => {
   })
 })
 
-describe('addQuestions', () => {
-  const authoredQuestion = (change: object = {}) => ({
-    ...JSON.parse(itemText(question, topic.concepts)),
-    ...change,
-  })
-
-  it('adds questions with new ids and the concept found by name', () => {
-    const added = addQuestions(topic, [authoredQuestion({ summary: 'Another' })], () => 'x')
-    expect(added.ok && added.record.questions).toEqual([
-      question,
-      { ...question, id: 'x', summary: 'Another', source: 'user' },
-    ])
-  })
-
-  it('replaces a question in place and adds nothing when one is invalid', () => {
-    const edited = addQuestions(topic, [authoredQuestion({ summary: 'new' })], nextId, 'q1')
-    expect(edited.ok && edited.record.questions).toEqual([{ ...question, summary: 'new' }])
-    expect(
-      addQuestions(topic, [authoredQuestion(), authoredQuestion({ answers: [0, 1] })], nextId),
-    ).toEqual({
-      ok: false,
-      errors: [
-        {
-          item: 2,
-          title: 'Which one',
-          errors: ['a single choice has exactly one answer', 'at least one option must be wrong'],
-        },
-      ],
-    })
-  })
-
-  it('deletes a question', () => {
-    expect(deleteItem(topic, 'questions', 'q1').questions).toEqual([])
-  })
-})
-
-describe('addProblems', () => {
+describe('itemText', () => {
   it('writes the concept by name, without the fields the app assigns', () => {
     const text = JSON.parse(itemText(problem, topic.concepts))
     expect(text).toMatchObject({ concepts: [{ name: 'Two pointers', group: 'Arrays' }] })
@@ -207,7 +174,42 @@ describe('addProblems', () => {
       concepts: 'x',
     })
   })
+})
 
+describe('deleteItem', () => {
+  it('deletes the item of that id from its list', () => {
+    const record = { ...topic, problems: [problem, { ...problem, id: 'q1' }] }
+    expect(deleteItem(record, 'questions', 'q1')).toEqual({ ...record, questions: [] })
+  })
+})
+
+describe('addQuestions', () => {
+  const authoredQuestion = (change: object = {}) => ({
+    ...JSON.parse(itemText(question, topic.concepts)),
+    ...change,
+  })
+
+  it('adds questions with new ids and the concept found by name', () => {
+    const added = addQuestions(topic, [authoredQuestion({ summary: 'Another' })], () => 'x')
+    expect(added.ok && added.record.questions).toEqual([
+      question,
+      { ...question, id: 'x', summary: 'Another', source: 'user' },
+    ])
+  })
+
+  it('replaces a question in place and adds nothing when one is invalid', () => {
+    const edited = addQuestions(topic, [authoredQuestion({ summary: 'new' })], nextId, 'q1')
+    expect(edited.ok && edited.record.questions).toEqual([{ ...question, summary: 'new' }])
+    expect(
+      addQuestions(topic, [authoredQuestion(), authoredQuestion({ answers: [0, 1] })], nextId),
+    ).toEqual({
+      ok: false,
+      errors: ['a single choice has exactly one answer', 'at least one option must be wrong'],
+    })
+  })
+})
+
+describe('addProblems', () => {
   it('adds problems with new ids, finding a concept by name or adding it once', () => {
     const added = addProblems(
       topic,
@@ -221,14 +223,14 @@ describe('addProblems', () => {
           ],
         }),
       ],
-      () => 'x',
+      ids('x'),
     )
     expect(added.ok).toBe(true)
     if (!added.ok) return
     expect(added.added.map((p) => [p.id, p.concepts, p.source])).toEqual([
-      ['x', ['two-pointers'], 'user'],
-      ['x', ['hash-maps'], 'user'],
-      ['x', ['hash-maps', 'two-pointers'], 'user'],
+      ['x1', ['two-pointers'], 'user'],
+      ['x2', ['hash-maps'], 'user'],
+      ['x3', ['hash-maps', 'two-pointers'], 'user'],
     ])
     expect(added.record.problems).toHaveLength(4)
     expect(added.record.concepts.map((c) => c.id)).toEqual(['two-pointers', 'hash-maps'])
@@ -238,7 +240,7 @@ describe('addProblems', () => {
     const concepts = (names: string[]) => names.map((name) => ({ name, group: 'G' }))
     const errors = (names: string[]) => {
       const added = addProblems(topic, [authored({ concepts: concepts(names) })], () => 'x')
-      return added.ok ? [] : added.errors[0].errors
+      return added.ok ? [] : added.errors
     }
     expect(errors([])).toEqual(['concepts: needs at least one concept'])
     expect(errors(['a', 'b', 'c', 'd'])).toEqual(['concepts: has at most 3 concepts'])
@@ -256,7 +258,7 @@ describe('addProblems', () => {
     expect(added.ok && added.record.problems).toEqual([{ ...problem, summary: 'new' }, other])
   })
 
-  it('adds nothing when any problem is invalid, and says which', () => {
+  it('adds nothing when any problem is invalid, and says why', () => {
     const added = addProblems(
       topic,
       [authored(), authored({ hints: ['one'] }), authored({ visible_tests: ['test_a', 'test_b'] })],
@@ -265,8 +267,8 @@ describe('addProblems', () => {
     expect(added).toEqual({
       ok: false,
       errors: [
-        { item: 2, title: 'T', errors: ['hints: needs exactly three hints'] },
-        { item: 3, title: 'T', errors: ['every test is visible; at least one must be hidden'] },
+        'hints: needs exactly three hints',
+        'every test is visible; at least one must be hidden',
       ],
     })
   })
@@ -334,6 +336,12 @@ describe('checkErrors', () => {
     expect(checkErrors(problem, { tests: [{ name: 'test_a', passed: true }] }, run(false))).toEqual(
       ['every test is visible; at least one must be hidden'],
     )
+    expect(checkErrors(problem, { tests: [{ name: 'test_b', passed: true }] }, run(false))).toEqual(
+      ['visible test test_a did not run'],
+    )
+    expect(checkErrors(problem, { tests: [] }, run(false))).toEqual([
+      'the tests define no test function',
+    ])
     expect(checkErrors(problem, { tests: [], error: 'Time limit exceeded' }, run(false))).toEqual([
       'the reference solution could not be checked: Time limit exceeded',
     ])
