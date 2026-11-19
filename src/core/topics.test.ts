@@ -4,6 +4,7 @@ import {
   addProblems,
   addQuestions,
   checkErrors,
+  conceptMap,
   deleteItem,
   itemText,
   newTopic,
@@ -73,6 +74,29 @@ describe('served', () => {
   it('reads a topic stored before questions existed', () => {
     const { questions: _, ...old } = topic
     expect(TopicRecordSchema.parse(old).questions).toEqual([])
+  })
+})
+
+describe('conceptMap', () => {
+  it('groups concepts by area in topic order, A–Z inside, with their served uses', () => {
+    const concepts = [
+      { id: 'two-pointers', name: 'Two pointers', group: 'Arrays' },
+      { id: 'graphs', name: 'Graphs', group: 'Trees' },
+      { id: 'hashing', name: 'Hashing', group: 'Arrays' },
+    ]
+    const both = { ...problem, id: 'b', concepts: ['hashing', 'two-pointers'] }
+    const broken = { ...problem, id: 'x', concepts: ['graphs'], hints: [] }
+    const { file } = served({ ...topic, concepts, problems: [problem, both, broken] })
+    expect(conceptMap(file)).toEqual([
+      {
+        area: 'Arrays',
+        concepts: [
+          { id: 'hashing', name: 'Hashing', problems: 1, questions: 0 },
+          { id: 'two-pointers', name: 'Two pointers', problems: 2, questions: 1 },
+        ],
+      },
+      { area: 'Trees', concepts: [{ id: 'graphs', name: 'Graphs', problems: 0, questions: 0 }] },
+    ])
   })
 })
 

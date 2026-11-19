@@ -341,7 +341,7 @@ export function App({ runner, storage }: Props) {
             <TopicsPage
               topics={topics}
               onCreate={createTopic}
-              onOpen={(id) => navigate({ page: 'topic', id })}
+              onEnable={(id, on) => updateTopic(id, (t) => ({ ...t, enabled: on }))}
             />,
           )}
         {route.page === 'topic' &&
