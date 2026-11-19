@@ -68,9 +68,11 @@ const QuestionWordingSchema = z.object({
   options: z.array(text).min(2, 'needs at least two options'),
 })
 
+export const QUESTION_TYPES = ['single', 'multiple'] as const
+
 export const QuestionSchema = z.object({
   id,
-  type: z.enum(['single', 'multiple']),
+  type: z.enum(QUESTION_TYPES),
   difficulty: DifficultySchema,
   concepts: conceptIds,
   wordings: z.array(QuestionWordingSchema).min(1, 'needs at least one wording'),
@@ -98,6 +100,7 @@ export type Problem = z.infer<typeof ProblemSchema>
 export type Wording = z.infer<typeof WordingSchema>
 export type Question = z.infer<typeof QuestionSchema>
 export type Difficulty = z.infer<typeof DifficultySchema>
+export type QuestionType = Question['type']
 
 // A concept missing from its topic is shown by its id.
 export function conceptNames(topic: Topic, concepts: string[]): string[] {

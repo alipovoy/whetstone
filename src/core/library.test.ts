@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Problem } from '@/content/schema'
-import { libraryEntries } from './library'
+import type { Problem, Question } from '@/content/schema'
+import { problemLibrary, questionLibrary } from './library'
 import { applicableFilter, filterEntries } from './problems'
 import { newTopic, type TopicRecord } from './topics'
 
@@ -19,13 +19,25 @@ const problem: Problem = {
   source: 'built-in',
 }
 
+const question: Question = {
+  id: 'q',
+  type: 'single',
+  difficulty: 'Medium',
+  concepts: ['stacks'],
+  wordings: [{ text: 'Which?', options: ['a', 'b'] }],
+  answers: [1],
+  explanation: 'Because',
+  summary: 'Stack order',
+  source: 'user',
+}
+
 const record = (id: string, created: number, change: Partial<TopicRecord>): TopicRecord => ({
   ...newTopic(id, id.toUpperCase(), created),
   concepts: [{ id: 'stacks', name: 'Stacks', group: 'Linear' }],
   ...change,
 })
 
-describe('libraryEntries', () => {
+describe('problemLibrary', () => {
   const later = record('b', 2, {
     enabled: false,
     problems: [{ ...problem, id: 'q', source: 'user', wordings: [{ title: 'Queue' }] }],
@@ -37,10 +49,10 @@ describe('libraryEntries', () => {
       { id: 's', concepts: 'stacks', source: 'robot' },
     ],
   })
-  const entries = libraryEntries([later, first])
+  const entries = problemLibrary([later, first])
 
   it('lists every stored problem by topic age, the served ones with the problem', () => {
-    expect(entries.map((e) => [e.topic.id, e.id, e.title, e.source, !!e.problem])).toEqual([
+    expect(entries.map((e) => [e.topic.id, e.id, e.title, e.source, !!e.item])).toEqual([
       ['a', 'p', 'Brackets', 'built-in', true],
       ['a', 'r', 'Brackets', 'built-in', false],
       ['a', 's', 'Untitled problem', undefined, false],
@@ -50,6 +62,7 @@ describe('libraryEntries', () => {
       topic: { id: 'a', name: 'A', enabled: true, concepts: first.concepts },
       concepts: [{ name: 'Stacks', area: 'Linear' }],
       difficulty: 'Easy',
+      type: undefined,
       errors: [],
     })
     expect(entries[3].topic.enabled).toBe(false)
@@ -66,5 +79,33 @@ describe('libraryEntries', () => {
   it('filters by source, dropping a source no problem has', () => {
     expect(filterEntries(entries, { source: 'user' }).map((e) => e.id)).toEqual(['q'])
     expect(applicableFilter({ source: 'ai', status: 'new' }, entries, [])).toEqual({})
+  })
+})
+
+describe('questionLibrary', () => {
+  const entries = questionLibrary([
+    record('a', 1, {
+      problems: [problem],
+      questions: [
+        question,
+        { ...question, id: 'm', type: 'multiple', answers: [0, 1], summary: 'All right' },
+        { id: 'x', type: 'open', summary: ' ' },
+      ],
+    }),
+  ])
+
+  it('lists every stored question with its type, the served ones with the question', () => {
+    expect(entries.map((e) => [e.id, e.title, e.type, e.difficulty, !!e.item])).toEqual([
+      ['q', 'Stack order', 'single', 'Medium', true],
+      ['m', 'All right', 'multiple', 'Medium', false],
+      ['x', 'Untitled question', undefined, '', false],
+    ])
+    expect(entries[1].errors).toEqual(['at least one option must be wrong'])
+  })
+
+  it('filters by type, dropping a type no question has', () => {
+    expect(filterEntries(entries, { type: 'multiple' }).map((e) => e.id)).toEqual(['m'])
+    const singles = entries.filter((e) => e.type === 'single')
+    expect(applicableFilter({ type: 'multiple' }, singles, [])).toEqual({})
   })
 })

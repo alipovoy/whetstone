@@ -3,7 +3,7 @@ import { Button } from 'react-bootstrap'
 import type { Topic } from '@/content/schema'
 import { formatClock, type Attempt, type Grade } from '@/core/attempt'
 import { HISTORY_STATUSES, historyEntries, type HistoryEntry } from '@/core/history'
-import { applicableFilter, filterEntries, type ProblemFilter } from '@/core/problems'
+import { applicableFilter, filterEntries, type ItemFilter } from '@/core/problems'
 import type { Quiz } from '@/core/quiz'
 import { Filters } from './Filters'
 import { formatWhen as when, plural } from './format'
@@ -20,8 +20,8 @@ const attemptsText = (n: number) => plural(n, 'graded attempt')
 interface CodingProps {
   topics: Topic[]
   attempts: Attempt[]
-  filter: ProblemFilter
-  onFilter: (filter: ProblemFilter) => void
+  filter: ItemFilter
+  onFilter: (filter: ItemFilter) => void
 }
 
 export function CodingReport({ topics, attempts, filter: asked, onFilter }: CodingProps) {

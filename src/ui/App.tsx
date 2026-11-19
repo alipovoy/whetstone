@@ -2,8 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Alert } from 'react-bootstrap'
 import { latestAttempt, startAttempt, type Attempt, type Grade } from '@/core/attempt'
 import { startQuiz, submitQuiz, type Quiz, type QuizSetup } from '@/core/quiz'
-import { libraryEntries } from '@/core/library'
-import { addProblems, deleteItem, newTopic, served, type TopicRecord } from '@/core/topics'
+import { problemLibrary, questionLibrary, type LibraryEntry } from '@/core/library'
+import {
+  addProblems,
+  deleteItem,
+  newTopic,
+  served,
+  type ItemList,
+  type TopicRecord,
+} from '@/core/topics'
 import type { Problem, Topic } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
 import type { Records } from '@/storage/database'
@@ -15,7 +22,7 @@ import { QuizPage } from './QuizPage'
 import { QuizzesPage } from './QuizzesPage'
 import { TopicPage } from './TopicPage'
 import { TopicsPage } from './TopicsPage'
-import { LibraryPage, LibraryProblem } from './LibraryPages'
+import { LibraryPage, LibraryProblem, LibraryQuestion } from './LibraryPages'
 import { Link } from './Link'
 import { href, navigate, replaceRoute, sectionOf, useRoute, type Route } from './route'
 import { AttemptReport, CodingReport, QuizReport } from './ReportsPages'
@@ -177,10 +184,15 @@ export function App({ runner, storage }: Props) {
   if (route.page === 'reports' && route.section === 'coding' && href(route) !== href(history))
     setHistory(route)
 
-  // The same for the library.
-  const [library, setLibrary] = useState<Route>({ page: 'library' })
-  if (route.page === 'library' && href(route) !== href(library)) setLibrary(route)
-  const stored = useMemo(() => libraryEntries(topics), [topics])
+  // The same for each library.
+  const [libraries, setLibraries] = useState<Record<ItemList, Route>>({
+    problems: { page: 'library', list: 'problems' },
+    questions: { page: 'library', list: 'questions' },
+  })
+  if (route.page === 'library' && href(route) !== href(libraries[route.list]))
+    setLibraries({ ...libraries, [route.list]: route })
+  const storedProblems = useMemo(() => problemLibrary(topics), [topics])
+  const storedQuestions = useMemo(() => questionLibrary(topics), [topics])
   // Said on the library page it was left for, until that page changes.
   const [notice, setNotice] = useState<{ at: string; text: string } | null>(null)
   if (notice && href(route) !== notice.at) setNotice(null)
@@ -191,6 +203,7 @@ export function App({ runner, storage }: Props) {
     putTopic({ ...added.record, updated_at: Date.now() })
     const to: Route = {
       page: 'library',
+      list: 'problems',
       filter: { topic: id },
       disabled: !record.enabled || undefined,
     }
@@ -200,6 +213,11 @@ export function App({ runner, storage }: Props) {
       text: `Added ${count === 1 ? '1 problem' : `${count} problems`} to ${record.name}.`,
     })
     navigate(to)
+  }
+
+  const deleteFrom = (from: ItemList, { topic, id }: LibraryEntry) => {
+    updateTopic(topic.id, (t) => deleteItem(t, from, id))
+    navigate(libraries[from])
   }
 
   const section = sectionOf(route)
@@ -213,8 +231,14 @@ export function App({ runner, storage }: Props) {
       ? attempts.find((a): a is Attempt & { grade: Grade } => a.id === route.id && !!a.grade)
       : undefined
   const entry =
-    route.page === 'library-problem' || route.page === 'edit-problem'
-      ? stored.find((e) => e.topic.id === route.topic && e.id === route.problem)
+    route.page === 'edit-problem'
+      ? findEntry(storedProblems, route.topic, route.problem)
+      : route.page === 'library-item' && route.list === 'problems'
+        ? findEntry(storedProblems, route.topic, route.item)
+        : undefined
+  const questionEntry =
+    route.page === 'library-item' && route.list === 'questions'
+      ? findEntry(storedQuestions, route.topic, route.item)
       : undefined
   const entryRecord = entry && topics.find((t) => t.id === entry.topic.id)
   const servedProblem = (attempt: Attempt): Route | undefined =>
@@ -223,6 +247,9 @@ export function App({ runner, storage }: Props) {
     )
       ? { page: 'solve', topic: attempt.topic, problem: attempt.problem }
       : undefined
+
+  const inLibrary = (of: ItemList) =>
+    (route.page === 'library' || route.page === 'library-item') && route.list === of
 
   const settings = (children: ReactNode) => (
     <div className="ws-page">
@@ -239,12 +266,10 @@ export function App({ runner, storage }: Props) {
           },
           {
             label: 'Coding problems',
-            to: library,
-            current:
-              route.page === 'library' ||
-              route.page === 'library-problem' ||
-              route.page === 'add-problems',
+            to: libraries.problems,
+            current: inLibrary('problems') || route.page === 'add-problems',
           },
+          { label: 'Quiz questions', to: libraries.questions, current: inLibrary('questions') },
         ]}
       >
         {children}
@@ -410,13 +435,20 @@ export function App({ runner, storage }: Props) {
         {route.page === 'library' &&
           settings(
             <LibraryPage
-              entries={stored}
+              key={route.list}
+              list={route.list}
+              entries={route.list === 'problems' ? storedProblems : storedQuestions}
               filter={route.filter ?? {}}
               disabled={route.disabled ?? false}
               notice={notice?.text}
               onDismiss={() => setNotice(null)}
               onFilter={(filter, disabled) =>
-                replaceRoute({ page: 'library', filter, disabled: disabled || undefined })
+                replaceRoute({
+                  page: 'library',
+                  list: route.list,
+                  filter,
+                  disabled: disabled || undefined,
+                })
               }
             />,
           )}
@@ -428,17 +460,17 @@ export function App({ runner, storage }: Props) {
                 record={entryRecord}
                 entry={entry}
                 runner={runner}
-                back={{ page: 'library-problem', topic: entry.topic.id, problem: entry.id }}
+                back={problemPage(entry)}
                 onBusy={setBusy}
                 onSave={(next) => {
                   putTopic({ ...next, updated_at: Date.now() })
-                  navigate({ page: 'library-problem', topic: entry.topic.id, problem: entry.id })
+                  navigate(problemPage(entry))
                 }}
               />
             </div>
           ) : (
             <div className="ws-page">
-              <Missing what="This problem" back={library} why="It was deleted." />
+              <Missing what="This problem" back={libraries.problems} why="It was deleted." />
             </div>
           ))}
         {route.page === 'add-problems' &&
@@ -448,26 +480,34 @@ export function App({ runner, storage }: Props) {
               topics={topics}
               initial={route}
               runner={runner}
-              back={library}
+              back={libraries.problems}
               onBusy={setBusy}
               onAdd={addTo}
             />,
           )}
-        {route.page === 'library-problem' &&
+        {route.page === 'library-item' &&
           settings(
-            entry ? (
-              <LibraryProblem
-                key={`${entry.topic.id}/${entry.id}`}
-                entry={entry}
-                back={library}
-                onTry={tryProblem}
-                onDelete={() => {
-                  updateTopic(entry.topic.id, (t) => deleteItem(t, 'problems', entry.id))
-                  navigate(library)
-                }}
+            route.list === 'problems' ? (
+              entry ? (
+                <LibraryProblem
+                  key={`${entry.topic.id}/${entry.id}`}
+                  entry={entry}
+                  back={libraries.problems}
+                  onTry={tryProblem}
+                  onDelete={() => deleteFrom('problems', entry)}
+                />
+              ) : (
+                <Missing what="This problem" back={libraries.problems} why="It was deleted." />
+              )
+            ) : questionEntry ? (
+              <LibraryQuestion
+                key={`${questionEntry.topic.id}/${questionEntry.id}`}
+                entry={questionEntry}
+                back={libraries.questions}
+                onDelete={() => deleteFrom('questions', questionEntry)}
               />
             ) : (
-              <Missing what="This problem" back={library} why="It was deleted." />
+              <Missing what="This question" back={libraries.questions} why="It was deleted." />
             ),
           )}
       </main>
@@ -492,6 +532,16 @@ function Missing({ what, back, why = 'It was deleted, or its topic is disabled.'
     </div>
   )
 }
+
+const findEntry = <T,>(entries: LibraryEntry<T>[], topic: string, id: string) =>
+  entries.find((e) => e.topic.id === topic && e.id === id)
+
+const problemPage = ({ topic, id }: LibraryEntry): Route => ({
+  page: 'library-item',
+  list: 'problems',
+  topic: topic.id,
+  item: id,
+})
 
 function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error)

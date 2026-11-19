@@ -1,11 +1,11 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Button, Dropdown, Form } from 'react-bootstrap'
-import { DIFFICULTIES, type Source } from '@/content/schema'
+import { DIFFICULTIES, type QuestionType, type Source } from '@/content/schema'
 import {
   conceptGroups,
   type ConceptGroup,
   type Filterable,
-  type ProblemFilter,
+  type ItemFilter,
   type ProblemStatus,
 } from '@/core/problems'
 
@@ -16,18 +16,19 @@ interface Props {
   entries: Filterable[]
   statuses?: { value: ProblemStatus; label: string }[]
   sources?: { value: Source; label: string }[]
-  filter: ProblemFilter
-  onFilter: (filter: ProblemFilter) => void
+  types?: { value: QuestionType; label: string }[]
+  filter: ItemFilter
+  onFilter: (filter: ItemFilter) => void
   children: ReactNode
 }
 
-// Search, topic, concepts, difficulty, and status or source; the topics and concepts are those of
-// the entries.
-export function Filters({ entries, statuses, sources, filter, onFilter, children }: Props) {
+// Search, topic, concepts, difficulty, and those of status, type and source given; the topics and
+// concepts are those of the entries.
+export function Filters({ entries, statuses, sources, types, filter, onFilter, children }: Props) {
   const id = useId()
   const topics = [...new Map(entries.map((e) => [e.topic.id, e.topic.name])).entries()]
   const groups = conceptGroups(entries, filter.topic)
-  const set = (change: ProblemFilter) => onFilter({ ...filter, ...change })
+  const set = (change: ItemFilter) => onFilter({ ...filter, ...change })
 
   return (
     <section className="ws-panel ws-filters" aria-label="Filters">
@@ -85,6 +86,22 @@ export function Filters({ entries, statuses, sources, filter, onFilter, children
               {statuses.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        )}
+        {types && (
+          <Form.Group controlId={`${id}-type`}>
+            <Form.Label>Type</Form.Label>
+            <Form.Select
+              value={filter.type ?? ''}
+              onChange={(e) => set({ type: types.find((t) => t.value === e.target.value)?.value })}
+            >
+              <option value="">Any type</option>
+              {types.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
                 </option>
               ))}
             </Form.Select>

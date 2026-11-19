@@ -787,8 +787,11 @@ a[aria-disabled='true'] {
   justify-content: flex-end;
   gap: 0.4rem;
 }
-.ws-library-problem {
+.ws-library-item {
   grid-template-columns: minmax(0, 1fr) 4.5rem 8rem;
+}
+.ws-library-item[data-list='questions'] {
+  grid-template-columns: minmax(0, 1fr) 8rem 4.5rem 8rem;
 }
 .ws-problem-errors {
   margin: 0.25rem 0 0;

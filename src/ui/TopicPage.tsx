@@ -50,7 +50,6 @@ export function TopicPage({ topic, onChange, onDelete }: Props) {
 
       <TopicConcepts
         topic={topic}
-        file={file}
         // An open editor holds concept names; a change under it would bring them back.
         locked={editing !== null}
         onChange={onChange}
