@@ -98,6 +98,11 @@ describe('choosing questions', () => {
   it('offers the areas of the chosen topics', () => {
     expect(quizAreas(topics, ['t1'])).toEqual(['G'])
     expect(quizAreas(topics, ['t1', 't2'])).toEqual(['G', 'H'])
+    // The topic's order, not the order of first use.
+    const late = [
+      topic('t', [question('d1', 'single', [0], 'Easy', ['d']), question('c1', 'single', [0])]),
+    ]
+    expect(quizAreas(late, ['t'])).toEqual(['G', 'H'])
   })
 
   it('draws the same questions for a seed, and more of them as the count grows', () => {

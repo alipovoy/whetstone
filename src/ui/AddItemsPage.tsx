@@ -63,6 +63,7 @@ function AddItems<T>({
   })
   const [source, setSource] = useState<Source>('chat')
   const [texts, setTexts] = useState<Record<Source, string>>({ chat: '', json: kind.template })
+  const answerLabel = source === 'chat' ? 'Chat bot answer' : `${capital(noun)}s JSON`
   const [checked, setChecked] = useState<Checked<T>[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
@@ -162,7 +163,7 @@ function AddItems<T>({
             <p className="text-body-secondary">
               Copy the prompt into a chat, then paste its whole answer here.
             </p>
-            <CodeBlock value={prompt} language="markdown" label="Prompt" />
+            <CodeBlock value={prompt} language="markdown" label="Prompt" maxHeight="12rem" />
           </Tab>
           <Tab eventKey="json" title="Write JSON" disabled={checking}>
             <p className="text-body-secondary mb-0">
@@ -170,6 +171,9 @@ function AddItems<T>({
             </p>
           </Tab>
         </Tabs>
+        <div className="form-label ws-chat-answer-label" aria-hidden="true">
+          {answerLabel}
+        </div>
         <CodeEditor
           key={source}
           initialValue={text}
@@ -177,10 +181,10 @@ function AddItems<T>({
             setTexts((all) => ({ ...all, [source]: value }))
             reset()
           }}
-          label={source === 'chat' ? 'Chat bot answer' : `${capital(noun)}s JSON`}
+          label={answerLabel}
           language="json"
           readOnly={checking}
-          className="ws-answer"
+          className="ws-chat-answer"
         />
         <p className="text-body-secondary small mt-2 mb-2">{kind.rules}</p>
         <Button onClick={() => void check()} disabled={checking || !text.trim()}>

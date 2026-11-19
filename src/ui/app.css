@@ -811,7 +811,7 @@ a[aria-disabled='true'] {
   align-items: flex-end;
 }
 .ws-order > * {
-  flex: 1 1 12rem;
+  flex: 1 1 10rem;
   min-width: 0;
 }
 .ws-order > legend {
@@ -823,8 +823,20 @@ a[aria-disabled='true'] {
 .ws-order > .ws-order-count {
   flex: 0 1 7rem;
 }
-.ws-answer .cm-scroller {
+.ws-chat-answer-label {
+  margin: 1rem 0 0.3rem;
+  font-weight: 600;
+}
+.ws-chat-answer .cm-scroller {
   min-height: 10rem;
+}
+/* The field fits the name, and shrinks on a narrow screen. */
+.ws-topic-rename {
+  max-width: 100%;
+}
+.ws-topic-name {
+  width: auto;
+  min-width: 0;
 }
 .ws-order .form-label {
   margin-bottom: 0.3rem;
@@ -1665,6 +1677,7 @@ a[aria-disabled='true'] {
 }
 .ws-sub-content {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
   min-width: 0;
 }
@@ -1781,11 +1794,20 @@ a[aria-disabled='true'] {
 
 /* The panel's own width decides, so the filters fit beside a side menu too. */
 @container filters (max-width: 64rem) {
+  /* Fields share rows and grow to fill them, so none is left alone beside a gap. */
   .ws-filter-fields {
-    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    display: flex;
+    flex-wrap: wrap;
   }
-  .ws-filter-search {
-    grid-column: 1 / -1;
+  .ws-filter-fields > * {
+    flex: 1 1 8.5rem;
+    min-width: 0;
+  }
+  .ws-filter-fields > .ws-filter-search {
+    flex-basis: 100%;
+  }
+  .ws-filter-fields > :has(.ws-seg) {
+    flex-basis: 15rem;
   }
   .ws-filters .ws-seg {
     display: flex;

@@ -27,9 +27,10 @@ interface Props {
   value: string
   language: keyof typeof LANGUAGES
   label: string
+  maxHeight?: string
 }
 
-export function CodeBlock({ value, language, label }: Props) {
+export function CodeBlock({ value, language, label, maxHeight = '24rem' }: Props) {
   const host = useRef<HTMLDivElement>(null)
   const [view, setView] = useState<EditorView | null>(null)
   const [theme] = useState(() => new Compartment())
@@ -46,7 +47,7 @@ export function CodeBlock({ value, language, label }: Props) {
         EditorState.readOnly.of(true),
         // Wrapped Python reads as other code; it scrolls instead.
         language === 'python' ? [] : EditorView.lineWrapping,
-        EditorView.theme({ '&': { maxHeight: '24rem' }, '.cm-scroller': { overflow: 'auto' } }),
+        EditorView.theme({ '&': { maxHeight }, '.cm-scroller': { overflow: 'auto' } }),
         theme.of([]),
         EditorView.contentAttributes.of({ 'aria-label': label }),
       ],

@@ -103,9 +103,14 @@ export function candidates(topics: TopicFile[], filter: QuizFilter): Candidate[]
   )
 }
 
-// The same area name in two topics is one area.
+// The areas that have questions, in the topics' order as on a topic page. The same area name in
+// two topics is one area.
 export function quizAreas(topics: TopicFile[], chosen: string[]): string[] {
-  return [...new Set(all(topics, chosen).flatMap((c) => c.areas))]
+  const used = new Set(all(topics, chosen).flatMap((c) => c.areas))
+  const ordered = topics
+    .filter((t) => chosen.includes(t.topic.id))
+    .flatMap((t) => t.topic.concepts.map((c) => c.group))
+  return [...new Set(ordered)].filter((area) => used.has(area))
 }
 
 // Each question has a fixed rank for a given seed, so the draw holds still while the count or
