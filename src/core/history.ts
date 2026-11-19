@@ -1,6 +1,6 @@
-import { conceptAreas, type Topic } from '@/content/schema'
+import type { Topic } from '@/content/schema'
 import type { Attempt, Grade } from './attempt'
-import { problemStatus, type Filterable } from './problems'
+import { entryConcepts, problemStatus, type Filterable } from './problems'
 
 export const HISTORY_STATUSES = ['solved', 'needs-work'] as const
 
@@ -24,13 +24,11 @@ export function historyEntries(topics: Topic[], attempts: Attempt[]): HistoryEnt
           grade,
           topic: { id: attempt.topic, name: topic?.name ?? asked.topic_name },
           title: asked.wording.title,
-          concepts: asked.concepts.map((c) => c.name),
-          areas: topic
-            ? conceptAreas(
-                topic,
-                asked.concepts.map((c) => c.id),
-              )
-            : [],
+          concepts: entryConcepts(
+            topic,
+            asked.concepts.map((c) => c.id),
+            asked.concepts.map((c) => c.name),
+          ),
           difficulty: asked.difficulty,
           status: problemStatus(attempt, attempt),
         },

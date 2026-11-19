@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { Form } from 'react-bootstrap'
+import { Button, Dropdown, Form } from 'react-bootstrap'
 import { DIFFICULTIES } from '@/content/schema'
 import {
-  entryAreas,
+  conceptGroups,
+  type ConceptGroup,
   type Filterable,
   type ProblemFilter,
   type ProblemStatus,
@@ -19,11 +20,11 @@ interface Props {
   children: ReactNode
 }
 
-// Search, topic, area, difficulty and status; the topics and areas are those of the entries.
+// Search, topic, concepts, difficulty and status; the topics and concepts are those of the entries.
 export function Filters({ entries, statuses, filter, onFilter, children }: Props) {
   const id = useId()
   const topics = [...new Map(entries.map((e) => [e.topic.id, e.topic.name])).entries()]
-  const areas = entryAreas(entries, filter.topic)
+  const groups = conceptGroups(entries, filter.topic)
   const set = (change: ProblemFilter) => onFilter({ ...filter, ...change })
 
   return (
@@ -47,20 +48,11 @@ export function Filters({ entries, statuses, filter, onFilter, children }: Props
             ))}
           </Form.Select>
         </Form.Group>
-        <Form.Group controlId={`${id}-area`}>
-          <Form.Label>Area</Form.Label>
-          <Form.Select
-            value={filter.area ?? ''}
-            onChange={(e) => set({ area: e.target.value || undefined })}
-          >
-            <option value="">All areas</option>
-            {areas.map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </Form.Select>
-        </Form.Group>
+        <ConceptsField
+          groups={groups}
+          off={filter.offConcepts ?? []}
+          onChange={(offConcepts) => set({ offConcepts })}
+        />
         <div>
           <span className="form-label d-block" id={`${id}-difficulty`}>
             Difficulty
@@ -97,6 +89,81 @@ export function Filters({ entries, statuses, filter, onFilter, children }: Props
       </div>
       <div className="ws-filter-foot">{children}</div>
     </section>
+  )
+}
+
+interface ConceptsFieldProps {
+  groups: ConceptGroup[]
+  off: string[]
+  onChange: (off?: string[]) => void
+}
+
+// A problem shows while any of its concepts is checked; all checked is no filter.
+function ConceptsField({ groups, off, onChange }: ConceptsFieldProps) {
+  const id = useId()
+  const names = [...new Set(groups.flatMap((g) => g.names))]
+  const checked = names.filter((n) => !off.includes(n))
+  const toggle = (name: string) =>
+    onChange(off.includes(name) ? off.filter((n) => n !== name) : [...off, name])
+  const summary =
+    checked.length === names.length
+      ? 'All concepts'
+      : checked.length === 0
+        ? 'No concepts'
+        : checked.length === 1
+          ? checked[0]
+          : `${checked.length} of ${names.length}`
+  return (
+    <div>
+      <span className="form-label d-block" id={`${id}-label`}>
+        Concepts
+      </span>
+      <Dropdown autoClose="outside">
+        <Dropdown.Toggle
+          as="button"
+          type="button"
+          id={`${id}-toggle`}
+          className="form-select ws-concepts-toggle"
+          aria-labelledby={`${id}-label ${id}-toggle`}
+        >
+          {summary}
+        </Dropdown.Toggle>
+        <Dropdown.Menu className="ws-concepts-menu">
+          <div className="ws-concepts-links">
+            <Button
+              variant="link"
+              size="sm"
+              disabled={checked.length === names.length}
+              onClick={() => onChange(undefined)}
+            >
+              All
+            </Button>
+            <Button
+              variant="link"
+              size="sm"
+              disabled={checked.length === 0}
+              onClick={() => onChange(names)}
+            >
+              Clear
+            </Button>
+          </div>
+          {groups.map((group, g) => (
+            <fieldset key={group.area ?? ''}>
+              <legend>{group.area ?? 'No area'}</legend>
+              {group.names.map((name, n) => (
+                <Form.Check
+                  key={name}
+                  id={`${id}-${g}-${n}`}
+                  label={name}
+                  checked={!off.includes(name)}
+                  onChange={() => toggle(name)}
+                />
+              ))}
+            </fieldset>
+          ))}
+        </Dropdown.Menu>
+      </Dropdown>
+    </div>
   )
 }
 

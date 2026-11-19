@@ -1,5 +1,4 @@
 import {
-  conceptAreas,
   conceptNames,
   type Difficulty,
   type Problem,
@@ -16,7 +15,8 @@ export type ProblemStatus = (typeof PROBLEM_STATUSES)[number]
 export interface ProblemFilter {
   search?: string
   topic?: string
-  area?: string
+  // Concepts are unchecked by name, so a new concept starts checked.
+  offConcepts?: string[]
   difficulty?: Difficulty
   status?: ProblemStatus
 }
@@ -25,10 +25,20 @@ export interface ProblemFilter {
 export interface Filterable {
   topic: { id: string; name: string }
   title: string
-  concepts: string[]
-  areas: string[]
+  concepts: EntryConcept[]
   difficulty: string
   status: ProblemStatus
+}
+
+// A concept no longer in its topic has no area.
+export interface EntryConcept {
+  name: string
+  area?: string
+}
+
+export interface ConceptGroup {
+  area?: string
+  names: string[]
 }
 
 export interface ProblemEntry extends Filterable {
@@ -54,8 +64,7 @@ export function problemEntries(topics: TopicFile[], attempts: Attempt[]): Proble
         topic,
         problem,
         title: problem.wordings[0].title,
-        concepts: conceptNames(topic, problem.concepts),
-        areas: conceptAreas(topic, problem.concepts),
+        concepts: entryConcepts(topic, problem.concepts, conceptNames(topic, problem.concepts)),
         difficulty: problem.difficulty,
         latest,
         graded,
@@ -70,30 +79,48 @@ export function filterEntries<T extends Filterable>(entries: T[], filter: Proble
   return entries.filter(
     (e) =>
       (!filter.topic || e.topic.id === filter.topic) &&
-      (!filter.area || e.areas.includes(filter.area)) &&
+      (!filter.offConcepts || e.concepts.some((c) => !filter.offConcepts?.includes(c.name))) &&
       (!filter.difficulty || e.difficulty === filter.difficulty) &&
       (!filter.status || e.status === filter.status) &&
-      words.every((w) => [e.title, ...e.concepts].join(' ').toLowerCase().includes(w)),
+      words.every((w) =>
+        [e.title, ...e.concepts.map((c) => c.name)].join(' ').toLowerCase().includes(w),
+      ),
   )
 }
 
-// The same area name in two topics is one area. Only areas with entries count.
-export function entryAreas(entries: Filterable[], topic?: string): string[] {
-  return [...new Set(entries.filter((e) => !topic || e.topic.id === topic).flatMap((e) => e.areas))]
+export function entryConcepts(topic: Topic | undefined, ids: string[], names: string[]) {
+  return ids.map((id, i): EntryConcept => ({
+    name: names[i],
+    area: topic?.concepts.find((c) => c.id === id)?.group,
+  }))
 }
 
-// A topic or area from an old address may be gone, or not go together, and a status may be one
-// the list cannot have; each would hide every entry while its field reads "All", so it is dropped.
+// The concepts the entries have, by name under their areas in order of first use. The same name in two
+// topics is one concept, and the same area is one area.
+export function conceptGroups(entries: Filterable[], topic?: string): ConceptGroup[] {
+  const groups = new Map<string | undefined, Set<string>>()
+  for (const entry of entries.filter((e) => !topic || e.topic.id === topic))
+    for (const { name, area } of entry.concepts) {
+      if (!groups.has(area)) groups.set(area, new Set())
+      groups.get(area)?.add(name)
+    }
+  return [...groups].map(([area, names]) => ({
+    area,
+    names: [...names].toSorted((a, b) => a.localeCompare(b)),
+  }))
+}
+
+// A topic from an old address may be gone, and a status may be one the list cannot have; each
+// would hide every entry while its field reads "All", so it is dropped. Unchecked concepts are
+// kept only while the topic offers them, so all checked always reads as no filter.
 export function applicableFilter(
   filter: ProblemFilter,
   entries: Filterable[],
   statuses: readonly ProblemStatus[] = PROBLEM_STATUSES,
 ): ProblemFilter {
   const topic = entries.some((e) => e.topic.id === filter.topic) ? filter.topic : undefined
-  const area =
-    filter.area !== undefined && entryAreas(entries, topic).includes(filter.area)
-      ? filter.area
-      : undefined
+  const offered = new Set(conceptGroups(entries, topic).flatMap((g) => g.names))
+  const off = [...new Set(filter.offConcepts)].filter((name) => offered.has(name))
   const status = statuses.find((s) => s === filter.status)
-  return { ...filter, topic, area, status }
+  return { ...filter, topic, offConcepts: off.length ? off : undefined, status }
 }

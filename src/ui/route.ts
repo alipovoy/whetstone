@@ -84,8 +84,8 @@ export function href(route: Route): string {
   }
 }
 
-const TEXT_FILTERS = ['search', 'topic', 'area'] as const
-const FILTER_KEYS = [...TEXT_FILTERS, 'difficulty', 'status'] as const
+const TEXT_FILTERS = ['search', 'topic'] as const
+const OFF_CONCEPTS = 'without'
 
 function withFilter<R extends Route & { filter?: ProblemFilter }>(route: R, query: string): R {
   const params = new URLSearchParams(query)
@@ -94,6 +94,8 @@ function withFilter<R extends Route & { filter?: ProblemFilter }>(route: R, quer
     const value = params.get(key)
     if (value) filter[key] = value
   }
+  const off = params.getAll(OFF_CONCEPTS).filter(Boolean)
+  if (off.length) filter.offConcepts = off
   const difficulty = DIFFICULTIES.find((d) => d === params.get('difficulty'))
   if (difficulty) filter.difficulty = difficulty
   const status = PROBLEM_STATUSES.find((s) => s === params.get('status'))
@@ -103,10 +105,13 @@ function withFilter<R extends Route & { filter?: ProblemFilter }>(route: R, quer
 
 function filterQuery(filter: ProblemFilter = {}): string {
   const params = new URLSearchParams()
-  for (const key of FILTER_KEYS) {
+  for (const key of TEXT_FILTERS) {
     const value = filter[key]
     if (value) params.set(key, value)
   }
+  for (const name of filter.offConcepts ?? []) params.append(OFF_CONCEPTS, name)
+  if (filter.difficulty) params.set('difficulty', filter.difficulty)
+  if (filter.status) params.set('status', filter.status)
   const query = params.toString()
   return query && '?' + query
 }

@@ -5,7 +5,10 @@ describe('routes', () => {
   const routes: Route[] = [
     { page: 'home' },
     { page: 'problems' },
-    { page: 'problems', filter: { search: 'a&b=c?#', topic: 'my topic', area: 'Trees / graphs' } },
+    {
+      page: 'problems',
+      filter: { search: 'a&b=c?#', topic: 'my topic', offConcepts: ['Trees, graphs', 'a&b'] },
+    },
     { page: 'problems', filter: { difficulty: 'Hard', status: 'needs-work' } },
     { page: 'solve', topic: 'my topic', problem: 'a/b' },
     { page: 'quizzes' },
@@ -43,10 +46,9 @@ describe('routes', () => {
   })
 
   it('drops unknown or empty filter values', () => {
-    expect(parseRoute('#/coding?difficulty=Insane&status=done&search=&area=X&color=red')).toEqual({
-      page: 'problems',
-      filter: { area: 'X' },
-    })
+    expect(
+      parseRoute('#/coding?difficulty=Insane&status=done&search=&area=X&without=&without=Y'),
+    ).toEqual({ page: 'problems', filter: { offConcepts: ['Y'] } })
     expect(parseRoute('#/coding?')).toEqual({ page: 'problems' })
     expect(href({ page: 'problems', filter: {} })).toBe('#/coding')
   })
