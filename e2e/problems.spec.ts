@@ -25,7 +25,7 @@ test('filter the problems, keep the filter, start a random match', async ({ page
   await expect(list).toHaveCount(titles('Easy').length)
 
   await page.getByRole('button', { name: 'Start a random one' }).click()
-  await expect(page).toHaveURL(/#\/coding\/algorithms\//)
+  await expect(page).toHaveURL(new RegExp(`#/coding/${topic.topic.id}/`))
   const heading = await page.getByRole('heading', { level: 1 }).innerText()
   expect(titles('Easy').some((t) => heading.startsWith(t))).toBe(true)
 

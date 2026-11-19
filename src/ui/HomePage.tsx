@@ -55,9 +55,7 @@ export function HomePage({ topics, attempts, quizzes, onStart, onResume }: Props
         {unfinished && (
           <div className="ws-resume">
             <div>
-              <h2 className="h5 mb-1">
-                Continue: {unfinished.problem.wordings[unfinished.attempt.wording]?.title}
-              </h2>
+              <h2 className="h5 mb-1">Continue: {unfinished.problem.wordings[0].title}</h2>
               <p className="text-body-secondary small mb-0">
                 {unfinished.problem.difficulty}, {minutes(unfinished.attempt.elapsed_ms)} spent
               </p>
