@@ -1670,12 +1670,8 @@ a[aria-disabled='true'] {
 }
 @media (min-width: 901px) {
   .ws-sub[data-placement='side'] {
-    --ws-side-width: 13.75rem;
     grid-template-columns: auto minmax(0, 1fr);
     column-gap: 1.25rem;
-    /* The menu hangs into the page's margin as far as it fits, so the content keeps the place it has on other pages.
-       Collapsed, the content grows into the menu's place. */
-    margin-left: calc(-1 * min(var(--ws-side-width), max(0px, (100vw - 1180px) / 2) + 1rem));
   }
   .ws-sub-side {
     position: sticky;
