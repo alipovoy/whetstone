@@ -11,6 +11,7 @@ import {
   addProblems,
   addQuestions,
   checkErrors,
+  conceptMap,
   deleteItem,
   itemText,
   served,
@@ -24,6 +25,7 @@ import { RUN_LIMIT_MS, type TestResult } from '@/runner/types'
 import { CodeBlock } from './CodeBlock'
 import { CodeEditor } from './CodeEditor'
 import type { Runner } from './ProblemPage'
+import { plural } from './format'
 import { ConceptTags } from './progress'
 
 interface Props {
@@ -79,16 +81,26 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
         <h2 className="h5">Concepts</h2>
         {topic.concepts.length === 0 ? (
           <p className="text-body-secondary">
-            None yet: adding a problem or question adds its concept.
+            None yet: adding a problem or question adds its concepts.
           </p>
         ) : (
-          <ul>
-            {topic.concepts.map((c) => (
-              <li key={c.id}>
-                {c.name} <span className="text-body-secondary">({c.group})</span>
-              </li>
-            ))}
-          </ul>
+          conceptMap(file).map(({ area, concepts }) => (
+            <section key={area} aria-label={area} className="ws-concept-area">
+              <h3 className="h6">{area}</h3>
+              <ListGroup as="ul">
+                {concepts.map((c) => (
+                  <ListGroup.Item as="li" key={c.id} aria-label={c.name}>
+                    <Stack direction="horizontal" gap={2} className="flex-wrap">
+                      <span>{c.name}</span>
+                      <span className="text-body-secondary small ms-auto">
+                        {plural(c.problems, 'problem')}, {plural(c.questions, 'question')}
+                      </span>
+                    </Stack>
+                  </ListGroup.Item>
+                ))}
+              </ListGroup>
+            </section>
+          ))
         )}
       </section>
 

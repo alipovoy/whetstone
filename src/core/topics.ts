@@ -253,3 +253,30 @@ export function checkErrors(problem: Problem, reference: CheckRun, starter: Chec
   }
   return errors
 }
+
+export interface ConceptUse {
+  id: string
+  name: string
+  problems: number
+  questions: number
+}
+
+export interface AreaUse {
+  area: string
+  concepts: ConceptUse[]
+}
+
+// Areas keep the topic's order; the concepts of an area go A–Z.
+export function conceptMap({ topic, problems, questions }: TopicFile): AreaUse[] {
+  const uses = (items: { concepts: string[] }[], id: string) =>
+    items.filter((item) => item.concepts.includes(id)).length
+  const areas = new Map<string, ConceptUse[]>()
+  for (const { id, name, group } of topic.concepts) {
+    const use = { id, name, problems: uses(problems, id), questions: uses(questions, id) }
+    areas.set(group, [...(areas.get(group) ?? []), use])
+  }
+  return [...areas].map(([area, concepts]) => ({
+    area,
+    concepts: concepts.toSorted((a, b) => a.name.localeCompare(b.name)),
+  }))
+}

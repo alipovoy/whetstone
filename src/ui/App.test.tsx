@@ -772,7 +772,7 @@ describe('Topics', () => {
   async function openTopic(name: string) {
     await userEvent.click(screen.getByRole('link', { name: 'Settings' }))
     await userEvent.click(screen.getByRole('link', { name: 'Topics' }))
-    await userEvent.click(screen.getByRole('button', { name: `Open ${name}` }))
+    await userEvent.click(screen.getByRole('link', { name }))
   }
 
   // jsdom cannot type into CodeMirror, so the text goes in through the editor itself.
@@ -819,7 +819,12 @@ describe('Topics', () => {
       [],
       12_000,
     )
-    expect(screen.getByRole('region', { name: 'Concepts' })).toHaveTextContent('Strings (Basics)')
+    const basics = within(screen.getByRole('region', { name: 'Concepts' })).getByRole('region', {
+      name: 'Basics',
+    })
+    expect(within(basics).getByRole('listitem', { name: 'Strings' })).toHaveTextContent(
+      'Strings2 problems, 0 questions',
+    )
     expect(put.topics.put).toHaveBeenLastCalledWith(
       expect.objectContaining({
         name: 'Strings',
@@ -958,6 +963,19 @@ describe('Topics', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     await userEvent.click(screen.getByRole('button', { name: 'Delete Better' }))
     expect(within(questions).queryByRole('listitem')).toBeNull()
+  })
+
+  it('lists topics with their counts and enables one in place', async () => {
+    const broken = { ...topic.problems[0], id: 'broken', hints: [] }
+    const stored = topicFromFile({ ...topic, problems: [...topic.problems, broken] }, 0)
+    const put = renderApp(fakeRunner(), { topics: [stored] }, { page: 'topics' })
+    const row = screen.getByRole('listitem', { name: 'Topic' })
+    expect(row).toHaveTextContent('1 concept, 2 problems, 0 questions')
+    await userEvent.click(screen.getByRole('switch', { name: 'Enabled Topic' }))
+    expect(put.topics.put).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: false }))
+    expect(screen.getByRole('switch', { name: 'Enabled Topic' })).not.toBeChecked()
+    await userEvent.click(within(row).getByRole('link', { name: 'Topic' }))
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Topic')
   })
 
   it('renames, disables and deletes a topic', async () => {

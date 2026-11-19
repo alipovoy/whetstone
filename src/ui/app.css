@@ -1773,3 +1773,6 @@ a[aria-disabled='true'] {
     display: none;
   }
 }
+.ws-concept-area + .ws-concept-area {
+  margin-top: 1rem;
+}

@@ -1,14 +1,16 @@
 import { useState } from 'react'
-import { Badge, Button, Form, ListGroup, Stack } from 'react-bootstrap'
-import type { TopicRecord } from '@/core/topics'
+import { Button, Form, ListGroup, Stack } from 'react-bootstrap'
+import { served, type TopicRecord } from '@/core/topics'
+import { plural } from './format'
+import { Link } from './Link'
 
 interface Props {
   topics: TopicRecord[]
   onCreate: (name: string) => void
-  onOpen: (id: string) => void
+  onEnable: (id: string, enabled: boolean) => void
 }
 
-export function TopicsPage({ topics, onCreate, onOpen }: Props) {
+export function TopicsPage({ topics, onCreate, onEnable }: Props) {
   const [name, setName] = useState('')
   return (
     <section aria-label="Topics">
@@ -36,26 +38,34 @@ export function TopicsPage({ topics, onCreate, onOpen }: Props) {
       <ListGroup as="ul">
         {topics
           .toSorted((a, b) => a.created_at - b.created_at)
-          .map((topic) => (
-            <ListGroup.Item as="li" key={topic.id} aria-label={topic.name}>
-              <Stack direction="horizontal" gap={2} className="flex-wrap">
-                <span className="fw-semibold">{topic.name}</span>
-                <span className="text-body-secondary">
-                  {topic.problems.length} problems, {topic.questions.length} questions
-                </span>
-                {!topic.enabled && <Badge bg="secondary">Disabled</Badge>}
-                <Button
-                  size="sm"
-                  variant="outline-primary"
-                  className="ms-auto"
-                  aria-label={`Open ${topic.name}`}
-                  onClick={() => onOpen(topic.id)}
-                >
-                  Open
-                </Button>
-              </Stack>
-            </ListGroup.Item>
-          ))}
+          .map((topic) => {
+            const { problems, questions } = served(topic).file
+            return (
+              <ListGroup.Item as="li" key={topic.id} aria-label={topic.name}>
+                <Stack direction="horizontal" gap={3} className="flex-wrap">
+                  <div>
+                    <Link to={{ page: 'topic', id: topic.id }} className="fw-semibold">
+                      {topic.name}
+                    </Link>
+                    <div className="text-body-secondary small">
+                      {plural(topic.concepts.length, 'concept')},{' '}
+                      {plural(problems.length, 'problem')}, {plural(questions.length, 'question')}
+                    </div>
+                  </div>
+                  <Form.Check
+                    type="switch"
+                    role="switch"
+                    id={`enabled-${topic.id}`}
+                    label="Enabled"
+                    aria-label={`Enabled ${topic.name}`}
+                    className="ms-auto"
+                    checked={topic.enabled}
+                    onChange={(event) => onEnable(topic.id, event.target.checked)}
+                  />
+                </Stack>
+              </ListGroup.Item>
+            )
+          })}
       </ListGroup>
     </section>
   )
