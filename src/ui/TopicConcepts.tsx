@@ -39,6 +39,12 @@ export function TopicConcepts({ topic, locked, onChange }: Props) {
     filter: { topic: topic.id, offConcepts: named[list].filter((n) => n !== name) },
     disabled: !topic.enabled || undefined,
   })
+  const addOf = (list: ItemList, name: string): Route => ({
+    page: 'add-items',
+    list,
+    topic: topic.id,
+    concepts: [name],
+  })
 
   function remove(id: string, name: string) {
     const used = conceptUsage(topic, id)
@@ -113,20 +119,20 @@ export function TopicConcepts({ topic, locked, onChange }: Props) {
                             to={
                               used.problems
                                 ? itemsOf('problems', c.name)
-                                : { page: 'add-problems', topic: topic.id, concepts: [c.name] }
+                                : addOf('problems', c.name)
                             }
                           />
                           ,{' '}
-                          {used.questions ? (
-                            <Count
-                              count={used.questions}
-                              noun="question"
-                              name={c.name}
-                              to={itemsOf('questions', c.name)}
-                            />
-                          ) : (
-                            plural(0, 'question')
-                          )}
+                          <Count
+                            count={used.questions}
+                            noun="question"
+                            name={c.name}
+                            to={
+                              used.questions
+                                ? itemsOf('questions', c.name)
+                                : addOf('questions', c.name)
+                            }
+                          />
                         </span>
                         <Stack direction="horizontal" gap={2}>
                           <Button

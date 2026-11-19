@@ -105,9 +105,14 @@ function NewQuiz({ topics, onStart }: Pick<Props, 'topics' | 'onStart'>) {
       <div className="ws-panel ws-empty">
         <h2 className="h5 mb-0">No questions to quiz on</h2>
         <p className="text-body-secondary">Add questions to a topic, or enable one.</p>
-        <Link className="btn btn-primary" to={{ page: 'topics' }}>
-          Open Settings, Topics
-        </Link>
+        <div className="d-flex flex-wrap justify-content-center gap-2">
+          <Link className="btn btn-primary" to={{ page: 'add-items', list: 'questions' }}>
+            Add questions
+          </Link>
+          <Link className="btn btn-outline-secondary" to={{ page: 'topics' }}>
+            Open Settings, Topics
+          </Link>
+        </div>
       </div>
     )
 

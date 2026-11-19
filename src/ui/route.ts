@@ -22,7 +22,13 @@ export type Route =
   | { page: 'library-item'; list: ItemList; topic: string; item: string }
   | { page: 'edit-problem'; topic: string; problem: string }
   // Prefilled from where it was opened: concepts by name.
-  | { page: 'add-problems'; topic?: string; concepts?: string[]; difficulty?: Difficulty }
+  | {
+      page: 'add-items'
+      list: ItemList
+      topic?: string
+      concepts?: string[]
+      difficulty?: Difficulty
+    }
 
 export type Section = 'home' | 'coding' | 'quizzes' | 'reports' | 'settings'
 
@@ -49,7 +55,7 @@ export function parseRoute(hash: string): Route {
       return { page: 'edit-problem', topic: third, problem: fourth }
     if (fifth) return { page: 'home' }
     if (third && fourth) return { page: 'library-item', list, topic: third, item: fourth }
-    if (list === 'problems' && third === ADD) return addRoute(query)
+    if (third === ADD) return addRoute(list, query)
     if (third) return { page: 'home' }
     const library = withFilter({ page: 'library', list }, query)
     return new URLSearchParams(query).get(DISABLED) === SHOWN
@@ -112,12 +118,12 @@ export function href(route: Route): string {
       return path('settings', route.list, route.topic, route.item)
     case 'edit-problem':
       return path('settings', 'problems', route.topic, route.problem, EDIT)
-    case 'add-problems': {
+    case 'add-items': {
       const params = new URLSearchParams()
       if (route.topic) params.set('topic', route.topic)
       for (const name of route.concepts ?? []) params.append(CONCEPT, name)
       if (route.difficulty) params.set('difficulty', route.difficulty)
-      return path('settings', 'problems', ADD) + queryText(params)
+      return path('settings', route.list, ADD) + queryText(params)
     }
   }
 }
@@ -151,9 +157,9 @@ function withFilter<R extends Route & { filter?: ItemFilter }>(route: R, query: 
   return Object.keys(filter).length ? { ...route, filter } : route
 }
 
-function addRoute(query: string): Route {
+function addRoute(list: ItemList, query: string): Route {
   const params = new URLSearchParams(query)
-  const route: Route = { page: 'add-problems' }
+  const route: Route = { page: 'add-items', list }
   const topic = params.get('topic')
   if (topic) route.topic = topic
   const concepts = params.getAll(CONCEPT).filter(Boolean)
@@ -186,9 +192,9 @@ function filterParams(filter: ItemFilter = {}): URLSearchParams {
   return params
 }
 
-// Add problems, prefilled from a filter: its topic, the concepts it keeps of that topic, and
-// its difficulty.
-export function addProblemsFor(filter: ItemFilter, entries: Filterable[]): Route {
+// Add items, prefilled from a filter: its topic, the concepts it keeps of that topic, and its
+// difficulty.
+export function addItemsFor(list: ItemList, filter: ItemFilter, entries: Filterable[]): Route {
   const { topic, offConcepts, difficulty } = filter
   const kept =
     topic && offConcepts
@@ -197,7 +203,8 @@ export function addProblemsFor(filter: ItemFilter, entries: Filterable[]): Route
           .filter((n) => !offConcepts.includes(n))
       : []
   return {
-    page: 'add-problems',
+    page: 'add-items',
+    list,
     topic,
     concepts: kept.length ? kept : undefined,
     difficulty,
@@ -222,7 +229,7 @@ export function sectionOf(route: Route): Section {
     case 'topic':
     case 'library':
     case 'library-item':
-    case 'add-problems':
+    case 'add-items':
     case 'edit-problem':
       return 'settings'
   }

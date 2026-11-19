@@ -55,7 +55,7 @@ export function EditProblemPage({ record, entry, runner, back, onBusy, onSave }:
   const reading = useMemo(() => {
     const read = readItems(text, 'problems')
     if ('error' in read || read.items.length !== 1) return null
-    const [draft] = readDrafts(record, read.items, () => entry.id)
+    const [draft] = readDrafts(record, read.items, () => entry.id, addProblems)
     return draft.ok ? draft : null
   }, [text, record, entry.id])
   const [shown, setShown] = useState(reading)
@@ -140,7 +140,7 @@ export function EditProblemPage({ record, entry, runner, back, onBusy, onSave }:
           )}
           <ProblemView
             topic={{ id: record.id, name: record.name, concepts: shown.concepts }}
-            problem={shown.problem}
+            problem={shown.item}
           />
         </>
       )}

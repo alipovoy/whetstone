@@ -5,6 +5,7 @@ import { startQuiz, submitQuiz, type Quiz, type QuizSetup } from '@/core/quiz'
 import { problemLibrary, questionLibrary, type LibraryEntry } from '@/core/library'
 import {
   addProblems,
+  addQuestions,
   deleteItem,
   newTopic,
   served,
@@ -22,12 +23,12 @@ import { QuizPage } from './QuizPage'
 import { QuizzesPage } from './QuizzesPage'
 import { TopicPage } from './TopicPage'
 import { TopicsPage } from './TopicsPage'
-import { LibraryPage, LibraryProblem, LibraryQuestion } from './LibraryPages'
+import { LibraryPage, LibraryProblem, LibraryQuestion, NOUN } from './LibraryPages'
 import { Link } from './Link'
 import { href, navigate, replaceRoute, sectionOf, useRoute, type Route } from './route'
 import { AttemptReport, CodingReport, QuizReport } from './ReportsPages'
 import { AppearancePage } from './SectionPages'
-import { AddProblemsPage } from './AddProblemsPage'
+import { AddItemsPage } from './AddItemsPage'
 import { EditProblemPage } from './EditProblemPage'
 
 export type AppRunner = Pick<PyodideRunner, 'run' | 'test' | 'warmUp' | 'status' | 'subscribe'>
@@ -196,21 +197,22 @@ export function App({ runner, storage }: Props) {
   // Said on the library page it was left for, until that page changes.
   const [notice, setNotice] = useState<{ at: string; text: string } | null>(null)
   if (notice && href(route) !== notice.at) setNotice(null)
-  const addTo = (id: string, items: unknown[]) => {
+  const addTo = (into: ItemList, id: string, items: unknown[]) => {
     const record = topicsNow.current.find((t) => t.id === id)
-    const added = record && addProblems(record, items, () => crypto.randomUUID())
+    const add = into === 'problems' ? addProblems : addQuestions
+    const added = record && add(record, items, () => crypto.randomUUID())
     if (!record || !added?.ok) return
     putTopic({ ...added.record, updated_at: Date.now() })
     const to: Route = {
       page: 'library',
-      list: 'problems',
+      list: into,
       filter: { topic: id },
       disabled: !record.enabled || undefined,
     }
     const count = added.added.length
     setNotice({
       at: href(to),
-      text: `Added ${count === 1 ? '1 problem' : `${count} problems`} to ${record.name}.`,
+      text: `Added ${count === 1 ? `1 ${NOUN[into]}` : `${count} ${NOUN[into]}s`} to ${record.name}.`,
     })
     navigate(to)
   }
@@ -249,7 +251,8 @@ export function App({ runner, storage }: Props) {
       : undefined
 
   const inLibrary = (of: ItemList) =>
-    (route.page === 'library' || route.page === 'library-item') && route.list === of
+    (route.page === 'library' || route.page === 'library-item' || route.page === 'add-items') &&
+    route.list === of
 
   const settings = (children: ReactNode) => (
     <div className="ws-page">
@@ -267,7 +270,7 @@ export function App({ runner, storage }: Props) {
           {
             label: 'Coding problems',
             to: libraries.problems,
-            current: inLibrary('problems') || route.page === 'add-problems',
+            current: inLibrary('problems'),
           },
           { label: 'Quiz questions', to: libraries.questions, current: inLibrary('questions') },
         ]}
@@ -473,16 +476,17 @@ export function App({ runner, storage }: Props) {
               <Missing what="This problem" back={libraries.problems} why="It was deleted." />
             </div>
           ))}
-        {route.page === 'add-problems' &&
+        {route.page === 'add-items' &&
           settings(
-            <AddProblemsPage
+            <AddItemsPage
               key={href(route)}
+              list={route.list}
               topics={topics}
               initial={route}
               runner={runner}
-              back={libraries.problems}
+              back={libraries[route.list]}
               onBusy={setBusy}
-              onAdd={addTo}
+              onAdd={(id, items) => addTo(route.list, id, items)}
             />,
           )}
         {route.page === 'library-item' &&

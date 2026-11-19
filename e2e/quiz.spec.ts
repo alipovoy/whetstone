@@ -35,12 +35,14 @@ async function addTopic(page: Page, name: string) {
   await page.getByRole('link', { name: 'Topics' }).click()
   await page.getByRole('textbox', { name: 'New topic name' }).fill(name)
   await page.getByRole('button', { name: 'Create topic' }).click()
-  await page.getByRole('button', { name: 'New question' }).click()
-  await page.getByRole('textbox', { name: 'Question JSON' }).fill(questions(name))
-  await page.getByRole('button', { name: 'Add' }).click()
-  await expect(
-    page.getByRole('region', { name: 'Questions' }).locator(':scope > ul > li'),
-  ).toHaveCount(5)
+  await page.getByRole('link', { name: 'Quiz questions' }).click()
+  await page.getByRole('link', { name: 'Add questions' }).click()
+  await page.getByLabel('Topic').selectOption({ label: name })
+  await page.getByRole('tab', { name: 'Write JSON' }).click()
+  await page.getByRole('textbox', { name: 'Questions JSON' }).fill(questions(name))
+  await page.getByRole('button', { name: 'Check' }).click()
+  await page.getByRole('button', { name: 'Add 5 questions' }).click()
+  await expect(page.getByText(`Added 5 questions to ${name}.`)).toBeVisible()
 }
 
 async function answerCurrent(page: Page) {

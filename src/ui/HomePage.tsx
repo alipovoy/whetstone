@@ -75,9 +75,13 @@ export function HomePage({ topics, attempts, quizzes, onStart, onResume }: Props
             <Icon name="quiz" />
             Build a quiz
           </Link>
-          <Link className="btn btn-outline-secondary" to={{ page: 'add-problems' }}>
+          <Link className="btn btn-outline-secondary" to={{ page: 'add-items', list: 'problems' }}>
             <Icon name="plus" />
             Add problems
+          </Link>
+          <Link className="btn btn-outline-secondary" to={{ page: 'add-items', list: 'questions' }}>
+            <Icon name="plus" />
+            Add questions
           </Link>
         </div>
       </section>

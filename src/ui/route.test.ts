@@ -25,9 +25,16 @@ describe('routes', () => {
     { page: 'library-item', list: 'problems', topic: 'my topic', item: 'a/b' },
     { page: 'library', list: 'questions', filter: { type: 'multiple', difficulty: 'Hard' } },
     { page: 'library-item', list: 'questions', topic: 'my topic', item: 'a/b' },
-    { page: 'add-problems' },
+    { page: 'add-items', list: 'problems' },
     { page: 'edit-problem', topic: 'my topic', problem: 'a/b' },
-    { page: 'add-problems', topic: 'a&b', concepts: ['X, y', 'Z'], difficulty: 'Medium' },
+    {
+      page: 'add-items',
+      list: 'problems',
+      topic: 'a&b',
+      concepts: ['X, y', 'Z'],
+      difficulty: 'Medium',
+    },
+    { page: 'add-items', list: 'questions', topic: 't', difficulty: 'Easy' },
   ]
 
   it('reads back every address it writes, ids with any characters included', () => {
@@ -48,7 +55,6 @@ describe('routes', () => {
       '#/coding/a/b/c',
       '#/settings/problems/t/p/view',
       '#/settings/problems/t/p/edit/more',
-      '#/settings/questions/add',
       '#/settings/questions/t/q/edit',
       '#/%E0',
     ])
@@ -87,6 +93,7 @@ describe('routes', () => {
       'reports',
       'reports',
       'reports',
+      'settings',
       'settings',
       'settings',
       'settings',

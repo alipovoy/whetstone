@@ -1,10 +1,10 @@
 import { useId } from 'react'
 import { Button, Dropdown, Form } from 'react-bootstrap'
 import { DIFFICULTIES } from '@/content/schema'
-import { MAX_ITEMS, type ProblemOrder } from '@/core/bridge'
+import { MAX_ITEMS, type ItemOrder } from '@/core/bridge'
 import type { TopicRecord } from '@/core/topics'
 
-export interface Order extends ProblemOrder {
+export interface Order extends ItemOrder {
   topic: string
 }
 
@@ -16,7 +16,7 @@ interface Props {
 }
 
 // What to add: the topic, its concepts to focus on, the difficulty and how many.
-export function ProblemOrderForm({ topics, value, onChange, disabled }: Props) {
+export function ItemOrderForm({ topics, value, onChange, disabled }: Props) {
   const id = useId()
   const set = (change: Partial<Order>) => onChange({ ...value, ...change })
   const topic = topics.find((t) => t.id === value.topic)
