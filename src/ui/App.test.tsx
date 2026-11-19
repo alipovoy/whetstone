@@ -588,7 +588,7 @@ describe('Layout', () => {
     setScheme('slate')
   })
 
-  it('continues the latest unfinished problem from Home, and lists recent results', async () => {
+  it('continues the latest unfinished problem or quiz from Home, and lists recent results', async () => {
     const open = startAttempt(
       crypto.randomUUID(),
       't',
@@ -604,7 +604,9 @@ describe('Layout', () => {
       2,
     )
     const quiz = submitQuiz(startQuiz(crypto.randomUUID(), quizOf(['single']), 3), 4)
-    renderApp(fakeRunner(), { attempts: [done, open], quizzes: [quiz] }, { page: 'home' })
+    const running = startQuiz(crypto.randomUUID(), quizOf(['single', 'multiple']), 5)
+    renderApp(fakeRunner(), { attempts: [done, open], quizzes: [quiz, running] }, { page: 'home' })
+    expect(screen.getByText('0 of 2 questions answered')).toBeInTheDocument()
     const recent = screen.getByRole('region', { name: 'Recent' })
     expect(
       within(recent)
@@ -618,6 +620,11 @@ describe('Layout', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
     expect(window.location.hash).toBe('#/coding/t/two')
     expect(screen.getByRole('textbox', { name: 'Solution code' })).toHaveTextContent('return 2')
+
+    await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Continue the quiz' }))
+    expect(window.location.hash).toBe(`#/quizzes/${running.id}`)
+    expect(screen.getByText('Question 1 of 2')).toBeInTheDocument()
   })
 
   it('starts a random problem from Home', async () => {
@@ -989,7 +996,7 @@ describe('Topics', () => {
     expect(copy).toHaveBeenLastCalledWith(expect.stringContaining('Focus on this concept: E.'))
   })
 
-  it('opens Add questions from a concept without questions, the quiz builder and Home', async () => {
+  it('opens Add questions from a concept without questions and the quiz builder', async () => {
     renderApp(fakeRunner(), {}, { page: 'quizzes' })
     expect(screen.getByText('No questions to quiz on')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('link', { name: 'Add questions' }))
@@ -1002,10 +1009,6 @@ describe('Topics', () => {
     expect(conceptsToggle()).toHaveTextContent('C')
     await userEvent.click(screen.getByRole('link', { name: 'Back to quiz questions' }))
     expect(window.location.hash).toBe('#/settings/questions')
-
-    await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
-    await userEvent.click(screen.getByRole('link', { name: 'Add questions' }))
-    expect(window.location.hash).toBe('#/settings/questions/add')
   })
 
   it('edits a problem as JSON beside a live preview, checks it, and saves it', async () => {

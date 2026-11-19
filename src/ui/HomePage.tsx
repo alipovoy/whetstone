@@ -38,6 +38,7 @@ export function HomePage({ topics, attempts, quizzes, onStart, onResume }: Props
       const found = find(attempt)
       return found ? [{ attempt, ...found }] : []
     })[0]
+  const running = quizzes.find((q) => !q.result)
   const all = topics.flatMap((t) => t.problems.map((problem) => ({ topic: t.topic, problem })))
   const random = () => {
     const pick = all[Math.floor(Math.random() * all.length)]
@@ -65,6 +66,24 @@ export function HomePage({ topics, attempts, quizzes, onStart, onResume }: Props
             </Button>
           </div>
         )}
+        {running && (
+          <div className="ws-resume">
+            <div>
+              <h2 className="h5 mb-1">Continue: quiz on {quizTopics(running)}</h2>
+              <p className="text-body-secondary small mb-0">
+                {running.picks.filter((p) => p.length).length} of{' '}
+                {plural(running.questions.length, 'question')} answered
+              </p>
+            </div>
+            <Link
+              className="btn btn-primary btn-lg"
+              to={{ page: 'quiz', id: running.id }}
+              aria-label="Continue the quiz"
+            >
+              Continue
+            </Link>
+          </div>
+        )}
         <div className="d-flex flex-wrap gap-2">
           <Button variant="outline-secondary" onClick={random} disabled={all.length === 0}>
             <Icon name="shuffle" />
@@ -74,25 +93,17 @@ export function HomePage({ topics, attempts, quizzes, onStart, onResume }: Props
             <Icon name="quiz" />
             Build a quiz
           </Link>
-          <Link className="btn btn-outline-secondary" to={{ page: 'add-items', list: 'problems' }}>
-            <Icon name="plus" />
-            Add problems
-          </Link>
-          <Link className="btn btn-outline-secondary" to={{ page: 'add-items', list: 'questions' }}>
-            <Icon name="plus" />
-            Add questions
-          </Link>
         </div>
       </section>
       <div className="ws-home-side">
         <Recent attempts={attempts} quizzes={quizzes} now={now} find={find} />
-        <section className="ws-panel p-4" aria-labelledby="progress-title">
-          <h2 id="progress-title" className="h5">
-            Your progress
+        <section className="ws-panel p-4" aria-labelledby="data-title">
+          <h2 id="data-title" className="h5">
+            Your data
           </h2>
           <p className="text-body-secondary small mb-0">
-            Progress is saved in this browser only. Clearing the site data removes it. Signing in to
-            keep it on a server comes later.
+            Topics, attempts and quizzes are kept in this browser only. Clearing the site data
+            removes them.
           </p>
         </section>
       </div>
@@ -129,7 +140,7 @@ function Recent({ attempts, quizzes, now, find }: RecentProps) {
             {
               key: q.id,
               at: q.result.at,
-              title: `Quiz: ${[...new Set(q.questions.map((s) => s.topic_name))].join(', ')}`,
+              title: `Quiz: ${quizTopics(q)}`,
               kind: plural(q.questions.length, 'question'),
               score: q.result.score,
               to: { page: 'quiz', id: q.id } as const,
@@ -167,6 +178,10 @@ function Recent({ attempts, quizzes, now, find }: RecentProps) {
       )}
     </section>
   )
+}
+
+function quizTopics(quiz: Quiz): string {
+  return [...new Set(quiz.questions.map((s) => s.topic_name))].join(', ')
 }
 
 function minutes(ms: number): string {
