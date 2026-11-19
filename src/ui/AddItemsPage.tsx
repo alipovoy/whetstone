@@ -5,7 +5,7 @@ import { readItems } from '@/core/bridge'
 import { readDrafts, served, type Draft, type ItemList, type TopicRecord } from '@/core/topics'
 import { CodeBlock } from './CodeBlock'
 import { CodeEditor } from './CodeEditor'
-import { capital } from './format'
+import { capital, plural } from './format'
 import { ItemOrderForm, type Order } from './ItemOrderForm'
 import { KINDS, type Check, type Kind } from './kinds'
 import { Link } from './Link'
@@ -19,7 +19,8 @@ interface Props {
   runner: Check
   back: Route
   onBusy: (busy: boolean) => void
-  onAdd: (topic: string, items: unknown[]) => void
+  // The topic with the items added, and how many.
+  onAdd: (record: TopicRecord, count: number) => void
 }
 
 export function AddItemsPage({ list, ...props }: Props) {
@@ -113,6 +114,16 @@ function AddItems<T>({
   }
 
   const ticked = (checked ?? []).filter((c) => c.ticked)
+  function add() {
+    if (!record) return
+    const added = kind.add(
+      record,
+      ticked.map((c) => c.draft.raw),
+      () => crypto.randomUUID(),
+    )
+    if (added.ok) onAdd(added.record, added.added.length)
+    else setError(`Could not add: ${added.errors.join('; ')}`)
+  }
 
   return (
     <section aria-labelledby="add-title" className="ws-report-page">
@@ -202,16 +213,8 @@ function AddItems<T>({
               />
             ))}
           </ul>
-          <Button
-            disabled={ticked.length === 0}
-            onClick={() =>
-              onAdd(
-                record.id,
-                ticked.map((c) => c.draft.raw),
-              )
-            }
-          >
-            Add {ticked.length === 1 ? `1 ${noun}` : `${ticked.length} ${noun}s`}
+          <Button disabled={ticked.length === 0} onClick={add}>
+            Add {plural(ticked.length, noun)}
           </Button>
         </section>
       )}

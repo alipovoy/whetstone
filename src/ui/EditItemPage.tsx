@@ -84,7 +84,7 @@ function EditItem<T>({
     const read = readItems(text, kind.list)
     if ('error' in read) return fail([read.error])
     const added = kind.add(record, read.items, () => entry.id, entry.id)
-    if (!added.ok) return fail(added.errors.flatMap((e) => e.errors))
+    if (!added.ok) return fail(added.errors)
     setChecking(true)
     try {
       const errors = kind.check ? await kind.check(runner, added.added[0]) : []

@@ -112,14 +112,8 @@ export function deleteItem(record: TopicRecord, list: ItemList, id: string): Top
   return { ...record, [list]: record[list].filter((item) => item.id !== id) }
 }
 
-export interface ItemErrors {
-  item: number
-  title?: string
-  errors: string[]
-}
-
 export type Adding<T> =
-  { ok: true; record: TopicRecord; added: T[] } | { ok: false; errors: ItemErrors[] }
+  { ok: true; record: TopicRecord; added: T[] } | { ok: false; errors: string[] }
 
 // Reads problems written by a person or a chat into the topic. The app assigns ids and source; a
 // concept is found by name or added to the topic. With `replaces`, the single item replaces that problem.
@@ -162,7 +156,7 @@ export function readDrafts<T>(
     const added = add(record, [raw], newId)
     return added.ok
       ? { raw, title, ok: true, item: added.added[0], concepts: added.record.concepts }
-      : { raw, title, ok: false, errors: added.errors[0].errors }
+      : { raw, title, ok: false, errors: added.errors }
   })
 }
 
@@ -193,18 +187,18 @@ function addItems<T extends { id: string }>(
 ): Adding<T> {
   const noun = list === 'problems' ? 'problem' : 'question'
   if (replaces && items.length !== 1) {
-    return { ok: false, errors: [{ item: 1, errors: [`an edit holds exactly one ${noun}`] }] }
+    return { ok: false, errors: [`an edit holds exactly one ${noun}`] }
   }
   const current = record[list]
   const replaced = current.find((item) => item.id === replaces)
   const concepts = [...record.concepts]
   const added: T[] = []
-  const errors: ItemErrors[] = []
-  items.forEach((raw, i) => {
+  const errors: string[] = []
+  for (const raw of items) {
     const reading = read(raw, concepts, replaced?.id ?? newId(), replaced?.source)
     if (reading.ok) added.push(reading.item)
-    else errors.push({ item: i + 1, title: titleOf(raw), errors: reading.errors })
-  })
+    else errors.push(...reading.errors)
+  }
   if (errors.length) return { ok: false, errors }
   const kept: { id: string }[] = current.filter((item) => item.id !== replaced?.id)
   kept.splice(replaced ? current.indexOf(replaced) : kept.length, 0, ...added)
@@ -240,7 +234,7 @@ function finish<T>(
 
 const SourceSchema = ProblemSchema.shape.source
 
-// A problem's title, or a question's summary, to name it in errors.
+// A problem's title, or a question's summary, to name it.
 export function titleOf(raw: unknown): string | undefined {
   const item = raw as { wordings?: { title?: unknown }[]; summary?: unknown } | null
   const title = item?.wordings?.[0]?.title ?? item?.summary

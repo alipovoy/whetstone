@@ -51,7 +51,6 @@ export interface ProblemEntry extends Filterable {
   topic: Topic
   problem: Problem
   status: ProblemStatus
-  latest?: Attempt
   graded?: Attempt
 }
 
@@ -73,7 +72,6 @@ export function problemEntries(topics: TopicFile[], attempts: Attempt[]): Proble
         title: problem.wordings[0].title,
         concepts: entryConcepts(topic, problem.concepts, conceptNames(topic, problem.concepts)),
         difficulty: problem.difficulty,
-        latest,
         graded,
         status: problemStatus(latest, graded),
       }
