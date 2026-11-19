@@ -34,6 +34,8 @@ const problem = (id: string, title: string): TopicFile['problems'][number] => ({
   source: 'built-in',
 })
 
+const conceptsToggle = () => screen.getByRole('button', { name: /^Concepts / })
+
 const topic: TopicFile = {
   topic: { id: 't', name: 'Topic', concepts: [{ id: 'c', name: 'C', group: 'G' }] },
   problems: [problem('one', 'First problem'), problem('two', 'Second problem')],
@@ -437,7 +439,7 @@ describe('App', () => {
     expect(problemRow('First problem')).toBeInTheDocument()
   })
 
-  it('ignores a topic or area in the address that no longer applies', async () => {
+  it('ignores a topic or concept in the address that no longer applies', async () => {
     const questionsOnly: TopicFile = {
       ...quizTopic,
       topic: { ...quizTopic.topic, id: 'q', name: 'Questions' },
@@ -448,24 +450,24 @@ describe('App', () => {
       { topics: [topicFromFile(topic, 0), topicFromFile(questionsOnly, 1)] },
       {
         page: 'problems',
-        filter: { topic: 'gone', area: 'G', difficulty: 'Easy' },
+        filter: { topic: 'gone', offConcepts: ['Gone'], difficulty: 'Easy' },
       },
     )
     expect(screen.getByRole('region', { name: 'Filters' })).toHaveTextContent('2 of 2 problems')
-    expect(screen.getByLabelText('Area')).toHaveValue('G')
+    expect(conceptsToggle()).toHaveTextContent('All concepts')
     expect(
       within(screen.getByLabelText('Topic'))
         .getAllByRole('option')
         .map((o) => o.textContent),
     ).toEqual(['All topics', 'Topic'])
     await userEvent.click(screen.getByRole('button', { name: 'Medium' }))
-    expect(window.location.hash).toBe('#/coding?area=G&difficulty=Medium')
+    expect(window.location.hash).toBe('#/coding?difficulty=Medium')
   })
 
-  it('keeps an area only while the chosen topic has it', async () => {
+  it('checks concepts under their areas, all or none, for the chosen topic', async () => {
     const other: TopicFile = {
-      topic: { id: 'u', name: 'Other', concepts: [{ id: 'c', name: 'C', group: 'H' }] },
-      problems: [problem('three', 'Third problem')],
+      topic: { id: 'u', name: 'Other', concepts: [{ id: 'd', name: 'D', group: 'H' }] },
+      problems: [{ ...problem('three', 'Third problem'), concepts: ['d'] }],
       questions: [],
     }
     renderApp(
@@ -473,20 +475,34 @@ describe('App', () => {
       { topics: [topicFromFile(topic, 0), topicFromFile(other, 1)] },
       {
         page: 'problems',
-        filter: { area: 'G' },
       },
     )
-    expect(screen.queryByRole('listitem', { name: 'Third problem' })).toBeNull()
-    await userEvent.selectOptions(screen.getByLabelText('Topic'), 'Topic')
-    expect(window.location.hash).toBe('#/coding?topic=t&area=G')
+    await userEvent.click(conceptsToggle())
+    const menu = screen.getByRole('group', { name: 'G' }).parentElement!
+    expect(
+      within(menu)
+        .getAllByRole('group')
+        .map((g) => g.textContent),
+    ).toEqual(['GC', 'HD'])
+    expect(within(menu).getByRole('button', { name: 'All' })).toBeDisabled()
+
+    await userEvent.click(within(menu).getByRole('checkbox', { name: 'C' }))
+    expect(window.location.hash).toBe('#/coding?without=C')
+    expect(conceptsToggle()).toHaveTextContent('D')
+    expect(screen.queryByRole('listitem', { name: 'First problem' })).toBeNull()
+    expect(problemRow('Third problem')).toBeInTheDocument()
+
+    await userEvent.click(within(menu).getByRole('button', { name: 'Clear' }))
+    expect(window.location.hash).toBe('#/coding?without=C&without=D')
+    expect(conceptsToggle()).toHaveTextContent('No concepts')
+    expect(screen.getByText('No problems match these filters')).toBeInTheDocument()
+    await userEvent.click(within(menu).getByRole('button', { name: 'All' }))
+    expect(window.location.hash).toBe('#/coding')
+
+    await userEvent.click(within(menu).getByRole('checkbox', { name: 'C' }))
     await userEvent.selectOptions(screen.getByLabelText('Topic'), 'Other')
     expect(window.location.hash).toBe('#/coding?topic=u')
-    expect(
-      within(screen.getByLabelText('Area'))
-        .getAllByRole('option')
-        .map((o) => o.textContent),
-    ).toEqual(['All areas', 'H'])
-    expect(problemRow('Third problem')).toBeInTheDocument()
+    expect(conceptsToggle()).toHaveTextContent('All concepts')
   })
 
   it('collapses either pane but not both, resizes them, and keeps the layout', async () => {

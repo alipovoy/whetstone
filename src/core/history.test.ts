@@ -45,21 +45,23 @@ describe('historyEntries', () => {
     expect(entries[0]).toMatchObject({
       topic: { id: 'algo', name: 'Algorithms' },
       title: 'Balanced brackets',
-      concepts: ['Stacks'],
-      areas: ['Linear'],
+      concepts: [{ name: 'Stacks', area: 'Linear' }],
       difficulty: 'Easy',
     })
   })
 
   it('reads a deleted topic from the grade, without an area', () => {
     const [entry] = historyEntries([], [graded('a', true, 1)])
-    expect(entry).toMatchObject({ topic: { id: 'algo', name: 'Algorithms' }, areas: [] })
+    expect(entry).toMatchObject({
+      topic: { id: 'algo', name: 'Algorithms' },
+      concepts: [{ name: 'Stacks', area: undefined }],
+    })
   })
 
   it('takes the problem filters', () => {
     const entries = historyEntries([topic], [graded('a', true, 1), graded('b', false, 2)])
     expect(filterEntries(entries, { status: 'solved', search: 'stacks' })).toEqual([entries[1]])
-    expect(filterEntries(entries, { area: 'Linear', difficulty: 'Medium' })).toEqual([])
+    expect(filterEntries(entries, { offConcepts: ['Graphs'], difficulty: 'Medium' })).toEqual([])
   })
 
   it('drops a status from the address that no graded attempt can have', () => {

@@ -129,8 +129,10 @@ function ProblemRow({ entry, onStart, onResume, onDiscard }: ProblemRowProps) {
     <li className="ws-problem" aria-label={title}>
       <div className="ws-problem-name">
         <Link to={{ page: 'solve', topic: topic.id, problem: problem.id }}>{title}</Link>
-        <span>{topic.name}</span>
-        <ConceptTags names={concepts} />
+        <div className="ws-problem-meta">
+          <span>{topic.name}</span>
+          <ConceptTags names={concepts.map((c) => c.name)} />
+        </div>
       </div>
       <span className="ws-difficulty" data-level={problem.difficulty}>
         {problem.difficulty}

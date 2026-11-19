@@ -3,8 +3,8 @@ import type { Difficulty, TopicFile } from '@/content/schema'
 import { gradeAttempt, startAttempt, type Attempt } from './attempt'
 import {
   applicableFilter,
+  conceptGroups,
   filterEntries,
-  entryAreas,
   problemEntries,
   problemStatus,
 } from './problems'
@@ -100,11 +100,11 @@ describe('problem list', () => {
   const titles = (filter: Parameters<typeof filterEntries>[1]) =>
     filterEntries(entries, filter).map((e) => e.title)
 
-  it('lists every problem in topic order with its concepts, areas and status', () => {
-    expect(entries.map((e) => [e.title, e.concepts, e.areas, e.status])).toEqual([
-      ['Balanced brackets', ['Stacks'], ['Linear'], 'solved'],
-      ['Count the islands', ['Graphs'], ['Trees and graphs'], 'in-progress'],
-      ['Count vowels', ['Scanning'], ['Linear'], 'new'],
+  it('lists every problem in topic order with its concepts, their areas and status', () => {
+    expect(entries.map((e) => [e.title, e.concepts, e.status])).toEqual([
+      ['Balanced brackets', [{ name: 'Stacks', area: 'Linear' }], 'solved'],
+      ['Count the islands', [{ name: 'Graphs', area: 'Trees and graphs' }], 'in-progress'],
+      ['Count vowels', [{ name: 'Scanning', area: 'Linear' }], 'new'],
     ])
     expect(entries[1].graded?.grade?.score).toBe(25)
   })
@@ -112,8 +112,9 @@ describe('problem list', () => {
   it('filters by every field together', () => {
     expect(titles({})).toHaveLength(3)
     expect(titles({ topic: 'str' })).toEqual(['Count vowels'])
-    expect(titles({ area: 'Linear' })).toEqual(['Balanced brackets', 'Count vowels'])
-    expect(titles({ area: 'Linear', topic: 'algo' })).toEqual(['Balanced brackets'])
+    expect(titles({ offConcepts: ['Graphs'] })).toEqual(['Balanced brackets', 'Count vowels'])
+    expect(titles({ offConcepts: ['Graphs'], topic: 'algo' })).toEqual(['Balanced brackets'])
+    expect(titles({ offConcepts: ['Stacks', 'Graphs', 'Scanning'] })).toEqual([])
     expect(titles({ difficulty: 'Medium' })).toEqual(['Count the islands'])
     expect(titles({ status: 'new' })).toEqual(['Count vowels'])
     expect(titles({ status: 'solved', difficulty: 'Medium' })).toEqual([])
@@ -126,35 +127,38 @@ describe('problem list', () => {
     expect(titles({ search: 'Algorithms' })).toEqual([])
   })
 
-  it('matches a problem of several concepts by any of them and their areas', () => {
+  it('keeps a problem of several concepts while any of them is checked', () => {
     const [algo] = files
     const both = {
       ...problem('paths', 'graphs', 'Hard', 'Shortest path'),
       concepts: ['graphs', 'stacks'],
     }
     const [entry] = problemEntries([{ ...algo, problems: [both] }], [])
-    expect([entry.concepts, entry.areas]).toEqual([
-      ['Graphs', 'Stacks'],
-      ['Trees and graphs', 'Linear'],
+    expect(entry.concepts).toEqual([
+      { name: 'Graphs', area: 'Trees and graphs' },
+      { name: 'Stacks', area: 'Linear' },
     ])
-    for (const filter of [{ area: 'Linear' }, { area: 'Trees and graphs' }, { search: 'stacks' }])
+    for (const filter of [{ offConcepts: ['Graphs'] }, { offConcepts: ['Stacks'] }])
       expect(filterEntries([entry], filter)).toEqual([entry])
-    expect(entryAreas([entry])).toEqual(['Trees and graphs', 'Linear'])
+    expect(filterEntries([entry], { offConcepts: ['Graphs', 'Stacks'] })).toEqual([])
+    expect(filterEntries([entry], { search: 'stacks' })).toEqual([entry])
   })
 
-  it('drops a topic or an area that no problem has, or that do not go together', () => {
-    expect(applicableFilter({ topic: 'gone', area: 'Linear', status: 'new' }, entries)).toEqual({
-      area: 'Linear',
-      status: 'new',
-    })
-    expect(applicableFilter({ topic: 'str', area: 'Trees and graphs' }, entries)).toEqual({
+  it('drops a topic that no problem has, and unchecked concepts the topic does not offer', () => {
+    expect(
+      applicableFilter({ topic: 'gone', offConcepts: ['Graphs', 'Gone'], status: 'new' }, entries),
+    ).toEqual({ offConcepts: ['Graphs'], status: 'new' })
+    expect(applicableFilter({ topic: 'str', offConcepts: ['Graphs'] }, entries)).toEqual({
       topic: 'str',
     })
-    expect(applicableFilter({ area: 'Questions only' }, entries)).toEqual({})
+    expect(applicableFilter({ offConcepts: ['Unused'] }, entries)).toEqual({})
   })
 
-  it('offers the areas that have problems, once each, for a topic or all', () => {
-    expect(entryAreas(entries)).toEqual(['Linear', 'Trees and graphs'])
-    expect(entryAreas(entries, 'str')).toEqual(['Linear'])
+  it('offers the concepts that have problems, once each, under their areas', () => {
+    expect(conceptGroups(entries)).toEqual([
+      { area: 'Linear', names: ['Scanning', 'Stacks'] },
+      { area: 'Trees and graphs', names: ['Graphs'] },
+    ])
+    expect(conceptGroups(entries, 'str')).toEqual([{ area: 'Linear', names: ['Scanning'] }])
   })
 })

@@ -95,8 +95,10 @@ function HistoryRow({ entry }: { entry: HistoryEntry }) {
     <li className="ws-problem ws-history" aria-label={`${title}, ${at}`}>
       <div className="ws-problem-name">
         <Link to={{ page: 'attempt', id: attempt.id }}>{title}</Link>
-        <span>{topic.name}</span>
-        <ConceptTags names={concepts} />
+        <div className="ws-problem-meta">
+          <span>{topic.name}</span>
+          <ConceptTags names={concepts.map((c) => c.name)} />
+        </div>
       </div>
       <span className="ws-difficulty" data-level={difficulty}>
         {difficulty}
