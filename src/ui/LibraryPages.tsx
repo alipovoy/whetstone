@@ -18,7 +18,7 @@ import { capital, plural } from './format'
 import { Link } from './Link'
 import { Markdown } from './Markdown'
 import { ConceptTags, TYPE_LABEL } from './progress'
-import { addProblemsFor, type Route } from './route'
+import { addItemsFor, type Route } from './route'
 import { Statement } from './Statement'
 
 const SOURCE_LABEL: Record<Source, string> = {
@@ -32,7 +32,7 @@ const LIST_TITLE: Record<ItemList, string> = {
   questions: 'Quiz questions',
 }
 
-const NOUN: Record<ItemList, string> = { problems: 'problem', questions: 'question' }
+export const NOUN: Record<ItemList, string> = { problems: 'problem', questions: 'question' }
 
 interface LibraryProps {
   list: ItemList
@@ -76,11 +76,9 @@ export function LibraryPage({
         <h1 id="library-title" className="h3 mb-0 me-auto">
           {LIST_TITLE[list]}
         </h1>
-        {list === 'problems' && (
-          <Link className="btn btn-primary" to={addProblemsFor(filter, entries)}>
-            Add problems
-          </Link>
-        )}
+        <Link className="btn btn-primary" to={addItemsFor(list, filter, entries)}>
+          Add {noun}s
+        </Link>
       </div>
       {notice && (
         <Alert variant="success" dismissible onClose={onDismiss} className="mb-0">
@@ -221,7 +219,11 @@ export function LibraryQuestion({ entry, back, onDelete }: ItemProps<Question>) 
   const { topic, item: question } = entry
   return (
     <LibraryItem list="questions" entry={entry} back={back} onDelete={onDelete}>
-      {question && <QuestionView topic={topic} question={question} />}
+      {question && (
+        <div className="ws-panel">
+          <QuestionView topic={topic} question={question} />
+        </div>
+      )}
     </LibraryItem>
   )
 }
@@ -315,9 +317,17 @@ export function ProblemView({ topic, problem }: { topic: Topic; problem: Problem
   )
 }
 
+interface QuestionViewProps {
+  topic: Topic
+  question: Question
+  // A preview inside another page names the question below that page's title.
+  preview?: boolean
+}
+
 // The question as stored: each wording with its options, the correct ones marked, then why.
-export function QuestionView({ topic, question }: { topic: Topic; question: Question }) {
+export function QuestionView({ topic, question, preview }: QuestionViewProps) {
   const { wordings, answers } = question
+  const Title = preview ? 'h3' : 'h1'
   const wording = ({ text, options }: Question['wordings'][number]) => (
     <>
       <Markdown source={text} />
@@ -335,33 +345,31 @@ export function QuestionView({ topic, question }: { topic: Topic; question: Ques
     </>
   )
   return (
-    <div className="ws-panel">
-      <div className="ws-statement">
-        <h1 className="h3">{question.summary}</h1>
-        <p className="ws-statement-meta">
-          <span className="ws-difficulty" data-level={question.difficulty}>
-            {question.difficulty}
-          </span>
-          <span>{TYPE_LABEL[question.type]}</span>
-          {topic.name}
-        </p>
-        <ConceptTags names={conceptNames(topic, question.concepts)} />
-        {wordings.length === 1 ? (
-          wording(wordings[0])
-        ) : (
-          <Tabs defaultActiveKey={0} className="mb-3">
-            {wordings.map((w, i) => (
-              <Tab key={i} eventKey={i} title={`Wording ${i + 1}`}>
-                {wording(w)}
-              </Tab>
-            ))}
-          </Tabs>
-        )}
-        <section className="ws-explanation" aria-label="Explanation">
-          <h2 className="h6">Explanation</h2>
-          <Markdown source={question.explanation} />
-        </section>
-      </div>
+    <div className="ws-statement">
+      <Title className="h3">{question.summary}</Title>
+      <p className="ws-statement-meta">
+        <span className="ws-difficulty" data-level={question.difficulty}>
+          {question.difficulty}
+        </span>
+        <span>{TYPE_LABEL[question.type]}</span>
+        {topic.name}
+      </p>
+      <ConceptTags names={conceptNames(topic, question.concepts)} />
+      {wordings.length === 1 ? (
+        wording(wordings[0])
+      ) : (
+        <Tabs defaultActiveKey={0} className="mb-3">
+          {wordings.map((w, i) => (
+            <Tab key={i} eventKey={i} title={`Wording ${i + 1}`}>
+              {wording(w)}
+            </Tab>
+          ))}
+        </Tabs>
+      )}
+      <section className="ws-explanation" aria-label="Explanation">
+        <h2 className="h6">Explanation</h2>
+        <Markdown source={question.explanation} />
+      </section>
     </div>
   )
 }

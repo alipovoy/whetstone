@@ -1,37 +1,120 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Alert, Button, Form, Tab, Tabs } from 'react-bootstrap'
-import type { Difficulty } from '@/content/schema'
-import { PROBLEM_TEMPLATE, problemRequest, readItems } from '@/core/bridge'
-import { readDrafts, served, type Draft, type TopicRecord } from '@/core/topics'
+import type { Difficulty, Problem, Question, Topic, TopicFile } from '@/content/schema'
+import {
+  PROBLEM_TEMPLATE,
+  problemRequest,
+  QUESTION_TEMPLATE,
+  questionRequest,
+  readItems,
+  type ItemOrder,
+  type PromptRequest,
+} from '@/core/bridge'
+import {
+  addProblems,
+  addQuestions,
+  readDrafts,
+  served,
+  type Adder,
+  type Draft,
+  type ItemList,
+  type TopicRecord,
+} from '@/core/topics'
 import { checkProblem } from './check'
 import { CodeBlock } from './CodeBlock'
 import { CodeEditor } from './CodeEditor'
+import { capital } from './format'
+import { ItemOrderForm, type Order } from './ItemOrderForm'
+import { QuestionView } from './LibraryPages'
 import { Link } from './Link'
 import type { Runner } from './ProblemPage'
-import { ProblemOrderForm, type Order } from './ProblemOrderForm'
 import type { Route } from './route'
 import { Statement } from './Statement'
 
+type Check = Pick<Runner, 'test'>
+
+// What sets adding problems apart from adding questions.
+interface Kind<T> {
+  list: ItemList
+  noun: string
+  back: string
+  template: string
+  request: (request: PromptRequest, order: ItemOrder) => string
+  existing: (file: TopicFile) => string[]
+  add: Adder<T>
+  // How an item is checked, beyond the content rules when `check` is given.
+  rules: string
+  check?: (runner: Check, item: T) => Promise<string[]>
+  preview: (topic: Topic, item: T) => ReactNode
+}
+
+const PROBLEMS: Kind<Problem> = {
+  list: 'problems',
+  noun: 'problem',
+  back: 'Back to coding problems',
+  template: PROBLEM_TEMPLATE,
+  request: problemRequest,
+  existing: (file) => file.problems.map((p) => p.wordings[0].title),
+  add: addProblems,
+  rules:
+    'Each problem is run in Python: its reference solution must pass every test and its starter code must fail one.',
+  check: checkProblem,
+  preview: (topic, problem) => (
+    <Statement topic={topic} problem={problem} wording={problem.wordings[0]} preview />
+  ),
+}
+
+const QUESTIONS: Kind<Question> = {
+  list: 'questions',
+  noun: 'question',
+  back: 'Back to quiz questions',
+  template: QUESTION_TEMPLATE,
+  request: questionRequest,
+  existing: (file) => file.questions.map((q) => q.summary),
+  add: addQuestions,
+  rules:
+    'Each question is checked: its answers must be options, a single choice has one, and at least one option is wrong.',
+  preview: (topic, question) => <QuestionView topic={topic} question={question} preview />,
+}
+
 interface Props {
+  list: ItemList
   topics: TopicRecord[]
   // Prefilled from where the page was opened.
   initial: { topic?: string; concepts?: string[]; difficulty?: Difficulty }
-  runner: Pick<Runner, 'test'>
+  runner: Check
   back: Route
   onBusy: (busy: boolean) => void
   onAdd: (topic: string, items: unknown[]) => void
 }
 
+export function AddItemsPage({ list, ...props }: Props) {
+  return list === 'problems' ? (
+    <AddItems kind={PROBLEMS} {...props} />
+  ) : (
+    <AddItems kind={QUESTIONS} {...props} />
+  )
+}
+
 type Source = 'chat' | 'json'
 
-interface Checked {
-  draft: Draft
-  // Errors of the Python check, for a problem that reads.
+interface Checked<T> {
+  draft: Draft<T>
+  // Errors of the kind's own check, for an item that reads.
   errors: string[]
   ticked: boolean
 }
 
-export function AddProblemsPage({ topics, initial, runner, back, onBusy, onAdd }: Props) {
+function AddItems<T>({
+  kind,
+  topics,
+  initial,
+  runner,
+  back,
+  onBusy,
+  onAdd,
+}: Omit<Props, 'list'> & { kind: Kind<T> }) {
+  const { noun } = kind
   const ordered = topics.toSorted((a, b) => a.created_at - b.created_at)
   const [order, setOrder] = useState<Order>(() => {
     const topic = ordered.find((t) => t.id === initial.topic) ?? ordered[0]
@@ -44,8 +127,8 @@ export function AddProblemsPage({ topics, initial, runner, back, onBusy, onAdd }
     }
   })
   const [source, setSource] = useState<Source>('chat')
-  const [texts, setTexts] = useState<Record<Source, string>>({ chat: '', json: PROBLEM_TEMPLATE })
-  const [checked, setChecked] = useState<Checked[] | null>(null)
+  const [texts, setTexts] = useState<Record<Source, string>>({ chat: '', json: kind.template })
+  const [checked, setChecked] = useState<Checked<T>[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
 
@@ -55,8 +138,8 @@ export function AddProblemsPage({ topics, initial, runner, back, onBusy, onAdd }
   if (!record)
     return (
       <div className="ws-panel ws-empty">
-        <h1 className="h4">Add problems</h1>
-        <p className="text-body-secondary">Problems go into a topic. Create one first.</p>
+        <h1 className="h4">Add {noun}s</h1>
+        <p className="text-body-secondary">{capital(noun)}s go into a topic. Create one first.</p>
         <Link className="btn btn-primary" to={{ page: 'topics' }}>
           Open Topics
         </Link>
@@ -64,12 +147,8 @@ export function AddProblemsPage({ topics, initial, runner, back, onBusy, onAdd }
     )
 
   const text = texts[source]
-  const prompt = problemRequest(
-    {
-      topic: record.name,
-      concepts: record.concepts,
-      existing: served(record).file.problems.map((p) => p.wordings[0].title),
-    },
+  const prompt = kind.request(
+    { topic: record.name, concepts: record.concepts, existing: kind.existing(served(record).file) },
     order,
   )
   // A change to what is checked makes the results stale.
@@ -81,14 +160,14 @@ export function AddProblemsPage({ topics, initial, runner, back, onBusy, onAdd }
   async function check() {
     if (!record) return
     reset()
-    const read = readItems(text, 'problems')
+    const read = readItems(text, kind.list)
     if ('error' in read) return setError(read.error)
-    const drafts = readDrafts(record, read.items, () => crypto.randomUUID())
+    const drafts = readDrafts(record, read.items, () => crypto.randomUUID(), kind.add)
     setChecking(true)
     try {
-      const results: Checked[] = []
+      const results: Checked<T>[] = []
       for (const draft of drafts) {
-        const errors = draft.ok ? await checkProblem(runner, draft.problem) : []
+        const errors = draft.ok && kind.check ? await kind.check(runner, draft.item) : []
         results.push({ draft, errors, ticked: draft.ok && errors.length === 0 })
       }
       setChecked(results)
@@ -105,14 +184,14 @@ export function AddProblemsPage({ topics, initial, runner, back, onBusy, onAdd }
     <section aria-labelledby="add-title" className="ws-report-page">
       <div className="d-flex flex-wrap align-items-center gap-2">
         <h1 id="add-title" className="h3 mb-0 me-auto">
-          Add problems
+          Add {noun}s
         </h1>
         <Link className="btn btn-outline-secondary" to={back} held={checking}>
-          Back to coding problems
+          {kind.back}
         </Link>
       </div>
       <div className="ws-panel p-4">
-        <ProblemOrderForm
+        <ItemOrderForm
           topics={ordered}
           value={order}
           disabled={checking}
@@ -142,7 +221,7 @@ export function AddProblemsPage({ topics, initial, runner, back, onBusy, onAdd }
           </Tab>
           <Tab eventKey="json" title="Write JSON" disabled={checking}>
             <p className="text-body-secondary mb-0">
-              Write one problem, or a list of them, starting from the template.
+              Write one {noun}, or a list of them, starting from the template.
             </p>
           </Tab>
         </Tabs>
@@ -153,15 +232,12 @@ export function AddProblemsPage({ topics, initial, runner, back, onBusy, onAdd }
             setTexts((all) => ({ ...all, [source]: value }))
             reset()
           }}
-          label={source === 'chat' ? 'Chat bot answer' : 'Problems JSON'}
+          label={source === 'chat' ? 'Chat bot answer' : `${capital(noun)}s JSON`}
           language="json"
           readOnly={checking}
           className="ws-answer"
         />
-        <p className="text-body-secondary small mt-2 mb-2">
-          Each problem is run in Python: its reference solution must pass every test and its starter
-          code must fail one.
-        </p>
+        <p className="text-body-secondary small mt-2 mb-2">{kind.rules}</p>
         <Button onClick={() => void check()} disabled={checking || !text.trim()}>
           {checking ? 'Checking…' : 'Check'}
         </Button>
@@ -180,6 +256,7 @@ export function AddProblemsPage({ topics, initial, runner, back, onBusy, onAdd }
             {checked.map((c, i) => (
               <DraftRow
                 key={i}
+                kind={kind}
                 record={record}
                 checked={c}
                 number={i + 1}
@@ -196,11 +273,11 @@ export function AddProblemsPage({ topics, initial, runner, back, onBusy, onAdd }
             onClick={() =>
               onAdd(
                 record.id,
-                ticked.map((c) => c.draft.item),
+                ticked.map((c) => c.draft.raw),
               )
             }
           >
-            Add {ticked.length === 1 ? '1 problem' : `${ticked.length} problems`}
+            Add {ticked.length === 1 ? `1 ${noun}` : `${ticked.length} ${noun}s`}
           </Button>
         </section>
       )}
@@ -208,17 +285,24 @@ export function AddProblemsPage({ topics, initial, runner, back, onBusy, onAdd }
   )
 }
 
-interface RowProps {
+interface RowProps<T> {
+  kind: Kind<T>
   record: TopicRecord
-  checked: Checked
+  checked: Checked<T>
   number: number
   onTick: (on: boolean) => void
 }
 
-function DraftRow({ record, checked: { draft, errors, ticked }, number, onTick }: RowProps) {
-  const title = draft.title ?? `Problem ${number}`
-  const problems = draft.ok ? errors : draft.errors
-  const passes = problems.length === 0
+function DraftRow<T>({
+  kind,
+  record,
+  checked: { draft, errors, ticked },
+  number,
+  onTick,
+}: RowProps<T>) {
+  const title = draft.title ?? `${capital(kind.noun)} ${number}`
+  const failures = draft.ok ? errors : draft.errors
+  const passes = failures.length === 0
   return (
     <li className="ws-draft" aria-label={title}>
       <Form.Check
@@ -232,7 +316,7 @@ function DraftRow({ record, checked: { draft, errors, ticked }, number, onTick }
         <p className="ws-draft-ok">Passes the check.</p>
       ) : (
         <ul className="ws-draft-errors">
-          {problems.map((e, i) => (
+          {failures.map((e, i) => (
             <li key={i}>{e}</li>
           ))}
         </ul>
@@ -240,12 +324,7 @@ function DraftRow({ record, checked: { draft, errors, ticked }, number, onTick }
       {draft.ok && (
         <details>
           <summary>Preview</summary>
-          <Statement
-            topic={{ id: record.id, name: record.name, concepts: draft.concepts }}
-            problem={draft.problem}
-            wording={draft.problem.wordings[0]}
-            preview
-          />
+          {kind.preview({ id: record.id, name: record.name, concepts: draft.concepts }, draft.item)}
         </details>
       )}
     </li>

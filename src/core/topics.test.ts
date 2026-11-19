@@ -285,11 +285,12 @@ describe('readDrafts', () => {
       topic,
       [authored({ concepts: [{ name: 'Graphs', group: 'Trees' }] }), authored({ hints: [] })],
       () => 'x',
+      addProblems,
     )
     expect(drafts[0]).toMatchObject({
       ok: true,
       title: 'T',
-      problem: { id: 'x', concepts: ['graphs'] },
+      item: { id: 'x', concepts: ['graphs'] },
     })
     expect(drafts[0].ok && drafts[0].concepts.map((c) => c.name)).toEqual([
       'Two pointers',
@@ -299,6 +300,21 @@ describe('readDrafts', () => {
       ok: false,
       title: 'T',
       errors: ['hints: needs exactly three hints'],
+    })
+  })
+
+  it('reads questions the same way', () => {
+    const written = JSON.parse(itemText(question, topic.concepts))
+    const drafts = readDrafts(
+      topic,
+      [written, { ...written, answers: [0, 1] }],
+      () => 'y',
+      addQuestions,
+    )
+    expect(drafts[0]).toMatchObject({ ok: true, title: 'Which one', item: { id: 'y' } })
+    expect(drafts[1]).toMatchObject({
+      ok: false,
+      errors: ['a single choice has exactly one answer', 'at least one option must be wrong'],
     })
   })
 })

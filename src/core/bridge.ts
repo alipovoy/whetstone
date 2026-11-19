@@ -11,7 +11,7 @@ export interface PromptRequest {
 }
 
 // What to add: concepts by name, none meaning any of the topic.
-export interface ProblemOrder {
+export interface ItemOrder {
   focus: string[]
   difficulty: Difficulty | 'Mixed'
   count: number
@@ -65,21 +65,10 @@ export const QUESTION_TEMPLATE = JSON.stringify(QUESTION, null, 2)
 
 export function problemRequest(
   { topic, concepts, existing }: PromptRequest,
-  { focus, difficulty, count }: ProblemOrder,
+  order: ItemOrder,
 ): string {
-  const one = count === 1
   return [
-    `Write ${one ? 'one new Python coding interview problem' : `${count} new Python coding interview problems`} for the topic "${topic}".`,
-    ...(difficulty !== 'Mixed'
-      ? [`${one ? 'The problem is' : 'Every problem is'} ${difficulty}.`]
-      : one
-        ? []
-        : ['Mix the difficulties, from Easy to Hard.']),
-    ...(focus.length
-      ? [
-          `Focus on ${focus.length === 1 ? 'this concept' : 'these concepts'}: ${focus.join('; ')}. Another concept may join, an existing one or a new one.`,
-        ]
-      : []),
+    ...ask(order, topic, 'Python coding interview problem', 'problem'),
     ...shape('problems', PROBLEM),
     'Rules:',
     `- \`concepts\` lists the 1 to ${MAX_CONCEPTS} different ideas the problem practises; reuse existing concepts when they fit.`,
@@ -93,9 +82,13 @@ export function problemRequest(
   ].join('\n')
 }
 
-export function questionRequest({ topic, concepts, existing }: PromptRequest): string {
+export function questionRequest(
+  { topic, concepts, existing }: PromptRequest,
+  order: ItemOrder,
+): string {
   return [
-    `Write 5 new interview quiz questions for the topic "${topic}", single and multiple choice, from Easy to Hard.`,
+    ...ask(order, topic, 'interview quiz question', 'question'),
+    ...(order.count > 1 ? ['Mix single and multiple choice.'] : []),
     ...shape('questions', QUESTION),
     'Rules:',
     `- \`concepts\` lists the 1 to ${MAX_CONCEPTS} different ideas the question checks; reuse existing concepts when they fit.`,
@@ -107,6 +100,29 @@ export function questionRequest({ topic, concepts, existing }: PromptRequest): s
     '- `summary` is a short phrase naming what the question checks.',
     ...context('Questions', concepts, existing),
   ].join('\n')
+}
+
+// What to write: how many, of what difficulty, on which concepts. `kind` is the noun of `what`.
+function ask(
+  { focus, difficulty, count }: ItemOrder,
+  topic: string,
+  what: string,
+  kind: string,
+): string[] {
+  const one = count === 1
+  return [
+    `Write ${one ? `one new ${what}` : `${count} new ${what}s`} for the topic "${topic}".`,
+    ...(difficulty !== 'Mixed'
+      ? [`${one ? `The ${kind} is` : `Every ${kind} is`} ${difficulty}.`]
+      : one
+        ? []
+        : ['Mix the difficulties, from Easy to Hard.']),
+    ...(focus.length
+      ? [
+          `Focus on ${focus.length === 1 ? 'this concept' : 'these concepts'}: ${focus.join('; ')}. Another concept may join, an existing one or a new one.`,
+        ]
+      : []),
+  ]
 }
 
 function shape(list: ItemList, example: object): string[] {
@@ -145,7 +161,7 @@ export function readItems(text: string, list: ItemList): { items: unknown[] } | 
   const keyed = json as Record<string, unknown> | null
   const other = list === 'problems' ? 'questions' : 'problems'
   if (Array.isArray(keyed?.[other]) && !Array.isArray(keyed?.[list])) {
-    return { error: `This holds ${other}; use New ${other.slice(0, -1)}.` }
+    return { error: `This holds ${other}, not ${list}.` }
   }
   const listed = keyed?.[list]
   const items = Array.isArray(json) ? json : Array.isArray(listed) ? listed : [json]

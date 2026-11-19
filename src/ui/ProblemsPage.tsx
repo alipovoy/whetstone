@@ -13,7 +13,7 @@ import {
 import { Filters } from './Filters'
 import { Icon } from './icons'
 import { Link } from './Link'
-import { addProblemsFor } from './route'
+import { addItemsFor } from './route'
 import { ConceptTags, statusOptions, StatusPill, TestMarks } from './progress'
 
 const STATUSES = statusOptions(PROBLEM_STATUSES)
@@ -55,7 +55,7 @@ export function ProblemsPage({
           <h2 className="h5 mb-0">No problems to practise</h2>
           <p className="text-body-secondary">Add problems to a topic, or enable one.</p>
           <div className="d-flex flex-wrap justify-content-center gap-2">
-            <Link className="btn btn-primary" to={{ page: 'add-problems' }}>
+            <Link className="btn btn-primary" to={{ page: 'add-items', list: 'problems' }}>
               Add problems
             </Link>
             <Link className="btn btn-outline-secondary" to={{ page: 'topics' }}>
@@ -100,7 +100,7 @@ export function ProblemsPage({
                   <Button variant="outline-secondary" onClick={() => onFilter({})}>
                     Clear filters
                   </Button>
-                  <Link className="btn btn-primary" to={addProblemsFor(filter, entries)}>
+                  <Link className="btn btn-primary" to={addItemsFor('problems', filter, entries)}>
                     Add problems
                   </Link>
                 </div>

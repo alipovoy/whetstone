@@ -150,24 +150,31 @@ export function addProblems(
   })
 }
 
-// Each item read on its own, for a list that adds the ones that pass. A problem read comes with
+// Each item read on its own, for a list that adds the ones that pass. An item read comes with
 // the topic's concepts as they would be after adding it.
-export type Draft = { item: unknown; title?: string } & (
-  { ok: true; problem: Problem; concepts: Concept[] } | { ok: false; errors: string[] }
+export type Draft<T> = { raw: unknown; title?: string } & (
+  { ok: true; item: T; concepts: Concept[] } | { ok: false; errors: string[] }
 )
 
-export function readDrafts(record: TopicRecord, items: unknown[], newId: () => string): Draft[] {
-  return items.map((item) => {
-    const added = addProblems(record, [item], newId)
-    if (added.ok)
-      return {
-        item,
-        title: titleOf(item),
-        ok: true,
-        problem: added.added[0],
-        concepts: added.record.concepts,
-      }
-    return { item, title: titleOf(item), ok: false, errors: added.errors[0].errors }
+export type Adder<T> = (
+  record: TopicRecord,
+  items: unknown[],
+  newId: () => string,
+  replaces?: string,
+) => Adding<T>
+
+export function readDrafts<T>(
+  record: TopicRecord,
+  items: unknown[],
+  newId: () => string,
+  add: Adder<T>,
+): Draft<T>[] {
+  return items.map((raw) => {
+    const title = titleOf(raw)
+    const added = add(record, [raw], newId)
+    return added.ok
+      ? { raw, title, ok: true, item: added.added[0], concepts: added.record.concepts }
+      : { raw, title, ok: false, errors: added.errors[0].errors }
   })
 }
 

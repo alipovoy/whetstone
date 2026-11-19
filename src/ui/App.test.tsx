@@ -899,7 +899,7 @@ describe('Topics', () => {
       .mockResolvedValueOnce(graded)
       .mockResolvedValueOnce(graded)
       .mockResolvedValueOnce(graded)
-    const put = renderApp(runner, {}, { page: 'add-problems', topic: 't' })
+    const put = renderApp(runner, {}, { page: 'add-items', list: 'problems', topic: 't' })
     await userEvent.click(screen.getByRole('tab', { name: 'Write JSON' }))
     expect(screen.getByRole('textbox', { name: 'Problems JSON' })).toHaveTextContent(
       '"Pair with target sum"',
@@ -978,6 +978,25 @@ describe('Topics', () => {
       ),
     )
     expect(copy).toHaveBeenLastCalledWith(expect.stringContaining('Focus on this concept: E.'))
+  })
+
+  it('opens Add questions from a concept without questions, the quiz builder and Home', async () => {
+    renderApp(fakeRunner(), {}, { page: 'quizzes' })
+    expect(screen.getByText('No questions to quiz on')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('link', { name: 'Add questions' }))
+    expect(window.location.hash).toBe('#/settings/questions/add')
+    expect(screen.getByRole('heading', { level: 1, name: 'Add questions' })).toBeInTheDocument()
+
+    await openTopic('Topic')
+    await userEvent.click(screen.getByRole('link', { name: 'Add questions of C' }))
+    expect(window.location.hash).toBe('#/settings/questions/add?topic=t&concept=C')
+    expect(conceptsToggle()).toHaveTextContent('C')
+    await userEvent.click(screen.getByRole('link', { name: 'Back to quiz questions' }))
+    expect(window.location.hash).toBe('#/settings/questions')
+
+    await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Add questions' }))
+    expect(window.location.hash).toBe('#/settings/questions/add')
   })
 
   it('edits a problem as JSON beside a live preview, checks it, and saves it', async () => {
@@ -1066,10 +1085,9 @@ describe('Topics', () => {
     expect(window.location.hash).toBe('#/coding')
   })
 
-  it('adds, edits and deletes choice questions without running Python', async () => {
+  it('adds checked questions from a chat answer without running Python, then edits and deletes them', async () => {
     const runner = fakeRunner()
-    renderApp(runner)
-    await openTopic('Topic')
+    renderApp(runner, {}, { page: 'library', list: 'questions' })
     const question = (summary: string) => ({
       concepts: [{ name: 'C', group: 'G' }],
       type: 'multiple',
@@ -1079,44 +1097,48 @@ describe('Topics', () => {
       explanation: 'Because',
       summary,
     })
-    await userEvent.click(screen.getByRole('button', { name: 'New question' }))
-    const editor = () =>
-      EditorView.findFromDOM(screen.getByRole('textbox', { name: 'Question JSON' }))!
-    const write = (text: string) => {
-      const view = editor()
-      act(() => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } }))
-    }
-    write(
-      JSON.stringify({ questions: [question('Good'), { ...question('Bad'), answers: [0, 1, 2] }] }),
-    )
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
-    expect(screen.getByRole('region', { name: 'New question' })).toHaveTextContent(
-      'Question 2 “Bad”:at least one option must be wrong',
-    )
-
-    write(JSON.stringify({ questions: [question('Good')] }))
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
-    const questions = screen.getByRole('region', { name: 'Questions' })
-    expect(within(questions).getByRole('listitem', { name: 'Good' })).toHaveTextContent(
-      'Medium, multiple choice',
-    )
-    expect(runner.test).not.toHaveBeenCalled()
-
-    await userEvent.click(screen.getByRole('button', { name: 'Edit Good' }))
-    write(editor().state.doc.toString().replace('"Good"', '"Better"'))
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(within(questions).getByRole('listitem', { name: 'Better' })).toBeInTheDocument()
-
+    await userEvent.click(screen.getByRole('link', { name: 'Add questions' }))
+    expect(window.location.hash).toBe('#/settings/questions/add')
     const copy = vi.fn(async (_text: string) => undefined)
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText: copy },
       configurable: true,
     })
-    await userEvent.click(screen.getByText('Chat bot request for questions'))
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Copy Chat bot request for questions' }),
+    await userEvent.click(screen.getByRole('button', { name: 'Copy Prompt' }))
+    expect(copy).toHaveBeenLastCalledWith(
+      expect.stringContaining('Write 3 new interview quiz questions for the topic "Topic".'),
     )
-    expect(copy).toHaveBeenLastCalledWith(expect.stringContaining('do not repeat them:\n- Better'))
+
+    const answer = JSON.stringify({
+      questions: [question('Good'), { ...question('Bad'), answers: [0, 1, 2] }],
+    })
+    enter('Chat bot answer', `Here:\n\`\`\`json\n${answer}\n\`\`\``)
+    await userEvent.click(screen.getByRole('button', { name: 'Check' }))
+    expect(await screen.findByRole('checkbox', { name: 'Good' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Bad' })).toBeDisabled()
+    expect(screen.getByRole('listitem', { name: 'Bad' })).toHaveTextContent(
+      'at least one option must be wrong',
+    )
+    const preview = within(screen.getByRole('listitem', { name: 'Good' }))
+    expect(preview.getByRole('heading', { level: 3, name: 'Good' })).toBeInTheDocument()
+    expect(runner.test).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add 1 question' }))
+    expect(window.location.hash).toBe('#/settings/questions?topic=t')
+    expect(screen.getByText('Added 1 question to Topic.')).toBeInTheDocument()
+    expect(screen.getByRole('listitem', { name: 'Good' })).toHaveTextContent('Multiple choice')
+
+    await openTopic('Topic')
+    expect(screen.getByRole('link', { name: 'Add questions' })).toHaveAttribute(
+      'href',
+      '#/settings/questions/add?topic=t',
+    )
+    const questions = screen.getByRole('region', { name: 'Questions' })
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Good' }))
+    const editor = EditorView.findFromDOM(screen.getByRole('textbox', { name: 'Question JSON' }))!
+    enter('Question JSON', editor.state.doc.toString().replace('"Good"', '"Better"'))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(within(questions).getByRole('listitem', { name: 'Better' })).toBeInTheDocument()
 
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     await userEvent.click(screen.getByRole('button', { name: 'Delete Better' }))
@@ -1146,6 +1168,7 @@ describe('Topics', () => {
           concepts: [...topic.topic.concepts, { id: 'd', name: 'D', group: 'G' }],
         },
         problems: [topic.problems[0], shared],
+        questions: [{ ...choiceQuestion('q', 'single', ['a', 'b'], [0]), concepts: ['d'] }],
       },
       0,
     )
@@ -1187,7 +1210,7 @@ describe('Topics', () => {
       }),
     )
 
-    await userEvent.click(screen.getByRole('button', { name: 'New question' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Edit q' }))
     expect(within(concepts).getByRole('button', { name: 'Delete C' })).toBeDisabled()
     expect(within(adding).getByRole('textbox', { name: 'Concept name' })).toBeEnabled()
     expect(concepts).toHaveTextContent('Save or cancel the open question first')

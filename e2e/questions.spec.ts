@@ -43,29 +43,30 @@ ${JSON.stringify({
 })}
 \`\`\``
 
-test('see the built-in questions, add one from a chat answer', async ({ page }) => {
+test('add a question from a chat answer, checked first', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.goto('./')
   await page.getByRole('link', { name: 'Settings' }).click()
-  await page.getByRole('link', { name: 'Topics' }).click()
-  await expect(page.getByRole('listitem', { name: 'Algorithms & data structures' })).toContainText(
-    '35 questions',
+  await page.getByRole('link', { name: 'Quiz questions' }).click()
+  await page.getByRole('link', { name: 'Add questions' }).click()
+  await page.getByRole('button', { name: 'Copy Prompt' }).click()
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
+    'Write 3 new interview quiz questions for the topic "Algorithms & data structures".',
   )
-  await page.getByRole('link', { name: 'Algorithms & data structures' }).click()
-  const questions = page.getByRole('region', { name: 'Questions' })
-  await expect(questions.locator(':scope > ul > li')).toHaveCount(35)
 
-  await page.getByRole('button', { name: 'New question' }).click()
-  await page.getByRole('textbox', { name: 'Question JSON' }).fill(answer)
-  await page.getByRole('button', { name: 'Add' }).click()
-  await expect(questions.getByRole('listitem', { name: 'Average dict lookup cost' })).toBeVisible()
-
-  await expect.poll(() => savedQuestions(page)).toBe(36)
+  await page.getByRole('textbox', { name: 'Chat bot answer' }).fill(answer)
+  await page.getByRole('button', { name: 'Check' }).click()
+  await expect(page.getByRole('checkbox', { name: 'Average dict lookup cost' })).toBeChecked()
+  await page.getByRole('button', { name: 'Add 1 question' }).click()
+  await expect(page.getByText('Added 1 question to Algorithms & data structures.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Average dict lookup cost' })).toBeVisible()
+  await expect.poll(() => savedQuestions(page)).toBe(builtIn.length + 1)
 
   await page.reload()
-  await page.getByRole('link', { name: 'Settings' }).click()
-  await page.getByRole('link', { name: 'Topics' }).click()
-  await page.getByRole('link', { name: 'Algorithms & data structures' }).click()
-  await expect(questions.locator(':scope > ul > li')).toHaveCount(36)
+  await page.getByRole('link', { name: 'Average dict lookup cost' }).click()
+  await expect(page.getByRole('region', { name: 'Explanation' })).toContainText(
+    'A dict hashes the key',
+  )
 })
 
 test('filter the quiz questions, read one with its answers, delete it', async ({ page }) => {

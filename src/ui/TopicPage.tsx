@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Alert, Badge, Button, Form, ListGroup, Stack } from 'react-bootstrap'
-import { QUESTION_TEMPLATE, questionRequest, readItems } from '@/core/bridge'
+import { readItems } from '@/core/bridge'
 import {
   addQuestions,
   deleteItem,
@@ -10,9 +10,9 @@ import {
   type TopicRecord,
 } from '@/core/topics'
 import { conceptNames } from '@/content/schema'
-import { CodeBlock } from './CodeBlock'
 import { CodeEditor } from './CodeEditor'
 import { ConceptTags } from './progress'
+import { Link } from './Link'
 import { TopicConcepts } from './TopicConcepts'
 
 interface Props {
@@ -21,13 +21,13 @@ interface Props {
   onDelete: () => void
 }
 
-// The editor adds new questions, or replaces the one being edited.
 interface Editing {
   text: string
-  replaces?: { id: string; title: string }
+  replaces: { id: string; title: string }
 }
 
-// Problems are added, edited and deleted in Settings, Coding problems.
+// Problems are added, edited and deleted in Settings, Coding problems; questions are added in
+// Settings, Quiz questions.
 export function TopicPage({ topic, onChange, onDelete }: Props) {
   const [editing, setEditing] = useState<Editing | null>(null)
   const { file, unreadable } = served(topic)
@@ -38,11 +38,6 @@ export function TopicPage({ topic, onChange, onDelete }: Props) {
     concepts: conceptNames(file.topic, q.concepts),
     text: itemText(q, topic.concepts),
   }))
-  const request = {
-    topic: topic.name,
-    concepts: topic.concepts,
-    existing: questions.map((r) => r.title),
-  }
 
   return (
     <Stack gap={4}>
@@ -110,18 +105,13 @@ export function TopicPage({ topic, onChange, onDelete }: Props) {
             onCancel={() => setEditing(null)}
           />
         ) : (
-          <Button variant="primary" onClick={() => setEditing({ text: '' })}>
-            New question
-          </Button>
+          <Link
+            className="btn btn-primary"
+            to={{ page: 'add-items', list: 'questions', topic: topic.id }}
+          >
+            Add questions
+          </Link>
         )}
-        <div className="mt-4">
-          <Snippet
-            label="Chat bot request for questions"
-            value={questionRequest(request)}
-            language="markdown"
-          />
-          <Snippet label="Question template" value={QUESTION_TEMPLATE} language="json" />
-        </div>
       </section>
     </Stack>
   )
@@ -145,18 +135,15 @@ function QuestionEditor({ topic, initial, onDone, onCancel }: EditorProps) {
     setFailed([])
     const read = readItems(text, 'questions')
     if ('error' in read) return setError(read.error)
-    const added = addQuestions(topic, read.items, () => crypto.randomUUID(), replaces?.id)
+    const added = addQuestions(topic, read.items, () => crypto.randomUUID(), replaces.id)
     if (added.ok) onDone(added.record)
     else setFailed(added.errors)
   }
 
   return (
-    <section aria-label={replaces ? `Edit ${replaces.title}` : 'New question'}>
+    <section aria-label={`Edit ${replaces.title}`}>
       <p className="text-body-secondary mb-2">
-        {replaces
-          ? 'Edit the question as JSON.'
-          : 'Paste one question, a list of questions, or a chat bot answer.'}{' '}
-        Each question is checked first. Nothing is added unless every question passes.
+        Edit the question as JSON. It is saved only when it passes the check.
       </p>
       <div className="mb-2">
         <CodeEditor
@@ -169,7 +156,7 @@ function QuestionEditor({ topic, initial, onDone, onCancel }: EditorProps) {
       {error && <Alert variant="danger">{error}</Alert>}
       {failed.length > 0 && (
         <Alert variant="danger">
-          Nothing was {replaces ? 'saved' : 'added'}.
+          Nothing was saved.
           {failed.map(({ item, title, errors }) => (
             <div key={item} className="mt-2">
               Question {item}
@@ -187,7 +174,7 @@ function QuestionEditor({ topic, initial, onDone, onCancel }: EditorProps) {
       )}
       <Stack direction="horizontal" gap={2}>
         <Button onClick={submit} disabled={!text.trim()}>
-          {replaces ? 'Save' : 'Add'}
+          Save
         </Button>
         <Button variant="outline-secondary" onClick={onCancel}>
           Cancel
@@ -250,20 +237,5 @@ function Header({ topic, onChange, onDelete }: HeaderProps) {
         </Button>
       </Stack>
     </div>
-  )
-}
-
-function Snippet(props: { label: string; value: string; language: 'json' | 'markdown' }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <details className="mb-2" onToggle={(event) => setOpen(event.currentTarget.open)}>
-      <summary>{props.label}</summary>
-      {/* Mounted when shown: the editor measures its lines when it is created. */}
-      {open && (
-        <div className="mt-2">
-          <CodeBlock {...props} />
-        </div>
-      )}
-    </details>
   )
 }
