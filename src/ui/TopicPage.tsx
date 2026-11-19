@@ -11,7 +11,6 @@ import {
   addProblems,
   addQuestions,
   checkErrors,
-  conceptMap,
   deleteItem,
   itemText,
   served,
@@ -25,8 +24,9 @@ import { RUN_LIMIT_MS, type TestResult } from '@/runner/types'
 import { CodeBlock } from './CodeBlock'
 import { CodeEditor } from './CodeEditor'
 import type { Runner } from './ProblemPage'
-import { plural } from './format'
+import { capital } from './format'
 import { ConceptTags } from './progress'
+import { TopicConcepts } from './TopicConcepts'
 
 interface Props {
   topic: TopicRecord
@@ -77,32 +77,7 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
     <Stack gap={4}>
       <Header topic={topic} onChange={onChange} onDelete={onDelete} disabled={checking} />
 
-      <section aria-label="Concepts">
-        <h2 className="h5">Concepts</h2>
-        {topic.concepts.length === 0 ? (
-          <p className="text-body-secondary">
-            None yet: adding a problem or question adds its concepts.
-          </p>
-        ) : (
-          conceptMap(file).map(({ area, concepts }) => (
-            <section key={area} aria-label={area} className="ws-concept-area">
-              <h3 className="h6">{area}</h3>
-              <ListGroup as="ul">
-                {concepts.map((c) => (
-                  <ListGroup.Item as="li" key={c.id} aria-label={c.name}>
-                    <Stack direction="horizontal" gap={2} className="flex-wrap">
-                      <span>{c.name}</span>
-                      <span className="text-body-secondary small ms-auto">
-                        {plural(c.problems, 'problem')}, {plural(c.questions, 'question')}
-                      </span>
-                    </Stack>
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
-            </section>
-          ))
-        )}
-      </section>
+      <TopicConcepts topic={topic} file={file} disabled={checking} onChange={onChange} />
 
       {/* Mounted when first shown; an open editor survives switching tabs. */}
       <Tabs defaultActiveKey="problems" mountOnEnter>
@@ -132,7 +107,6 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
 }
 
 const NOUN = { problems: 'problem', questions: 'question' } as const
-const capital = (s: string) => s[0].toUpperCase() + s.slice(1)
 
 interface ItemsProps {
   list: ItemList
