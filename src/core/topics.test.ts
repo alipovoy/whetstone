@@ -60,20 +60,17 @@ let n = 0
 const nextId = () => `new-${++n}`
 
 describe('served', () => {
-  it('serves the problems that follow the content rules and counts the rest', () => {
+  it('serves the problems that follow the content rules', () => {
     const broken = { ...problem, id: 'q', hints: [] }
     const orphan = { ...problem, id: 'r', concepts: ['gone'] }
-    const { file, unreadable } = served({ ...topic, problems: [problem, broken, orphan] })
+    const file = served({ ...topic, problems: [problem, broken, orphan] })
     expect(file.problems.map((p) => p.id)).toEqual(['p'])
     expect(file.topic).toEqual({ id: 't', name: 'Topic', concepts: topic.concepts })
-    expect(unreadable).toEqual({ problems: 2, questions: 0 })
   })
 
-  it('serves the questions that follow the content rules and counts the rest', () => {
+  it('serves the questions that follow the content rules', () => {
     const wrong = { ...question, id: 'q2', answers: [5] }
-    const { file, unreadable } = served({ ...topic, questions: [question, wrong] })
-    expect(file.questions).toEqual([question])
-    expect(unreadable).toEqual({ problems: 0, questions: 1 })
+    expect(served({ ...topic, questions: [question, wrong] }).questions).toEqual([question])
   })
 
   it('reads a topic stored before questions existed', () => {

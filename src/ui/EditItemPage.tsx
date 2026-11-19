@@ -2,27 +2,44 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Button } from 'react-bootstrap'
 import { readItems } from '@/core/bridge'
 import type { LibraryEntry } from '@/core/library'
-import { addProblems, itemText, readDrafts, type TopicRecord } from '@/core/topics'
-import { checkProblem } from './check'
+import { itemText, readDrafts, type ItemList, type TopicRecord } from '@/core/topics'
+import { capital } from './format'
 import { CodeEditor } from './CodeEditor'
-import { ProblemView } from './LibraryPages'
+import { KINDS, type Check, type Kind } from './kinds'
 import { Link } from './Link'
-import type { Runner } from './ProblemPage'
 import { guardLeaving, type Route } from './route'
 import { SplitView } from './SplitView'
 
 interface Props {
+  list: ItemList
   record: TopicRecord
   entry: LibraryEntry
-  runner: Pick<Runner, 'test'>
+  runner: Check
   back: Route
   onBusy: (busy: boolean) => void
   onSave: (record: TopicRecord) => void
 }
 
+export function EditItemPage({ list, ...props }: Props) {
+  return list === 'problems' ? (
+    <EditItem kind={KINDS.problems} {...props} />
+  ) : (
+    <EditItem kind={KINDS.questions} {...props} />
+  )
+}
+
 type Outcome = { ok: true } | { ok: false; errors: string[] }
 
-export function EditProblemPage({ record, entry, runner, back, onBusy, onSave }: Props) {
+function EditItem<T>({
+  kind,
+  record,
+  entry,
+  runner,
+  back,
+  onBusy,
+  onSave,
+}: Omit<Props, 'list'> & { kind: Kind<T> }) {
+  const { noun } = kind
   const [initial] = useState(() => itemText(entry.raw, record.concepts))
   const [text, setText] = useState(initial)
   const [outcome, setOutcome] = useState<Outcome | null>(null)
@@ -51,26 +68,26 @@ export function EditProblemPage({ record, entry, runner, back, onBusy, onSave }:
     }
   }, [])
 
-  // The preview follows the text while it reads as a problem, and keeps the last one that did.
+  // The preview follows the text while it reads as an item, and keeps the last one that did.
   const reading = useMemo(() => {
-    const read = readItems(text, 'problems')
+    const read = readItems(text, kind.list)
     if ('error' in read || read.items.length !== 1) return null
-    const [draft] = readDrafts(record, read.items, () => entry.id, addProblems)
+    const [draft] = readDrafts(record, read.items, () => entry.id, kind.add)
     return draft.ok ? draft : null
-  }, [text, record, entry.id])
+  }, [text, record, entry.id, kind])
   const [shown, setShown] = useState(reading)
   if (reading && reading !== shown) setShown(reading)
 
-  // The edited topic when the problem passes every check.
+  // The edited topic when the item passes every check.
   async function check(): Promise<TopicRecord | null> {
     setOutcome(null)
-    const read = readItems(text, 'problems')
+    const read = readItems(text, kind.list)
     if ('error' in read) return fail([read.error])
-    const added = addProblems(record, read.items, () => entry.id, entry.id)
+    const added = kind.add(record, read.items, () => entry.id, entry.id)
     if (!added.ok) return fail(added.errors.flatMap((e) => e.errors))
     setChecking(true)
     try {
-      const errors = await checkProblem(runner, added.added[0])
+      const errors = kind.check ? await kind.check(runner, added.added[0]) : []
       if (errors.length) return fail(errors)
       setOutcome({ ok: true })
       return added.record
@@ -120,7 +137,7 @@ export function EditProblemPage({ record, entry, runner, back, onBusy, onSave }:
           setText(value)
           setOutcome(null)
         }}
-        label="Problem JSON"
+        label={`${capital(noun)} JSON`}
         language="json"
         readOnly={checking}
       />
@@ -130,18 +147,15 @@ export function EditProblemPage({ record, entry, runner, back, onBusy, onSave }:
   const preview = (
     <div className="ws-edit-pane ws-report-page">
       {!shown ? (
-        <p className="text-body-secondary">The preview shows once the JSON reads as a problem.</p>
+        <p className="text-body-secondary">The preview shows once the JSON reads as a {noun}.</p>
       ) : (
         <>
           {shown !== reading && (
             <p className="text-body-secondary mb-0">
-              The JSON does not read as a problem now; this is how it last read.
+              The JSON does not read as a {noun} now; this is how it last read.
             </p>
           )}
-          <ProblemView
-            topic={{ id: record.id, name: record.name, concepts: shown.concepts }}
-            problem={shown.item}
-          />
+          {kind.view({ id: record.id, name: record.name, concepts: shown.concepts }, shown.item)}
         </>
       )}
     </div>
@@ -154,7 +168,7 @@ export function EditProblemPage({ record, entry, runner, back, onBusy, onSave }:
           Edit {entry.title}
         </h1>
         <Link className="btn btn-outline-secondary" to={back} held={checking}>
-          Back to the problem
+          Back to the {noun}
         </Link>
         <Button variant="outline-primary" onClick={() => void check()} disabled={checking}>
           {checking ? 'Checking…' : 'Check'}

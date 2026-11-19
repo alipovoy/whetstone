@@ -18,13 +18,12 @@ import type { Route } from './route'
 
 interface Props {
   topic: TopicRecord
-  locked: boolean
   onChange: (change: (topic: TopicRecord) => TopicRecord) => void
 }
 
 const AREAS = 'concept-areas'
 
-export function TopicConcepts({ topic, locked, onChange }: Props) {
+export function TopicConcepts({ topic, onChange }: Props) {
   const [editing, setEditing] = useState<string | null>(null)
   const areas = [...new Set(topic.concepts.map((c) => c.group))]
   // A library lists every stored item, served or not, and filters by the concepts left
@@ -68,23 +67,19 @@ export function TopicConcepts({ topic, locked, onChange }: Props) {
           <option key={area} value={area} />
         ))}
       </datalist>
-      {locked && (
-        <p className="text-body-secondary small">
-          Save or cancel the open question first to change concepts.
-        </p>
-      )}
       <ConceptForm
         label="New concept"
         submit="New concept"
         className="mb-3"
-        disabled={locked}
         clearOnSave
         onSave={(name, area) => addConcept(topic, name, area)}
         onSaved={(record) => onChange(() => record)}
       />
       {topic.concepts.length === 0 ? (
         <p className="text-body-secondary">
-          None yet: adding a problem or question adds its concepts.
+          None yet. Concepts join as you{' '}
+          <Link to={{ page: 'add-items', list: 'problems', topic: topic.id }}>add problems</Link> or{' '}
+          <Link to={{ page: 'add-items', list: 'questions', topic: topic.id }}>add questions</Link>.
         </p>
       ) : (
         conceptMap(topic.concepts).map(({ area, concepts }) => (
@@ -100,7 +95,6 @@ export function TopicConcepts({ topic, locked, onChange }: Props) {
                         label={`Edit ${c.name}`}
                         submit="Save"
                         initial={{ name: c.name, area }}
-                        disabled={locked}
                         onSave={(name, newArea) => editConcept(topic, c.id, name, newArea)}
                         onSaved={(record) => {
                           onChange(() => record)
@@ -139,7 +133,7 @@ export function TopicConcepts({ topic, locked, onChange }: Props) {
                             size="sm"
                             variant="outline-primary"
                             aria-label={`Edit ${c.name}`}
-                            disabled={locked || editing !== null}
+                            disabled={editing !== null}
                             onClick={() => setEditing(c.id)}
                           >
                             Edit
@@ -148,7 +142,7 @@ export function TopicConcepts({ topic, locked, onChange }: Props) {
                             size="sm"
                             variant="outline-danger"
                             aria-label={`Delete ${c.name}`}
-                            disabled={locked || editing !== null}
+                            disabled={editing !== null}
                             onClick={() => remove(c.id, c.name)}
                           >
                             Delete
@@ -196,22 +190,13 @@ interface FormProps {
   submit: string
   className?: string
   initial?: { name: string; area: string }
-  disabled: boolean
   clearOnSave?: boolean
   onSave: (name: string, area: string) => ConceptChange
   onSaved: (record: TopicRecord) => void
   onCancel?: () => void
 }
 
-function ConceptForm({
-  label,
-  submit,
-  className,
-  initial,
-  disabled,
-  clearOnSave,
-  ...on
-}: FormProps) {
+function ConceptForm({ label, submit, className, initial, clearOnSave, ...on }: FormProps) {
   const [name, setName] = useState(initial?.name ?? '')
   const [area, setArea] = useState(initial?.area ?? '')
   const [error, setError] = useState<string | null>(null)
@@ -252,7 +237,7 @@ function ConceptForm({
             type="submit"
             variant={on.onCancel ? 'primary' : 'outline-primary'}
             className="text-nowrap"
-            disabled={disabled || !name.trim() || !area.trim()}
+            disabled={!name.trim() || !area.trim()}
           >
             {submit}
           </Button>

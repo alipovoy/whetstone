@@ -20,7 +20,7 @@ export type Route =
   // request.
   | { page: 'library'; list: ItemList; filter?: ItemFilter; disabled?: boolean }
   | { page: 'library-item'; list: ItemList; topic: string; item: string }
-  | { page: 'edit-problem'; topic: string; problem: string }
+  | { page: 'edit-item'; list: ItemList; topic: string; item: string }
   // Prefilled from where it was opened: concepts by name.
   | {
       page: 'add-items'
@@ -51,8 +51,8 @@ export function parseRoute(hash: string): Route {
   if (rest.length > 0) return { page: 'home' }
   const list = LISTS.find((l) => first === 'settings' && second === l)
   if (list) {
-    if (list === 'problems' && fifth === EDIT && third && fourth)
-      return { page: 'edit-problem', topic: third, problem: fourth }
+    if (fifth === EDIT && third && fourth)
+      return { page: 'edit-item', list, topic: third, item: fourth }
     if (fifth) return { page: 'home' }
     if (third && fourth) return { page: 'library-item', list, topic: third, item: fourth }
     if (third === ADD) return addRoute(list, query)
@@ -116,8 +116,8 @@ export function href(route: Route): string {
     }
     case 'library-item':
       return path('settings', route.list, route.topic, route.item)
-    case 'edit-problem':
-      return path('settings', 'problems', route.topic, route.problem, EDIT)
+    case 'edit-item':
+      return path('settings', route.list, route.topic, route.item, EDIT)
     case 'add-items': {
       const params = new URLSearchParams()
       if (route.topic) params.set('topic', route.topic)
@@ -230,7 +230,7 @@ export function sectionOf(route: Route): Section {
     case 'library':
     case 'library-item':
     case 'add-items':
-    case 'edit-problem':
+    case 'edit-item':
       return 'settings'
   }
 }

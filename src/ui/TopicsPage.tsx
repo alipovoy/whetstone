@@ -39,7 +39,7 @@ export function TopicsPage({ topics, onCreate, onEnable }: Props) {
         {topics
           .toSorted((a, b) => a.created_at - b.created_at)
           .map((topic) => {
-            const { problems, questions } = served(topic).file
+            const { problems, questions } = served(topic)
             return (
               <ListGroup.Item as="li" key={topic.id} aria-label={topic.name}>
                 <Stack direction="horizontal" gap={3} className="flex-wrap">

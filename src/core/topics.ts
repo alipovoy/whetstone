@@ -52,11 +52,6 @@ export function topicFromFile({ topic, problems, questions }: TopicFile, now: nu
   return { ...newTopic(topic.id, topic.name, now), concepts: topic.concepts, problems, questions }
 }
 
-export interface Served {
-  file: TopicFile
-  unreadable: { problems: number; questions: number }
-}
-
 type Read<T> = { ok: true; item: T } | { ok: false; errors: string[] }
 export type ItemReader<T> = (raw: unknown, concepts: Set<string>) => Read<T>
 
@@ -88,20 +83,13 @@ function servedItems<T>(items: unknown[], read: ItemReader<T>, concepts: Set<str
   })
 }
 
-export function served(record: TopicRecord): Served {
+// The topic as practised: only the items that follow the current rules.
+export function served(record: TopicRecord): TopicFile {
   const concepts = new Set(record.concepts.map((c) => c.id))
-  const problems = servedItems(record.problems, readProblem, concepts)
-  const questions = servedItems(record.questions, readQuestion, concepts)
   return {
-    file: {
-      topic: { id: record.id, name: record.name, concepts: record.concepts },
-      problems,
-      questions,
-    },
-    unreadable: {
-      problems: record.problems.length - problems.length,
-      questions: record.questions.length - questions.length,
-    },
+    topic: { id: record.id, name: record.name, concepts: record.concepts },
+    problems: servedItems(record.problems, readProblem, concepts),
+    questions: servedItems(record.questions, readQuestion, concepts),
   }
 }
 
