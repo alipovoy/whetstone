@@ -19,6 +19,7 @@ import type { Runner } from './ProblemPage'
 import { capital } from './format'
 import { ConceptTags } from './progress'
 import { Link } from './Link'
+import type { Route } from './route'
 import { TopicConcepts } from './TopicConcepts'
 
 interface Props {
@@ -93,25 +94,11 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
             list="problems"
             rows={problems}
             unreadable={unreadable.problems}
-            adding={
-              <Link className="btn btn-primary" to={{ page: 'add-problems', topic: topic.id }}>
-                Add problems
-              </Link>
-            }
+            addAt={{ page: 'add-problems', topic: topic.id }}
           />
         </Tab>
         <Tab eventKey="questions" title="Questions" disabled={checking}>
-          <Items
-            {...shared}
-            list="questions"
-            rows={questions}
-            unreadable={unreadable.questions}
-            adding={(open) => (
-              <Button variant="primary" onClick={open}>
-                New question
-              </Button>
-            )}
-          >
+          <Items {...shared} list="questions" rows={questions} unreadable={unreadable.questions}>
             <Snippet
               label="Chat bot request for questions"
               value={questionRequest({ ...request, existing: questions.map((r) => r.title) })}
@@ -138,7 +125,7 @@ interface ItemsProps {
   onChange: Props['onChange']
   onEditor: (list: ItemList, open: boolean) => void
   // Problems are added on their own page; questions here.
-  adding: ReactNode | ((open: () => void) => ReactNode)
+  addAt?: Route
   children?: ReactNode
 }
 
@@ -146,7 +133,7 @@ function Items({
   list,
   rows,
   unreadable,
-  adding,
+  addAt,
   children,
   onChange,
   onEditor,
@@ -208,10 +195,14 @@ function Items({
           }}
           onCancel={() => setEditing(null)}
         />
-      ) : typeof adding === 'function' ? (
-        adding(() => setEditing({ text: '' }))
+      ) : addAt ? (
+        <Link className="btn btn-primary" to={addAt}>
+          Add {list}
+        </Link>
       ) : (
-        adding
+        <Button variant="primary" onClick={() => setEditing({ text: '' })}>
+          New {NOUN[list]}
+        </Button>
       )}
       {children && <div className="mt-4">{children}</div>}
     </section>
