@@ -788,12 +788,6 @@ describe('Topics', () => {
   const problemEditor = () =>
     EditorView.findFromDOM(screen.getByRole('textbox', { name: 'Problem JSON' }))!
 
-  async function submit(text: string, button = 'Add') {
-    const view = problemEditor()
-    act(() => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } }))
-    await userEvent.click(screen.getByRole('button', { name: button }))
-  }
-
   // jsdom cannot type into CodeMirror, so the text goes in through the editor itself.
   function enter(label: string, text: string) {
     const view = EditorView.findFromDOM(screen.getByRole('textbox', { name: label }))!
@@ -960,28 +954,88 @@ describe('Topics', () => {
       ),
     )
     expect(copy).toHaveBeenLastCalledWith(expect.stringContaining('Focus on this concept: E.'))
-
-    await openTopic('Topic')
-    await userEvent.click(screen.getByRole('link', { name: 'Add problems' }))
-    expect(window.location.hash).toBe('#/settings/problems/add?topic=t')
   })
 
-  it('edits a served problem in place after the check', async () => {
+  it('edits a problem as JSON beside a live preview, checks it, and saves it', async () => {
     const runner = fakeRunner()
-    runner.test.mockResolvedValueOnce(allPass).mockResolvedValueOnce(graded)
-    renderApp(runner)
-    await openTopic('Topic')
-    await userEvent.click(screen.getByRole('button', { name: 'Edit First problem' }))
-    const text = problemEditor().state.doc.toString()
-    await submit(text.replace('"First problem"', '"Renamed problem"'), 'Save')
+    runner.test
+      .mockResolvedValueOnce(graded)
+      .mockResolvedValueOnce(graded)
+      .mockResolvedValueOnce(allPass)
+      .mockResolvedValueOnce(graded)
+    const put = renderApp(runner, {}, { page: 'library-problem', topic: 't', problem: 'one' })
+    await userEvent.click(screen.getByRole('link', { name: 'Edit' }))
+    expect(window.location.hash).toBe('#/settings/problems/t/one/edit')
+    const preview = screen.getByRole('region', { name: 'Preview' })
+    expect(within(preview).getByRole('heading', { name: 'First problem' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
 
-    const problems = screen.getByRole('region', { name: 'Topic problems' })
-    await within(problems).findByRole('listitem', { name: 'Renamed problem' })
-    expect(
-      within(problems)
-        .getAllByRole('listitem')
-        .flatMap((li) => li.getAttribute('aria-label') ?? []),
-    ).toEqual(['Renamed problem', 'Second problem'])
+    const text = problemEditor().state.doc.toString()
+    enter('Problem JSON', text.replace('"First problem"', '"Renamed problem"'))
+    expect(within(preview).getByRole('heading', { name: 'Renamed problem' })).toBeInTheDocument()
+    enter('Problem JSON', text.replace('"First problem"', '"Half').slice(0, -10))
+    expect(within(preview).getByRole('heading', { name: 'Renamed problem' })).toBeInTheDocument()
+    expect(preview).toHaveTextContent('this is how it last read')
+
+    enter('Problem JSON', text.replace('"hints": [', '"hints": ["0", '))
+    await userEvent.click(screen.getByRole('button', { name: 'Check' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('hints: needs exactly three hints')
+    expect(runner.test).not.toHaveBeenCalled()
+
+    enter('Problem JSON', text.replace('"First problem"', '"Renamed problem"'))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'the reference solution fails test_b',
+    )
+    expect(put.topics.put).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByRole('button', { name: 'Try it' })).toBeInTheDocument()
+    expect(window.location.hash).toBe('#/settings/problems/t/one')
+    expect(screen.getByRole('heading', { level: 1, name: 'Renamed problem' })).toBeVisible()
+    expect(put.topics.put.mock.lastCall![0].problems.map((p) => p.id)).toEqual(['one', 'two'])
+    // The check that saved it no longer holds the page.
+    await userEvent.click(mainLink('Quizzes'))
+    expect(window.location.hash).toBe('#/quizzes')
+  })
+
+  it('asks before leaving unsaved changes, and opens a broken problem to fix it', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const broken = { ...topic.problems[0], id: 'bad', hints: [] }
+    renderApp(
+      fakeRunner(),
+      { topics: [{ ...topicFromFile(topic, 0), problems: [broken] }] },
+      { page: 'edit-problem', topic: 't', problem: 'bad' },
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Not served, because:hints: needs exactly three hints',
+    )
+    expect(screen.getByRole('region', { name: 'Preview' })).toHaveTextContent(
+      'The preview shows once the JSON reads as a problem.',
+    )
+    expect(problemEditor().state.doc.toString()).toContain('"name": "C"')
+
+    await userEvent.click(screen.getByRole('link', { name: 'Back to the problem' }))
+    expect(confirm).not.toHaveBeenCalled()
+    expect(window.location.hash).toBe('#/settings/problems/t/bad')
+    await userEvent.click(screen.getByRole('link', { name: 'Edit' }))
+
+    enter(
+      'Problem JSON',
+      problemEditor().state.doc.toString().replace('"hints": []', '"hints": ["1", "2", "3"]'),
+    )
+    await userEvent.click(screen.getByRole('link', { name: 'Back to the problem' }))
+    expect(confirm).toHaveBeenCalledWith('Leave without saving your changes?')
+    expect(window.location.hash).toBe('#/settings/problems/t/bad/edit')
+    act(() => {
+      window.location.hash = '#/settings/problems'
+      window.dispatchEvent(new HashChangeEvent('hashchange'))
+    })
+    expect(screen.getByRole('heading', { name: 'Edit First problem' })).toBeInTheDocument()
+
+    confirm.mockReturnValue(true)
+    await userEvent.click(mainLink('Coding problems'))
+    expect(window.location.hash).toBe('#/coding')
   })
 
   it('adds, edits and deletes choice questions without running Python', async () => {
@@ -997,8 +1051,6 @@ describe('Topics', () => {
       explanation: 'Because',
       summary,
     })
-    expect(screen.queryByRole('button', { name: 'New question' })).toBeNull()
-    await userEvent.click(screen.getByRole('tab', { name: 'Questions' }))
     await userEvent.click(screen.getByRole('button', { name: 'New question' }))
     const editor = () =>
       EditorView.findFromDOM(screen.getByRole('textbox', { name: 'Question JSON' }))!
@@ -1016,7 +1068,7 @@ describe('Topics', () => {
 
     write(JSON.stringify({ questions: [question('Good')] }))
     await userEvent.click(screen.getByRole('button', { name: 'Add' }))
-    const questions = screen.getByRole('region', { name: 'Topic questions' })
+    const questions = screen.getByRole('region', { name: 'Questions' })
     expect(within(questions).getByRole('listitem', { name: 'Good' })).toHaveTextContent(
       'Medium, multiple choice',
     )
@@ -1107,10 +1159,10 @@ describe('Topics', () => {
       }),
     )
 
-    await userEvent.click(screen.getByRole('button', { name: 'Edit Second problem' }))
+    await userEvent.click(screen.getByRole('button', { name: 'New question' }))
     expect(within(concepts).getByRole('button', { name: 'Delete C' })).toBeDisabled()
     expect(within(adding).getByRole('textbox', { name: 'Concept name' })).toBeEnabled()
-    expect(concepts).toHaveTextContent('Save or cancel the open problem or question first')
+    expect(concepts).toHaveTextContent('Save or cancel the open question first')
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(within(concepts).getByRole('button', { name: 'Delete C' })).toBeEnabled()
 
@@ -1126,9 +1178,6 @@ describe('Topics', () => {
     confirm.mockReturnValue(true)
     await userEvent.click(within(concepts).getByRole('button', { name: 'Delete C' }))
     expect(within(concepts).queryByRole('listitem', { name: 'C' })).toBeNull()
-    const problems = screen.getByRole('region', { name: 'Topic problems' })
-    expect(within(problems).queryByRole('listitem', { name: 'First problem' })).toBeNull()
-    expect(within(problems).getByRole('listitem', { name: 'Second problem' })).toBeInTheDocument()
     expect(put.topics.put).toHaveBeenLastCalledWith(
       expect.objectContaining({ problems: [{ ...shared, concepts: ['d'] }] }),
     )

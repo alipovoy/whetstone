@@ -35,12 +35,11 @@ async function addTopic(page: Page, name: string) {
   await page.getByRole('link', { name: 'Topics' }).click()
   await page.getByRole('textbox', { name: 'New topic name' }).fill(name)
   await page.getByRole('button', { name: 'Create topic' }).click()
-  await page.getByRole('tab', { name: 'Questions' }).click()
   await page.getByRole('button', { name: 'New question' }).click()
   await page.getByRole('textbox', { name: 'Question JSON' }).fill(questions(name))
   await page.getByRole('button', { name: 'Add' }).click()
   await expect(
-    page.getByRole('region', { name: 'Topic questions' }).locator(':scope > ul > li'),
+    page.getByRole('region', { name: 'Questions' }).locator(':scope > ul > li'),
   ).toHaveCount(5)
 }
 

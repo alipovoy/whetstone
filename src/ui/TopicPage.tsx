@@ -1,287 +1,170 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { Alert, Badge, Button, Form, ListGroup, Stack, Tab, Tabs } from 'react-bootstrap'
+import { useState } from 'react'
+import { Alert, Badge, Button, Form, ListGroup, Stack } from 'react-bootstrap'
 import { QUESTION_TEMPLATE, questionRequest, readItems } from '@/core/bridge'
 import {
-  addProblems,
   addQuestions,
   deleteItem,
   itemText,
   served,
   type ItemErrors,
-  type ItemList,
   type TopicRecord,
 } from '@/core/topics'
 import { conceptNames } from '@/content/schema'
-import { checkProblem } from './check'
 import { CodeBlock } from './CodeBlock'
 import { CodeEditor } from './CodeEditor'
-import type { Runner } from './ProblemPage'
-import { capital } from './format'
 import { ConceptTags } from './progress'
-import { Link } from './Link'
-import type { Route } from './route'
 import { TopicConcepts } from './TopicConcepts'
 
 interface Props {
   topic: TopicRecord
-  runner: Pick<Runner, 'test'>
   onChange: (change: (topic: TopicRecord) => TopicRecord) => void
   onDelete: () => void
-  onBusy: (busy: boolean) => void
 }
 
-// The editor adds new items to its list, or replaces the one being edited.
+// The editor adds new questions, or replaces the one being edited.
 interface Editing {
   text: string
   replaces?: { id: string; title: string }
 }
 
-interface Row {
-  id: string
-  title: string
-  badge: string
-  concepts: string[]
-  text: string
-}
-
-export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) {
-  const [checking, setChecking] = useState(false)
-  const [editors, setEditors] = useState<ItemList[]>([])
+// Problems are added, edited and deleted in Settings, Coding problems.
+export function TopicPage({ topic, onChange, onDelete }: Props) {
+  const [editing, setEditing] = useState<Editing | null>(null)
   const { file, unreadable } = served(topic)
-
-  useEffect(() => onBusy(checking), [checking, onBusy])
-
-  const problems: Row[] = file.problems.map((p) => ({
-    id: p.id,
-    title: p.wordings[0].title,
-    badge: p.difficulty,
-    concepts: conceptNames(file.topic, p.concepts),
-    text: itemText(p, topic.concepts),
-  }))
-  const questions: Row[] = file.questions.map((q) => ({
+  const questions = file.questions.map((q) => ({
     id: q.id,
     title: q.summary,
     badge: `${q.difficulty}, ${q.type === 'single' ? 'single choice' : 'multiple choice'}`,
     concepts: conceptNames(file.topic, q.concepts),
     text: itemText(q, topic.concepts),
   }))
-  const request = { topic: topic.name, concepts: topic.concepts }
-  const onEditor = useCallback(
-    (list: ItemList, open: boolean) =>
-      setEditors((lists) => [...lists.filter((l) => l !== list), ...(open ? [list] : [])]),
-    [],
-  )
-  const shared = { topic, runner, checking, onChecking: setChecking, onChange, onEditor }
+  const request = {
+    topic: topic.name,
+    concepts: topic.concepts,
+    existing: questions.map((r) => r.title),
+  }
 
   return (
     <Stack gap={4}>
-      <Header topic={topic} onChange={onChange} onDelete={onDelete} disabled={checking} />
+      <Header topic={topic} onChange={onChange} onDelete={onDelete} />
 
       <TopicConcepts
         topic={topic}
         file={file}
-        disabled={checking}
-        // An open item editor holds concept names; a change under it would bring them back.
-        locked={editors.length > 0}
+        // An open editor holds concept names; a change under it would bring them back.
+        locked={editing !== null}
         onChange={onChange}
       />
 
-      {/* Mounted when first shown; an open editor survives switching tabs. */}
-      <Tabs defaultActiveKey="problems" mountOnEnter>
-        <Tab eventKey="problems" title="Problems" disabled={checking}>
-          <Items
-            {...shared}
-            list="problems"
-            rows={problems}
-            unreadable={unreadable.problems}
-            addAt={{ page: 'add-problems', topic: topic.id }}
+      <section aria-labelledby="questions-title">
+        <h2 id="questions-title" className="h5">
+          Questions
+        </h2>
+        {unreadable.questions > 0 && (
+          <Alert variant="warning">
+            {unreadable.questions} questions do not follow the current content rules and are not
+            served.
+          </Alert>
+        )}
+        <ListGroup as="ul" className="mb-2">
+          {questions.map(({ id, title, badge, concepts, text }) => (
+            <ListGroup.Item as="li" key={id} aria-label={title}>
+              <Stack direction="horizontal" gap={2} className="flex-wrap">
+                <span className="fw-semibold">{title}</span>
+                <Badge bg="secondary">{badge}</Badge>
+                <ConceptTags names={concepts} />
+                <Stack direction="horizontal" gap={2} className="ms-auto">
+                  <Button
+                    size="sm"
+                    variant="outline-primary"
+                    aria-label={`Edit ${title}`}
+                    disabled={editing !== null}
+                    onClick={() => setEditing({ text, replaces: { id, title } })}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline-danger"
+                    aria-label={`Delete ${title}`}
+                    disabled={editing !== null}
+                    onClick={() => {
+                      if (confirm(`Delete "${title}"?`))
+                        onChange((t) => deleteItem(t, 'questions', id))
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </Stack>
+              </Stack>
+            </ListGroup.Item>
+          ))}
+        </ListGroup>
+        {editing ? (
+          <QuestionEditor
+            topic={topic}
+            initial={editing}
+            onDone={(next) => {
+              onChange(() => next)
+              setEditing(null)
+            }}
+            onCancel={() => setEditing(null)}
           />
-        </Tab>
-        <Tab eventKey="questions" title="Questions" disabled={checking}>
-          <Items {...shared} list="questions" rows={questions} unreadable={unreadable.questions}>
-            <Snippet
-              label="Chat bot request for questions"
-              value={questionRequest({ ...request, existing: questions.map((r) => r.title) })}
-              language="markdown"
-            />
-            <Snippet label="Question template" value={QUESTION_TEMPLATE} language="json" />
-          </Items>
-        </Tab>
-      </Tabs>
+        ) : (
+          <Button variant="primary" onClick={() => setEditing({ text: '' })}>
+            New question
+          </Button>
+        )}
+        <div className="mt-4">
+          <Snippet
+            label="Chat bot request for questions"
+            value={questionRequest(request)}
+            language="markdown"
+          />
+          <Snippet label="Question template" value={QUESTION_TEMPLATE} language="json" />
+        </div>
+      </section>
     </Stack>
   )
 }
 
-const NOUN = { problems: 'problem', questions: 'question' } as const
-
-interface ItemsProps {
-  list: ItemList
-  rows: Row[]
-  unreadable: number
-  topic: TopicRecord
-  runner: Pick<Runner, 'test'>
-  checking: boolean
-  onChecking: (checking: boolean) => void
-  onChange: Props['onChange']
-  onEditor: (list: ItemList, open: boolean) => void
-  // Problems are added on their own page; questions here.
-  addAt?: Route
-  children?: ReactNode
-}
-
-function Items({
-  list,
-  rows,
-  unreadable,
-  addAt,
-  children,
-  onChange,
-  onEditor,
-  ...editor
-}: ItemsProps) {
-  const [editing, setEditing] = useState<Editing | null>(null)
-  const open = editing !== null
-  useEffect(() => onEditor(list, open), [list, open, onEditor])
-  return (
-    <section aria-label={`Topic ${list}`} className="pt-3">
-      {unreadable > 0 && (
-        <Alert variant="warning">
-          {unreadable} {list} do not follow the current content rules and are not served.
-        </Alert>
-      )}
-      <ListGroup as="ul" className="mb-2">
-        {rows.map(({ id, title, badge, concepts, text }) => (
-          <ListGroup.Item as="li" key={id} aria-label={title}>
-            <Stack direction="horizontal" gap={2} className="flex-wrap">
-              <span className="fw-semibold">{title}</span>
-              <Badge bg="secondary">{badge}</Badge>
-              <ConceptTags names={concepts} />
-              <Stack direction="horizontal" gap={2} className="ms-auto">
-                <Button
-                  size="sm"
-                  variant="outline-primary"
-                  aria-label={`Edit ${title}`}
-                  disabled={editing !== null}
-                  onClick={() => setEditing({ text, replaces: { id, title } })}
-                >
-                  Edit
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline-danger"
-                  aria-label={`Delete ${title}`}
-                  disabled={editing !== null}
-                  onClick={() => {
-                    const kept = list === 'problems' ? ' Its past attempts will be kept.' : ''
-                    if (confirm(`Delete "${title}"?${kept}`))
-                      onChange((t) => deleteItem(t, list, id))
-                  }}
-                >
-                  Delete
-                </Button>
-              </Stack>
-            </Stack>
-          </ListGroup.Item>
-        ))}
-      </ListGroup>
-      {editing ? (
-        <ItemEditor
-          {...editor}
-          list={list}
-          initial={editing}
-          onDone={(next) => {
-            onChange(() => next)
-            setEditing(null)
-          }}
-          onCancel={() => setEditing(null)}
-        />
-      ) : addAt ? (
-        <Link className="btn btn-primary" to={addAt}>
-          Add {list}
-        </Link>
-      ) : (
-        <Button variant="primary" onClick={() => setEditing({ text: '' })}>
-          New {NOUN[list]}
-        </Button>
-      )}
-      {children && <div className="mt-4">{children}</div>}
-    </section>
-  )
-}
-
 interface EditorProps {
-  list: ItemList
   topic: TopicRecord
   initial: Editing
-  runner: Pick<Runner, 'test'>
-  checking: boolean
-  onChecking: (checking: boolean) => void
   onDone: (topic: TopicRecord) => void
   onCancel: () => void
 }
 
-function ItemEditor({
-  list,
-  topic,
-  initial,
-  runner,
-  checking,
-  onChecking,
-  onDone,
-  onCancel,
-}: EditorProps) {
+function QuestionEditor({ topic, initial, onDone, onCancel }: EditorProps) {
   const [text, setText] = useState(initial.text)
   const [error, setError] = useState<string | null>(null)
   const [failed, setFailed] = useState<ItemErrors[]>([])
   const { replaces } = initial
-  const noun = NOUN[list]
 
-  async function submit() {
+  function submit() {
     setError(null)
     setFailed([])
-    const read = readItems(text, list)
+    const read = readItems(text, 'questions')
     if ('error' in read) return setError(read.error)
-    const newId = () => crypto.randomUUID()
-    if (list === 'questions') {
-      const added = addQuestions(topic, read.items, newId, replaces?.id)
-      return added.ok ? onDone(added.record) : setFailed(added.errors)
-    }
-    const added = addProblems(topic, read.items, newId, replaces?.id)
-    if (!added.ok) return setFailed(added.errors)
-    onChecking(true)
-    try {
-      const found: ItemErrors[] = []
-      for (const [i, problem] of added.added.entries()) {
-        const errors = await checkProblem(runner, problem)
-        if (errors.length) found.push({ item: i + 1, title: problem.wordings[0].title, errors })
-      }
-      if (found.length) setFailed(found)
-      else onDone(added.record)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-    } finally {
-      onChecking(false)
-    }
+    const added = addQuestions(topic, read.items, () => crypto.randomUUID(), replaces?.id)
+    if (added.ok) onDone(added.record)
+    else setFailed(added.errors)
   }
 
   return (
-    <section aria-label={replaces ? `Edit ${replaces.title}` : `New ${noun}`}>
+    <section aria-label={replaces ? `Edit ${replaces.title}` : 'New question'}>
       <p className="text-body-secondary mb-2">
         {replaces
-          ? `Edit the ${noun} as JSON.`
-          : `Paste one ${noun}, a list of ${list}, or a chat bot answer.`}{' '}
-        {list === 'problems'
-          ? 'Each problem is run in Python first: its reference solution must pass every test and its starter code must fail one.'
-          : 'Each question is checked first.'}{' '}
-        Nothing is added unless every {noun} passes.
+          ? 'Edit the question as JSON.'
+          : 'Paste one question, a list of questions, or a chat bot answer.'}{' '}
+        Each question is checked first. Nothing is added unless every question passes.
       </p>
       <div className="mb-2">
         <CodeEditor
           initialValue={initial.text}
           onChange={setText}
-          label={`${capital(noun)} JSON`}
+          label="Question JSON"
           language="json"
-          readOnly={checking}
         />
       </div>
       {error && <Alert variant="danger">{error}</Alert>}
@@ -290,11 +173,11 @@ function ItemEditor({
           Nothing was {replaces ? 'saved' : 'added'}.
           {failed.map(({ item, title, errors }) => (
             <div key={item} className="mt-2">
-              {capital(noun)} {item}
+              Question {item}
               {title && ` “${title}”`}:
               <ul className="mb-0">
-                {errors.map((e) => (
-                  <li key={e} style={{ whiteSpace: 'pre-wrap' }}>
+                {errors.map((e, i) => (
+                  <li key={i} style={{ whiteSpace: 'pre-wrap' }}>
                     {e}
                   </li>
                 ))}
@@ -304,10 +187,10 @@ function ItemEditor({
         </Alert>
       )}
       <Stack direction="horizontal" gap={2}>
-        <Button onClick={() => void submit()} disabled={checking || !text.trim()}>
-          {checking ? 'Checking…' : replaces ? 'Save' : 'Add'}
+        <Button onClick={submit} disabled={!text.trim()}>
+          {replaces ? 'Save' : 'Add'}
         </Button>
-        <Button variant="outline-secondary" onClick={onCancel} disabled={checking}>
+        <Button variant="outline-secondary" onClick={onCancel}>
           Cancel
         </Button>
       </Stack>
@@ -319,10 +202,9 @@ interface HeaderProps {
   topic: TopicRecord
   onChange: Props['onChange']
   onDelete: () => void
-  disabled: boolean
 }
 
-function Header({ topic, onChange, onDelete, disabled }: HeaderProps) {
+function Header({ topic, onChange, onDelete }: HeaderProps) {
   const [name, setName] = useState(topic.name)
   return (
     <div>
@@ -360,7 +242,6 @@ function Header({ topic, onChange, onDelete, disabled }: HeaderProps) {
         <Button
           variant="outline-danger"
           className="ms-auto"
-          disabled={disabled}
           onClick={() => {
             if (confirm(`Delete the topic "${topic.name}"? Its past attempts will be kept.`))
               onDelete()

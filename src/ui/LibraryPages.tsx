@@ -170,13 +170,19 @@ export function LibraryProblem({ entry, back, onTry, onDelete }: ProblemProps) {
           {problem && topic.enabled && (
             <Button onClick={() => onTry(topic, problem)}>Try it</Button>
           )}
+          <Link
+            className={`btn ${problem ? 'btn-outline-primary' : 'btn-primary'}`}
+            to={{ page: 'edit-problem', topic: topic.id, problem: entry.id }}
+          >
+            Edit
+          </Link>
           <Button variant="outline-danger" onClick={remove}>
             Delete
           </Button>
         </div>
       </div>
       {problem ? (
-        <Served topic={topic} problem={problem} />
+        <ProblemView topic={topic} problem={problem} />
       ) : (
         <Broken entry={entry} errors={errors} />
       )}
@@ -184,7 +190,8 @@ export function LibraryProblem({ entry, back, onTry, onDelete }: ProblemProps) {
   )
 }
 
-function Served({ topic, problem }: { topic: Topic; problem: Problem }) {
+// The problem as stored: its wordings as the solver reads them, then what the solver does not see.
+export function ProblemView({ topic, problem }: { topic: Topic; problem: Problem }) {
   const { wordings } = problem
   const visible = problem.visible_tests.join(', ')
   return (
@@ -238,7 +245,7 @@ function Broken({ entry, errors }: { entry: LibraryEntry; errors: string[] }) {
         <h1 className="h3">{entry.title}</h1>
         <p className="text-body-secondary">{entry.topic.name}</p>
         <Alert variant="warning" className="mb-0">
-          This problem is not served: it breaks the current content rules.
+          This problem is not served: it breaks the current content rules. Edit it to fix it.
           <ul className="mb-0 mt-2">
             {errors.map((e) => (
               <li key={e}>{e}</li>

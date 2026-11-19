@@ -66,6 +66,16 @@ test('create a topic, fill it from a chat, solve a problem from it', async ({ pa
   await library.click()
   await page.getByRole('link', { name: 'Count vowels' }).click()
   await expect(page.getByRole('region', { name: 'Reference solution' })).toBeVisible()
+  await page.getByRole('link', { name: 'Edit' }).click()
+  // The editor renders only the lines in view, so the whole text is typed over it.
+  await page.getByRole('textbox', { name: 'Problem JSON' }).click()
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.keyboard.insertText(answer.replace('Count vowels', 'Count the vowels'))
+  await expect(page.getByRole('region', { name: 'Preview' })).toContainText('Count the vowels')
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Count the vowels' })).toBeVisible({
+    timeout: 90_000,
+  })
   await page.getByRole('button', { name: 'Try it' }).click()
   const editor = page.getByRole('textbox', { name: 'Solution code' })
   await editor.click()
