@@ -57,6 +57,7 @@ export function TopicsPage({ topics, onCreate, onEnable }: Props) {
                     role="switch"
                     id={`enabled-${topic.id}`}
                     label="Enabled"
+                    aria-label={`Enabled ${topic.name}`}
                     className="ms-auto"
                     checked={topic.enabled}
                     onChange={(event) => onEnable(topic.id, event.target.checked)}

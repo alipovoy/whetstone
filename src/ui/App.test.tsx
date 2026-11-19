@@ -966,12 +966,14 @@ describe('Topics', () => {
   })
 
   it('lists topics with their counts and enables one in place', async () => {
-    const put = renderApp(fakeRunner(), {}, { page: 'topics' })
+    const broken = { ...topic.problems[0], id: 'broken', hints: [] }
+    const stored = topicFromFile({ ...topic, problems: [...topic.problems, broken] }, 0)
+    const put = renderApp(fakeRunner(), { topics: [stored] }, { page: 'topics' })
     const row = screen.getByRole('listitem', { name: 'Topic' })
     expect(row).toHaveTextContent('1 concept, 2 problems, 0 questions')
-    await userEvent.click(within(row).getByRole('switch', { name: 'Enabled' }))
+    await userEvent.click(screen.getByRole('switch', { name: 'Enabled Topic' }))
     expect(put.topics.put).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: false }))
-    expect(within(row).getByRole('switch', { name: 'Enabled' })).not.toBeChecked()
+    expect(screen.getByRole('switch', { name: 'Enabled Topic' })).not.toBeChecked()
     await userEvent.click(within(row).getByRole('link', { name: 'Topic' }))
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Topic')
   })
