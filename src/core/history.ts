@@ -1,12 +1,13 @@
 import type { Topic } from '@/content/schema'
 import type { Attempt, Grade } from './attempt'
-import { entryConcepts, problemStatus, type Filterable } from './problems'
+import { entryConcepts, problemStatus, type Filterable, type ProblemStatus } from './problems'
 
 export const HISTORY_STATUSES = ['solved', 'needs-work'] as const
 
 export interface HistoryEntry extends Filterable {
   attempt: Attempt
   grade: Grade
+  status: ProblemStatus
 }
 
 // A grade keeps the problem as asked, so an attempt reads the same after its problem changes or

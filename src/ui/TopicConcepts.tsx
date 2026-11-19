@@ -10,7 +10,11 @@ import {
   type ConceptChange,
   type TopicRecord,
 } from '@/core/topics'
+import { conceptGroups } from '@/core/problems'
+import { libraryEntries } from '@/core/library'
 import { capital, plural } from './format'
+import { Link } from './Link'
+import type { Route } from './route'
 
 interface Props {
   topic: TopicRecord
@@ -26,6 +30,14 @@ export function TopicConcepts({ topic, file, locked, onChange, ...props }: Props
   const disabled = props.disabled || locked
   const [editing, setEditing] = useState<string | null>(null)
   const areas = [...new Set(topic.concepts.map((c) => c.group))]
+  // The library lists every stored problem, served or not, and filters by the concepts left
+  // unchecked, including those a broken problem names but the topic no longer has.
+  const stored = conceptGroups(libraryEntries([topic])).flatMap((g) => g.names)
+  const problemsOf = (name: string): Route => ({
+    page: 'library',
+    filter: { topic: topic.id, offConcepts: stored.filter((n) => n !== name) },
+    disabled: !topic.enabled || undefined,
+  })
 
   function remove(id: string, name: string) {
     const used = conceptUsage(topic, id)
@@ -91,7 +103,12 @@ export function TopicConcepts({ topic, file, locked, onChange, ...props }: Props
                     <Stack direction="horizontal" gap={2} className="flex-wrap">
                       <span>{c.name}</span>
                       <span className="text-body-secondary small ms-auto">
-                        {plural(c.problems, 'problem')}, {plural(c.questions, 'question')}
+                        <ProblemCount
+                          count={conceptUsage(topic, c.id).problems}
+                          name={c.name}
+                          to={problemsOf(c.name)}
+                        />
+                        , {plural(c.questions, 'question')}
                       </span>
                       <Stack direction="horizontal" gap={2}>
                         <Button
@@ -122,6 +139,15 @@ export function TopicConcepts({ topic, file, locked, onChange, ...props }: Props
         ))
       )}
     </section>
+  )
+}
+
+function ProblemCount({ count, name, to }: { count: number; name: string; to: Route }) {
+  if (count === 0) return plural(count, 'problem')
+  return (
+    <Link to={to} aria-label={`${plural(count, 'problem')} of ${name}`}>
+      {plural(count, 'problem')}
+    </Link>
   )
 }
 
