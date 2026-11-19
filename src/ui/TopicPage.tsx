@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Alert, Badge, Button, Form, ListGroup, Stack, Tab, Tabs } from 'react-bootstrap'
 import {
   PROBLEM_TEMPLATE,
@@ -11,7 +11,6 @@ import {
   addProblems,
   addQuestions,
   checkErrors,
-  conceptMap,
   deleteItem,
   itemText,
   served,
@@ -25,8 +24,9 @@ import { RUN_LIMIT_MS, type TestResult } from '@/runner/types'
 import { CodeBlock } from './CodeBlock'
 import { CodeEditor } from './CodeEditor'
 import type { Runner } from './ProblemPage'
-import { plural } from './format'
+import { capital } from './format'
 import { ConceptTags } from './progress'
+import { TopicConcepts } from './TopicConcepts'
 
 interface Props {
   topic: TopicRecord
@@ -52,6 +52,7 @@ interface Row {
 
 export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) {
   const [checking, setChecking] = useState(false)
+  const [editors, setEditors] = useState<ItemList[]>([])
   const { file, unreadable } = served(topic)
 
   useEffect(() => onBusy(checking), [checking, onBusy])
@@ -71,38 +72,25 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
     text: itemText(q, topic.concepts),
   }))
   const request = { topic: topic.name, concepts: topic.concepts }
-  const shared = { topic, runner, checking, onChecking: setChecking, onChange }
+  const onEditor = useCallback(
+    (list: ItemList, open: boolean) =>
+      setEditors((lists) => [...lists.filter((l) => l !== list), ...(open ? [list] : [])]),
+    [],
+  )
+  const shared = { topic, runner, checking, onChecking: setChecking, onChange, onEditor }
 
   return (
     <Stack gap={4}>
       <Header topic={topic} onChange={onChange} onDelete={onDelete} disabled={checking} />
 
-      <section aria-label="Concepts">
-        <h2 className="h5">Concepts</h2>
-        {topic.concepts.length === 0 ? (
-          <p className="text-body-secondary">
-            None yet: adding a problem or question adds its concepts.
-          </p>
-        ) : (
-          conceptMap(file).map(({ area, concepts }) => (
-            <section key={area} aria-label={area} className="ws-concept-area">
-              <h3 className="h6">{area}</h3>
-              <ListGroup as="ul">
-                {concepts.map((c) => (
-                  <ListGroup.Item as="li" key={c.id} aria-label={c.name}>
-                    <Stack direction="horizontal" gap={2} className="flex-wrap">
-                      <span>{c.name}</span>
-                      <span className="text-body-secondary small ms-auto">
-                        {plural(c.problems, 'problem')}, {plural(c.questions, 'question')}
-                      </span>
-                    </Stack>
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
-            </section>
-          ))
-        )}
-      </section>
+      <TopicConcepts
+        topic={topic}
+        file={file}
+        disabled={checking}
+        // An open item editor holds concept names; a change under it would bring them back.
+        locked={editors.length > 0}
+        onChange={onChange}
+      />
 
       {/* Mounted when first shown; an open editor survives switching tabs. */}
       <Tabs defaultActiveKey="problems" mountOnEnter>
@@ -132,7 +120,6 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
 }
 
 const NOUN = { problems: 'problem', questions: 'question' } as const
-const capital = (s: string) => s[0].toUpperCase() + s.slice(1)
 
 interface ItemsProps {
   list: ItemList
@@ -143,11 +130,14 @@ interface ItemsProps {
   checking: boolean
   onChecking: (checking: boolean) => void
   onChange: Props['onChange']
+  onEditor: (list: ItemList, open: boolean) => void
   children: ReactNode
 }
 
-function Items({ list, rows, unreadable, children, onChange, ...editor }: ItemsProps) {
+function Items({ list, rows, unreadable, children, onChange, onEditor, ...editor }: ItemsProps) {
   const [editing, setEditing] = useState<Editing | null>(null)
+  const open = editing !== null
+  useEffect(() => onEditor(list, open), [list, open, onEditor])
   return (
     <section aria-label={`Topic ${list}`} className="pt-3">
       {unreadable > 0 && (
@@ -178,7 +168,7 @@ function Items({ list, rows, unreadable, children, onChange, ...editor }: ItemsP
                   aria-label={`Delete ${title}`}
                   disabled={editing !== null}
                   onClick={() => {
-                    const kept = list === 'problems' ? ' Its past attempts are kept.' : ''
+                    const kept = list === 'problems' ? ' Its past attempts will be kept.' : ''
                     if (confirm(`Delete "${title}"?${kept}`))
                       onChange((t) => deleteItem(t, list, id))
                   }}
@@ -377,7 +367,8 @@ function Header({ topic, onChange, onDelete, disabled }: HeaderProps) {
           className="ms-auto"
           disabled={disabled}
           onClick={() => {
-            if (confirm(`Delete the topic "${topic.name}"? Past attempts are kept.`)) onDelete()
+            if (confirm(`Delete the topic "${topic.name}"? Its past attempts will be kept.`))
+              onDelete()
           }}
         >
           Delete topic

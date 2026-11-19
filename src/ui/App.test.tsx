@@ -978,6 +978,88 @@ describe('Topics', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Topic')
   })
 
+  it('adds, edits and deletes the concepts of a topic', async () => {
+    const shared = { ...problem('two', 'Second problem'), concepts: ['c', 'd'] }
+    const stored = topicFromFile(
+      {
+        ...topic,
+        topic: {
+          ...topic.topic,
+          concepts: [...topic.topic.concepts, { id: 'd', name: 'D', group: 'G' }],
+        },
+        problems: [topic.problems[0], shared],
+      },
+      0,
+    )
+    const put = renderApp(fakeRunner(), { topics: [stored] })
+    await openTopic('Topic')
+    const concepts = screen.getByRole('region', { name: 'Concepts' })
+    const adding = within(concepts).getByRole('form', { name: 'New concept' })
+    await userEvent.type(within(adding).getByRole('textbox', { name: 'Concept name' }), ' c ')
+    await userEvent.type(within(adding).getByRole('combobox', { name: 'Area' }), 'H')
+    await userEvent.click(within(adding).getByRole('button', { name: 'New concept' }))
+    expect(within(adding).getByRole('alert')).toHaveTextContent('already has a concept named “c”')
+
+    await userEvent.clear(within(adding).getByRole('textbox', { name: 'Concept name' }))
+    await userEvent.type(within(adding).getByRole('textbox', { name: 'Concept name' }), 'E')
+    await userEvent.click(within(adding).getByRole('button', { name: 'New concept' }))
+    const h = within(concepts).getByRole('region', { name: 'H' })
+    expect(within(h).getByRole('listitem', { name: 'E' })).toHaveTextContent('E0 problems')
+    expect(within(adding).getByRole('textbox', { name: 'Concept name' })).toHaveValue('')
+
+    await userEvent.click(within(concepts).getByRole('button', { name: 'Edit D' }))
+    const editing = within(concepts).getByRole('form', { name: 'Edit D' })
+    await userEvent.clear(within(editing).getByRole('textbox', { name: 'Concept name' }))
+    await userEvent.type(within(editing).getByRole('textbox', { name: 'Concept name' }), 'Dee')
+    await userEvent.clear(within(editing).getByRole('combobox', { name: 'Area' }))
+    await userEvent.type(within(editing).getByRole('combobox', { name: 'Area' }), 'H')
+    await userEvent.click(within(editing).getByRole('button', { name: 'Save' }))
+    expect(
+      within(h)
+        .getAllByRole('listitem')
+        .map((li) => li.getAttribute('aria-label')),
+    ).toEqual(['Dee', 'E'])
+    expect(put.topics.put).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        concepts: [
+          { id: 'c', name: 'C', group: 'G' },
+          { id: 'd', name: 'Dee', group: 'H' },
+          { id: 'e', name: 'E', group: 'H' },
+        ],
+      }),
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Second problem' }))
+    expect(within(concepts).getByRole('button', { name: 'Delete C' })).toBeDisabled()
+    expect(within(adding).getByRole('textbox', { name: 'Concept name' })).toBeEnabled()
+    expect(concepts).toHaveTextContent('Save or cancel the open problem or question first')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(within(concepts).getByRole('button', { name: 'Delete C' })).toBeEnabled()
+
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    await userEvent.click(within(concepts).getByRole('button', { name: 'Delete E' }))
+    expect(confirm).toHaveBeenLastCalledWith('Delete the concept “E”?')
+    await userEvent.click(within(concepts).getByRole('button', { name: 'Delete C' }))
+    expect(confirm).toHaveBeenLastCalledWith(
+      'Delete the concept “C”? It will be removed from 2 problems. 1 problem has no other concept and will be deleted too. Past attempts at the deleted problem will be kept.',
+    )
+    expect(within(concepts).getByRole('listitem', { name: 'C' })).toBeInTheDocument()
+
+    confirm.mockReturnValue(true)
+    await userEvent.click(within(concepts).getByRole('button', { name: 'Delete C' }))
+    expect(within(concepts).queryByRole('listitem', { name: 'C' })).toBeNull()
+    const problems = screen.getByRole('region', { name: 'Topic problems' })
+    expect(within(problems).queryByRole('listitem', { name: 'First problem' })).toBeNull()
+    expect(within(problems).getByRole('listitem', { name: 'Second problem' })).toBeInTheDocument()
+    expect(put.topics.put).toHaveBeenLastCalledWith(
+      expect.objectContaining({ problems: [{ ...shared, concepts: ['d'] }] }),
+    )
+
+    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
+    await userEvent.click(conceptsToggle())
+    expect(screen.getByRole('group', { name: 'H' })).toHaveTextContent('Dee')
+  })
+
   it('renames, disables and deletes a topic', async () => {
     const put = renderApp(fakeRunner())
     await openTopic('Topic')
