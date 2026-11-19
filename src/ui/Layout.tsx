@@ -1,8 +1,15 @@
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import { Icon, Logo, type IconName } from './icons'
 import { Link } from './Link'
 import type { Route, Section } from './route'
-import { THEME_CHOICES, setThemeChoice, useThemeChoice, type ThemeChoice } from './theme'
+import {
+  THEME_CHOICES,
+  setSideMenu,
+  setThemeChoice,
+  useSideMenu,
+  useThemeChoice,
+  type ThemeChoice,
+} from './theme'
 
 const MENU: { section: Section; label: string; icon: IconName; to: Route }[] = [
   { section: 'coding', label: 'Coding problems', icon: 'code', to: { page: 'problems' } },
@@ -83,20 +90,48 @@ interface SubMenuPageProps {
 }
 
 export function SubMenuPage({ label, items, placement, held = false, children }: SubMenuPageProps) {
+  const id = useId()
+  const side = useSideMenu()
+  const nav = (
+    <nav id={id} className="ws-sub-menu" aria-label={label}>
+      {items.map((item) => (
+        <Link
+          key={item.label}
+          to={item.to}
+          held={held}
+          aria-current={item.current ? 'page' : undefined}
+        >
+          {item.label}
+        </Link>
+      ))}
+    </nav>
+  )
+  const open = side === 'open'
   return (
-    <div className="ws-sub" data-placement={placement}>
-      <nav className="ws-sub-menu" aria-label={label}>
-        {items.map((item) => (
-          <Link
-            key={item.label}
-            to={item.to}
-            held={held}
-            aria-current={item.current ? 'page' : undefined}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+    <div
+      className="ws-sub"
+      data-placement={placement}
+      data-side={placement === 'side' ? side : undefined}
+    >
+      {placement === 'side' ? (
+        <div className="ws-sub-side">
+          {nav}
+          <div className="ws-sub-edge">
+            <button
+              type="button"
+              aria-controls={id}
+              aria-expanded={open}
+              aria-label={`${open ? 'Hide' : 'Show'} the ${label} menu`}
+              title={`${open ? 'Hide' : 'Show'} the menu`}
+              onClick={() => setSideMenu(open ? 'closed' : 'open')}
+            >
+              <Icon name={open ? 'chevron-left' : 'chevron-right'} />
+            </button>
+          </div>
+        </div>
+      ) : (
+        nav
+      )}
       <div className="ws-sub-content">{children}</div>
     </div>
   )

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 
 export type ThemeChoice = 'system' | 'light' | 'dark'
 export type Scheme = 'slate' | 'mint' | 'sunset' | 'amber' | 'emerald' | 'rainbow'
+export type SideMenu = 'open' | 'closed'
 
 export const THEME_CHOICES: ThemeChoice[] = ['system', 'light', 'dark']
 export const SCHEMES: Scheme[] = ['slate', 'mint', 'sunset', 'amber', 'emerald', 'rainbow']
@@ -36,6 +37,7 @@ function preference<T extends string>(key: string, values: T[]) {
 
 const theme = preference('whetstone.theme', THEME_CHOICES)
 const scheme = preference('whetstone.scheme', SCHEMES)
+const sideMenu = preference<SideMenu>('whetstone.side-menu', ['open', 'closed'])
 
 const isDark = () => theme.get() === 'dark' || (theme.get() === 'system' && darkQuery().matches)
 
@@ -53,6 +55,7 @@ function subscribe(listener: () => void): () => void {
 
 export const setThemeChoice = theme.set
 export const setScheme = scheme.set
+export const setSideMenu = sideMenu.set
 
 export function useThemeChoice(): ThemeChoice {
   return useSyncExternalStore(subscribe, theme.get)
@@ -62,13 +65,18 @@ export function useScheme(): Scheme {
   return useSyncExternalStore(subscribe, scheme.get)
 }
 
+export function useSideMenu(): SideMenu {
+  return useSyncExternalStore(subscribe, sideMenu.get)
+}
+
 export function useDarkMode(): boolean {
   return useSyncExternalStore(subscribe, isDark)
 }
 
-export function applyTheme(): void {
+export function applyPreferences(): void {
   theme.load()
   scheme.load()
+  sideMenu.load()
   changed()
   darkQuery().addEventListener('change', changed)
 }
