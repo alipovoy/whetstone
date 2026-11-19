@@ -31,12 +31,12 @@ export function TopicConcepts({ topic, file, locked, onChange, ...props }: Props
     const used = conceptUsage(topic, id)
     let message = `Delete the concept “${name}”?`
     if (used.problems + used.questions > 0)
-      message += ` It is removed from ${items(used.problems, used.questions)}.`
+      message += ` It will be removed from ${items(used.problems, used.questions)}.`
     const { problems, questions } = used.only
     const one = problems + questions === 1
     if (problems + questions > 0)
-      message += ` ${capital(items(problems, questions))} ${one ? 'has' : 'have'} no other concept and ${one ? 'is' : 'are'} deleted too.`
-    if (problems > 0) message += ' Past attempts are kept.'
+      message += ` ${capital(items(problems, questions))} ${one ? 'has' : 'have'} no other concept and will be deleted too.`
+    if (problems > 0) message += ' Past attempts will be kept.'
     if (confirm(message)) onChange((t) => deleteConcept(t, id))
   }
 

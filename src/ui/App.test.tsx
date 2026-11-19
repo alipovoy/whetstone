@@ -1041,7 +1041,7 @@ describe('Topics', () => {
     expect(confirm).toHaveBeenLastCalledWith('Delete the concept “E”?')
     await userEvent.click(within(concepts).getByRole('button', { name: 'Delete C' }))
     expect(confirm).toHaveBeenLastCalledWith(
-      'Delete the concept “C”? It is removed from 2 problems. 1 problem has no other concept and is deleted too. Past attempts are kept.',
+      'Delete the concept “C”? It will be removed from 2 problems. 1 problem has no other concept and will be deleted too. Past attempts will be kept.',
     )
     expect(within(concepts).getByRole('listitem', { name: 'C' })).toBeInTheDocument()
 
