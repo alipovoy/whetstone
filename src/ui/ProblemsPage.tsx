@@ -13,6 +13,7 @@ import {
 import { Filters } from './Filters'
 import { Icon } from './icons'
 import { Link } from './Link'
+import { addProblemsFor } from './route'
 import { ConceptTags, statusOptions, StatusPill, TestMarks } from './progress'
 
 const STATUSES = statusOptions(PROBLEM_STATUSES)
@@ -53,9 +54,14 @@ export function ProblemsPage({
         <div className="ws-panel ws-empty">
           <h2 className="h5 mb-0">No problems to practise</h2>
           <p className="text-body-secondary">Add problems to a topic, or enable one.</p>
-          <Link className="btn btn-primary" to={{ page: 'topics' }}>
-            Open Settings, Topics
-          </Link>
+          <div className="d-flex flex-wrap justify-content-center gap-2">
+            <Link className="btn btn-primary" to={{ page: 'add-problems' }}>
+              Add problems
+            </Link>
+            <Link className="btn btn-outline-secondary" to={{ page: 'topics' }}>
+              Open Settings, Topics
+            </Link>
+          </div>
         </div>
       ) : (
         <>
@@ -87,10 +93,17 @@ export function ProblemsPage({
             {shown.length === 0 ? (
               <div className="ws-empty">
                 <h2 className="h5 mb-0">No problems match these filters</h2>
-                <p className="text-body-secondary">Widen the search or clear the filters.</p>
-                <Button variant="outline-secondary" onClick={() => onFilter({})}>
-                  Clear filters
-                </Button>
+                <p className="text-body-secondary">
+                  Widen the search, clear the filters, or add some.
+                </p>
+                <div className="d-flex flex-wrap justify-content-center gap-2">
+                  <Button variant="outline-secondary" onClick={() => onFilter({})}>
+                    Clear filters
+                  </Button>
+                  <Link className="btn btn-primary" to={addProblemsFor(filter, entries)}>
+                    Add problems
+                  </Link>
+                </div>
               </div>
             ) : (
               <ul className="ws-problems">

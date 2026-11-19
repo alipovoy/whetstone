@@ -1,31 +1,24 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Alert, Badge, Button, Form, ListGroup, Stack, Tab, Tabs } from 'react-bootstrap'
-import {
-  PROBLEM_TEMPLATE,
-  problemRequest,
-  QUESTION_TEMPLATE,
-  questionRequest,
-  readItems,
-} from '@/core/bridge'
+import { QUESTION_TEMPLATE, questionRequest, readItems } from '@/core/bridge'
 import {
   addProblems,
   addQuestions,
-  checkErrors,
   deleteItem,
   itemText,
   served,
-  type CheckRun,
   type ItemErrors,
   type ItemList,
   type TopicRecord,
 } from '@/core/topics'
-import { conceptNames, type Problem } from '@/content/schema'
-import { RUN_LIMIT_MS, type TestResult } from '@/runner/types'
+import { conceptNames } from '@/content/schema'
+import { checkProblem } from './check'
 import { CodeBlock } from './CodeBlock'
 import { CodeEditor } from './CodeEditor'
 import type { Runner } from './ProblemPage'
 import { capital } from './format'
 import { ConceptTags } from './progress'
+import { Link } from './Link'
 import { TopicConcepts } from './TopicConcepts'
 
 interface Props {
@@ -95,17 +88,30 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
       {/* Mounted when first shown; an open editor survives switching tabs. */}
       <Tabs defaultActiveKey="problems" mountOnEnter>
         <Tab eventKey="problems" title="Problems" disabled={checking}>
-          <Items {...shared} list="problems" rows={problems} unreadable={unreadable.problems}>
-            <Snippet
-              label="Chat bot request for problems"
-              value={problemRequest({ ...request, existing: problems.map((r) => r.title) })}
-              language="markdown"
-            />
-            <Snippet label="Problem template" value={PROBLEM_TEMPLATE} language="json" />
-          </Items>
+          <Items
+            {...shared}
+            list="problems"
+            rows={problems}
+            unreadable={unreadable.problems}
+            adding={
+              <Link className="btn btn-primary" to={{ page: 'add-problems', topic: topic.id }}>
+                Add problems
+              </Link>
+            }
+          />
         </Tab>
         <Tab eventKey="questions" title="Questions" disabled={checking}>
-          <Items {...shared} list="questions" rows={questions} unreadable={unreadable.questions}>
+          <Items
+            {...shared}
+            list="questions"
+            rows={questions}
+            unreadable={unreadable.questions}
+            adding={(open) => (
+              <Button variant="primary" onClick={open}>
+                New question
+              </Button>
+            )}
+          >
             <Snippet
               label="Chat bot request for questions"
               value={questionRequest({ ...request, existing: questions.map((r) => r.title) })}
@@ -131,10 +137,21 @@ interface ItemsProps {
   onChecking: (checking: boolean) => void
   onChange: Props['onChange']
   onEditor: (list: ItemList, open: boolean) => void
-  children: ReactNode
+  // Problems are added on their own page; questions here.
+  adding: ReactNode | ((open: () => void) => ReactNode)
+  children?: ReactNode
 }
 
-function Items({ list, rows, unreadable, children, onChange, onEditor, ...editor }: ItemsProps) {
+function Items({
+  list,
+  rows,
+  unreadable,
+  adding,
+  children,
+  onChange,
+  onEditor,
+  ...editor
+}: ItemsProps) {
   const [editing, setEditing] = useState<Editing | null>(null)
   const open = editing !== null
   useEffect(() => onEditor(list, open), [list, open, onEditor])
@@ -191,12 +208,12 @@ function Items({ list, rows, unreadable, children, onChange, onEditor, ...editor
           }}
           onCancel={() => setEditing(null)}
         />
+      ) : typeof adding === 'function' ? (
+        adding(() => setEditing({ text: '' }))
       ) : (
-        <Button variant="primary" onClick={() => setEditing({ text: '' })}>
-          New {NOUN[list]}
-        </Button>
+        adding
       )}
-      <div className="mt-4">{children}</div>
+      {children && <div className="mt-4">{children}</div>}
     </section>
   )
 }
@@ -244,7 +261,7 @@ function ItemEditor({
     try {
       const found: ItemErrors[] = []
       for (const [i, problem] of added.added.entries()) {
-        const errors = await check(runner, problem)
+        const errors = await checkProblem(runner, problem)
         if (errors.length) found.push({ item: i + 1, title: problem.wordings[0].title, errors })
       }
       if (found.length) setFailed(found)
@@ -305,19 +322,6 @@ function ItemEditor({
       </Stack>
     </section>
   )
-}
-
-async function check(runner: Pick<Runner, 'test'>, problem: Problem): Promise<string[]> {
-  const reference = await runner.test(problem.reference_solution, problem.tests, [], RUN_LIMIT_MS)
-  // Python failing to start says nothing about the problem.
-  if (reference.error && !reference.timedOut)
-    throw new Error(`Python could not run: ${reference.error}`)
-  const starter = await runner.test(problem.starter_code, problem.tests, [], RUN_LIMIT_MS)
-  return checkErrors(problem, checkRun(reference), checkRun(starter))
-}
-
-function checkRun(result: TestResult): CheckRun {
-  return { tests: result.tests, error: result.error ?? result.loadError ?? result.testsError }
 }
 
 interface HeaderProps {

@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TopicFile } from '@/content/schema'
 import type { RunnerStatus, RunResult, TestResult } from '@/runner/types'
 import { AttemptSchema, gradeAttempt, startAttempt, type Attempt } from '@/core/attempt'
-import { PROBLEM_TEMPLATE } from '@/core/bridge'
 import { candidates, startQuiz, submitQuiz, type Quiz } from '@/core/quiz'
 import { itemText, topicFromFile, type TopicRecord } from '@/core/topics'
 import { App, type AppRunner, type AppStorage } from './App'
@@ -795,6 +794,12 @@ describe('Topics', () => {
     await userEvent.click(screen.getByRole('button', { name: button }))
   }
 
+  // jsdom cannot type into CodeMirror, so the text goes in through the editor itself.
+  function enter(label: string, text: string) {
+    const view = EditorView.findFromDOM(screen.getByRole('textbox', { name: label }))!
+    act(() => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } }))
+  }
+
   it('creates a topic, adds checked problems from a chat answer and serves them', async () => {
     const runner = fakeRunner()
     runner.test
@@ -807,14 +812,33 @@ describe('Topics', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Create topic' }))
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Strings')
 
-    await userEvent.click(screen.getByRole('button', { name: 'New problem' }))
-    const answer = JSON.stringify({ problems: [written('Reverse words'), written('Count vowels')] })
-    await submit(`Sure:\n\`\`\`json\n${answer}\n\`\`\``)
+    await userEvent.click(
+      within(screen.getByRole('navigation', { name: 'Settings' })).getByRole('link', {
+        name: 'Coding problems',
+      }),
+    )
+    await userEvent.click(screen.getByRole('link', { name: 'Add problems' }))
+    expect(window.location.hash).toBe('#/settings/problems/add')
+    await userEvent.selectOptions(screen.getByLabelText('Topic'), 'Strings')
+    const copy = vi.fn(async (_text: string) => undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: copy },
+      configurable: true,
+    })
+    await userEvent.click(screen.getByRole('button', { name: 'Copy Prompt' }))
+    expect(copy).toHaveBeenLastCalledWith(
+      expect.stringContaining(
+        'Write 3 new Python coding interview problems for the topic "Strings".',
+      ),
+    )
 
-    const problems = await screen.findByRole('region', { name: 'Topic problems' })
-    await within(problems).findByRole('listitem', { name: 'Reverse words' })
-    expect(within(problems).getByRole('listitem', { name: 'Count vowels' })).toBeInTheDocument()
-    expect(screen.queryByRole('textbox', { name: 'Problem JSON' })).toBeNull()
+    const answer = JSON.stringify({ problems: [written('Reverse words'), written('Count vowels')] })
+    enter('Chat bot answer', `Sure:\n\`\`\`json\n${answer}\n\`\`\``)
+    await userEvent.click(screen.getByRole('button', { name: 'Check' }))
+    expect(await screen.findByRole('checkbox', { name: 'Reverse words' })).toBeChecked()
+    expect(screen.getByRole('listitem', { name: 'Count vowels' })).toHaveTextContent(
+      'Passes the check.',
+    )
     expect(runner.test).toHaveBeenNthCalledWith(
       1,
       topic.problems[0].reference_solution,
@@ -829,38 +853,24 @@ describe('Topics', () => {
       [],
       12_000,
     )
-    const basics = within(screen.getByRole('region', { name: 'Concepts' })).getByRole('region', {
-      name: 'Basics',
-    })
-    expect(within(basics).getByRole('listitem', { name: 'Strings' })).toHaveTextContent(
-      'Strings2 problems, 0 questions',
-    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add 2 problems' }))
+    expect(screen.getByText('Added 2 problems to Strings.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Topic')).toHaveDisplayValue('Strings')
+    expect(screen.getByRole('listitem', { name: 'Count vowels' })).toBeInTheDocument()
+    // Said once: coming back to the list does not repeat it.
+    await userEvent.click(screen.getByRole('link', { name: 'Add problems' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Back to coding problems' }))
+    expect(screen.queryByText('Added 2 problems to Strings.')).toBeNull()
     expect(put.topics.put).toHaveBeenLastCalledWith(
       expect.objectContaining({
         name: 'Strings',
+        concepts: [{ id: 'strings', name: 'Strings', group: 'Basics' }],
         problems: [
           expect.objectContaining({ concepts: ['strings'], source: 'user' }),
           expect.objectContaining({ concepts: ['strings'], source: 'user' }),
         ],
       }),
-    )
-    const copy = vi.fn(async (_text: string) => undefined)
-    Object.defineProperty(navigator, 'clipboard', {
-      value: { writeText: copy },
-      configurable: true,
-    })
-    await userEvent.click(screen.getByText('Chat bot request for problems'))
-    await userEvent.click(screen.getByText('Problem template'))
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Copy Chat bot request for problems' }),
-    )
-    expect(copy).toHaveBeenLastCalledWith(
-      expect.stringContaining('do not repeat them:\n- Reverse words\n- Count vowels'),
-    )
-    await userEvent.click(screen.getByRole('button', { name: 'Copy Problem template' }))
-    expect(copy).toHaveBeenLastCalledWith(PROBLEM_TEMPLATE)
-    expect(screen.getByRole('button', { name: 'Copy Problem template' })).toHaveTextContent(
-      'Copied',
     )
 
     await userEvent.click(mainLink('Coding problems'))
@@ -868,34 +878,92 @@ describe('Topics', () => {
     expect(screen.getByRole('heading', { name: /Reverse words/ })).toBeInTheDocument()
   })
 
-  it('adds nothing when one problem fails its check, and says which and why', async () => {
+  it('adds only the ticked problems that pass, and says why the others fail', async () => {
     const runner = fakeRunner()
     runner.test
       .mockResolvedValueOnce(allPass)
       .mockResolvedValueOnce(graded)
       .mockResolvedValueOnce(graded)
       .mockResolvedValueOnce(graded)
-    renderApp(runner)
-    await openTopic('Topic')
-    await userEvent.click(screen.getByRole('button', { name: 'New problem' }))
-    await submit(JSON.stringify([written('Good'), written('Broken')]))
+    const put = renderApp(runner, {}, { page: 'add-problems', topic: 't' })
+    await userEvent.click(screen.getByRole('tab', { name: 'Write JSON' }))
+    expect(screen.getByRole('textbox', { name: 'Problems JSON' })).toHaveTextContent(
+      '"Pair with target sum"',
+    )
+    enter(
+      'Problems JSON',
+      JSON.stringify([written('Good'), written('Failing'), { ...written('Unread'), hints: [] }]),
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Check' }))
 
-    const editor = screen.getByRole('region', { name: 'New problem' })
-    expect(await within(editor).findByText(/Nothing was added/)).toBeInTheDocument()
-    expect(editor).toHaveTextContent('Problem 2 “Broken”:the reference solution fails test_b')
-    expect(editor).not.toHaveTextContent('Problem 1')
-    const problems = screen.getByRole('region', { name: 'Topic problems' })
-    expect(within(problems).queryByRole('listitem', { name: 'Good' })).toBeNull()
+    const failing = await screen.findByRole('checkbox', { name: 'Failing' })
+    expect(failing).not.toBeChecked()
+    expect(failing).toBeDisabled()
+    expect(screen.getByRole('listitem', { name: 'Failing' })).toHaveTextContent(
+      'the reference solution fails test_b',
+    )
+    expect(screen.getByRole('listitem', { name: 'Unread' })).toHaveTextContent(
+      'hints: needs exactly three hints',
+    )
+    expect(runner.test).toHaveBeenCalledTimes(4)
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Good' }))
+    expect(screen.getByRole('button', { name: 'Add 0 problems' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Good' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add 1 problem' }))
+    expect(window.location.hash).toBe('#/settings/problems?topic=t')
+    expect(put.topics.put.mock.lastCall![0].problems).toHaveLength(3)
   })
 
-  it('reports text that is not JSON, and Cancel closes the editor', async () => {
-    renderApp(fakeRunner())
-    await openTopic('Topic')
-    await userEvent.click(screen.getByRole('button', { name: 'New problem' }))
-    await submit('I cannot help with that.')
+  it('reports text that is not JSON, and goes back to the list as it was filtered', async () => {
+    renderApp(fakeRunner(), {}, { page: 'library', filter: { difficulty: 'Easy' } })
+    await userEvent.click(screen.getByRole('link', { name: 'Add problems' }))
+    expect(window.location.hash).toBe('#/settings/problems/add?difficulty=Easy')
+    expect(screen.getByRole('button', { name: 'Easy' })).toHaveAttribute('aria-pressed', 'true')
+    enter('Chat bot answer', 'I cannot help with that.')
+    await userEvent.click(screen.getByRole('button', { name: 'Check' }))
     expect(screen.getByText(/Not valid JSON/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(screen.queryByRole('textbox', { name: 'Problem JSON' })).toBeNull()
+    await userEvent.click(screen.getByRole('link', { name: 'Back to coding problems' }))
+    expect(window.location.hash).toBe('#/settings/problems?difficulty=Easy')
+  })
+
+  it('opens Add problems prefilled from a concept without problems and from an empty list', async () => {
+    const two: TopicFile = {
+      ...topic,
+      topic: {
+        ...topic.topic,
+        concepts: [...topic.topic.concepts, { id: 'e', name: 'E', group: 'G' }],
+      },
+    }
+    renderApp(fakeRunner(), { topics: [topicFromFile(two, 0)] })
+    await userEvent.click(conceptsToggle())
+    await userEvent.click(screen.getByRole('checkbox', { name: 'C' }))
+    await userEvent.selectOptions(screen.getByLabelText('Topic'), 'Topic')
+    await userEvent.click(screen.getByRole('button', { name: 'Hard' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Add problems' }))
+    expect(window.location.hash).toBe('#/settings/problems/add?topic=t&difficulty=Hard')
+
+    await openTopic('Topic')
+    await userEvent.click(screen.getByRole('link', { name: 'Add problems of E' }))
+    expect(window.location.hash).toBe('#/settings/problems/add?topic=t&concept=E')
+    expect(conceptsToggle()).toHaveTextContent('E')
+    const copy = vi.fn(async (_text: string) => undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: copy },
+      configurable: true,
+    })
+    await userEvent.selectOptions(screen.getByLabelText('How many'), '1')
+    await userEvent.click(screen.getByRole('button', { name: 'Copy Prompt' }))
+    expect(copy).toHaveBeenLastCalledWith(
+      expect.stringContaining(
+        'Write one new Python coding interview problem for the topic "Topic".',
+      ),
+    )
+    expect(copy).toHaveBeenLastCalledWith(expect.stringContaining('Focus on this concept: E.'))
+
+    await openTopic('Topic')
+    await userEvent.click(screen.getByRole('link', { name: 'Add problems' }))
+    expect(window.location.hash).toBe('#/settings/problems/add?topic=t')
   })
 
   it('edits a served problem in place after the check', async () => {

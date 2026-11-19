@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { DIFFICULTIES, SOURCES } from '@/content/schema'
-import { PROBLEM_STATUSES, type ProblemFilter } from '@/core/problems'
+import { DIFFICULTIES, SOURCES, type Difficulty } from '@/content/schema'
+import {
+  conceptGroups,
+  PROBLEM_STATUSES,
+  type Filterable,
+  type ProblemFilter,
+} from '@/core/problems'
 
 // Hash addresses need no server rewrite on GitHub Pages.
 export type Route =
@@ -18,6 +23,8 @@ export type Route =
   // Settings, Coding problems: every stored problem; those of disabled topics on request.
   | { page: 'library'; filter?: ProblemFilter; disabled?: boolean }
   | { page: 'library-problem'; topic: string; problem: string }
+  // Prefilled from where it was opened: concepts by name.
+  | { page: 'add-problems'; topic?: string; concepts?: string[]; difficulty?: Difficulty }
 
 export type Section = 'home' | 'coding' | 'quizzes' | 'reports' | 'settings'
 
@@ -40,6 +47,7 @@ export function parseRoute(hash: string): Route {
   if (rest.length > 0) return { page: 'home' }
   if (first === 'settings' && second === 'problems') {
     if (third && fourth) return { page: 'library-problem', topic: third, problem: fourth }
+    if (third === ADD) return addRoute(query)
     if (third) return { page: 'home' }
     const library = withFilter({ page: 'library' }, query)
     return new URLSearchParams(query).get(DISABLED) === SHOWN
@@ -100,12 +108,21 @@ export function href(route: Route): string {
     }
     case 'library-problem':
       return path('settings', 'problems', route.topic, route.problem)
+    case 'add-problems': {
+      const params = new URLSearchParams()
+      if (route.topic) params.set('topic', route.topic)
+      for (const name of route.concepts ?? []) params.append(CONCEPT, name)
+      if (route.difficulty) params.set('difficulty', route.difficulty)
+      return path('settings', 'problems', ADD) + queryText(params)
+    }
   }
 }
 
 const TEXT_FILTERS = ['search', 'topic'] as const
 const OFF_CONCEPTS = 'without'
 const DISABLED = 'disabled'
+const ADD = 'add'
+const CONCEPT = 'concept'
 const SHOWN = 'shown'
 
 function withFilter<R extends Route & { filter?: ProblemFilter }>(route: R, query: string): R {
@@ -124,6 +141,18 @@ function withFilter<R extends Route & { filter?: ProblemFilter }>(route: R, quer
   const source = SOURCES.find((s) => s === params.get('source'))
   if (source) filter.source = source
   return Object.keys(filter).length ? { ...route, filter } : route
+}
+
+function addRoute(query: string): Route {
+  const params = new URLSearchParams(query)
+  const route: Route = { page: 'add-problems' }
+  const topic = params.get('topic')
+  if (topic) route.topic = topic
+  const concepts = params.getAll(CONCEPT).filter(Boolean)
+  if (concepts.length) route.concepts = concepts
+  const difficulty = DIFFICULTIES.find((d) => d === params.get('difficulty'))
+  if (difficulty) route.difficulty = difficulty
+  return route
 }
 
 function filterQuery(filter?: ProblemFilter): string {
@@ -148,6 +177,24 @@ function filterParams(filter: ProblemFilter = {}): URLSearchParams {
   return params
 }
 
+// Add problems, prefilled from a filter: its topic, the concepts it keeps of that topic, and
+// its difficulty.
+export function addProblemsFor(filter: ProblemFilter, entries: Filterable[]): Route {
+  const { topic, offConcepts, difficulty } = filter
+  const kept =
+    topic && offConcepts
+      ? conceptGroups(entries, topic)
+          .flatMap((g) => g.names)
+          .filter((n) => !offConcepts.includes(n))
+      : []
+  return {
+    page: 'add-problems',
+    topic,
+    concepts: kept.length ? kept : undefined,
+    difficulty,
+  }
+}
+
 export function sectionOf(route: Route): Section {
   switch (route.page) {
     case 'home':
@@ -166,6 +213,7 @@ export function sectionOf(route: Route): Section {
     case 'topic':
     case 'library':
     case 'library-problem':
+    case 'add-problems':
       return 'settings'
   }
 }

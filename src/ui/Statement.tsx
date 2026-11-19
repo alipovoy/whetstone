@@ -7,14 +7,17 @@ interface Props {
   topic: Topic
   problem: Problem
   wording: Wording
+  // A preview inside another page names the problem below that page's title.
+  preview?: boolean
   children?: ReactNode
 }
 
 // The problem as the solver reads it.
-export function Statement({ topic, problem, wording, children }: Props) {
+export function Statement({ topic, problem, wording, preview, children }: Props) {
+  const Title = preview ? 'h3' : 'h1'
   return (
     <div className="ws-statement">
-      <h1 className="h3">{wording.title}</h1>
+      <Title className="h3">{wording.title}</Title>
       <p className="ws-statement-meta">
         <span className="ws-difficulty" data-level={problem.difficulty}>
           {problem.difficulty}

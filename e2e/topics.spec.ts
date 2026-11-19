@@ -35,34 +35,35 @@ ${JSON.stringify({
 test('create a topic, fill it from a chat, solve a problem from it', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   const copied = async () => {
-    await page.getByRole('button', { name: 'Copy Chat bot request for problems' }).click()
+    await page.getByRole('button', { name: 'Copy Prompt' }).click()
     return page.evaluate(() => navigator.clipboard.readText())
   }
+  const library = page
+    .getByRole('navigation', { name: 'Settings' })
+    .getByRole('link', { name: 'Coding problems' })
   await page.goto('./')
   await page.getByRole('link', { name: 'Settings' }).click()
   await page.getByRole('link', { name: 'Topics' }).click()
   await page.getByRole('textbox', { name: 'New topic name' }).fill('Strings')
   await page.getByRole('button', { name: 'Create topic' }).click()
-  await page.getByText('Chat bot request for problems').click()
+  await library.click()
+  await page.getByRole('link', { name: 'Add problems' }).click()
+  await page.getByLabel('Topic').selectOption({ label: 'Strings' })
   expect(await copied()).toContain(
     'Write 3 new Python coding interview problems for the topic "Strings"',
   )
 
-  await page.getByRole('button', { name: 'New problem' }).click()
-  await page.getByRole('textbox', { name: 'Problem JSON' }).fill(answer)
-  await page.getByRole('button', { name: 'Add' }).click()
-  await expect(
-    page
-      .getByRole('region', { name: 'Topic problems' })
-      .getByRole('listitem', { name: 'Count vowels' }),
-  ).toBeVisible({ timeout: 90_000 })
+  await page.getByRole('textbox', { name: 'Chat bot answer' }).fill(answer)
+  await page.getByRole('button', { name: 'Check' }).click()
+  await expect(page.getByText('Passes the check.')).toBeVisible({ timeout: 90_000 })
+  await page.getByRole('button', { name: 'Add 1 problem' }).click()
+  await expect(page.getByText('Added 1 problem to Strings.')).toBeVisible()
+
+  await page.getByRole('link', { name: 'Add problems' }).click()
   expect(await copied()).toContain('do not repeat them:\n- Count vowels')
 
   await page.reload()
-  await page
-    .getByRole('navigation', { name: 'Settings' })
-    .getByRole('link', { name: 'Coding problems' })
-    .click()
+  await library.click()
   await page.getByRole('link', { name: 'Count vowels' }).click()
   await expect(page.getByRole('region', { name: 'Reference solution' })).toBeVisible()
   await page.getByRole('button', { name: 'Try it' }).click()

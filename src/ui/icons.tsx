@@ -12,6 +12,7 @@ const PATHS = {
   'chevron-left': 'M15 6l-6 6 6 6',
   'chevron-right': 'M9 6l6 6-6 6',
   'chevron-up': 'M6 15l6-6 6 6',
+  plus: 'M12 5v14M5 12h14',
   flag: 'M5 21V4M5 4h12l-2.5 4L17 12H5',
   shuffle:
     'M3 7h3c4 0 6 10 10 10h5M3 17h3c1.5 0 2.7-1.4 3.8-3M14.2 10c1.1-1.6 2.3-3 3.8-3h3M18 4l3 3-3 3M18 14l3 3-3 3',

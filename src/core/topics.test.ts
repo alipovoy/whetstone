@@ -12,6 +12,7 @@ import {
   editConcept,
   itemText,
   newTopic,
+  readDrafts,
   served,
   TopicRecordSchema,
   type TopicRecord,
@@ -270,6 +271,30 @@ describe('addProblems', () => {
 
   it('takes exactly one problem for an edit', () => {
     expect(addProblems(topic, [authored(), authored()], nextId, 'p').ok).toBe(false)
+  })
+})
+
+describe('readDrafts', () => {
+  it('reads each problem on its own, with the concepts it would add', () => {
+    const drafts = readDrafts(
+      topic,
+      [authored({ concepts: [{ name: 'Graphs', group: 'Trees' }] }), authored({ hints: [] })],
+      () => 'x',
+    )
+    expect(drafts[0]).toMatchObject({
+      ok: true,
+      title: 'T',
+      problem: { id: 'x', concepts: ['graphs'] },
+    })
+    expect(drafts[0].ok && drafts[0].concepts.map((c) => c.name)).toEqual([
+      'Two pointers',
+      'Graphs',
+    ])
+    expect(drafts[1]).toMatchObject({
+      ok: false,
+      title: 'T',
+      errors: ['hints: needs exactly three hints'],
+    })
   })
 })
 

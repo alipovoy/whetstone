@@ -32,10 +32,10 @@ export function TopicConcepts({ topic, file, locked, onChange, ...props }: Props
   const areas = [...new Set(topic.concepts.map((c) => c.group))]
   // The library lists every stored problem, served or not, and filters by the concepts left
   // unchecked, including those a broken problem names but the topic no longer has.
-  const stored = conceptGroups(libraryEntries([topic])).flatMap((g) => g.names)
+  const named = conceptGroups(libraryEntries([topic])).flatMap((g) => g.names)
   const problemsOf = (name: string): Route => ({
     page: 'library',
-    filter: { topic: topic.id, offConcepts: stored.filter((n) => n !== name) },
+    filter: { topic: topic.id, offConcepts: named.filter((n) => n !== name) },
     disabled: !topic.enabled || undefined,
   })
 
@@ -84,56 +84,63 @@ export function TopicConcepts({ topic, file, locked, onChange, ...props }: Props
           <section key={area} aria-label={area} className="ws-concept-area">
             <h3 className="h6">{area}</h3>
             <ListGroup as="ul">
-              {concepts.map((c) => (
-                <ListGroup.Item as="li" key={c.id} aria-label={c.name}>
-                  {editing === c.id ? (
-                    <ConceptForm
-                      label={`Edit ${c.name}`}
-                      submit="Save"
-                      initial={{ name: c.name, area }}
-                      disabled={disabled}
-                      onSave={(name, newArea) => editConcept(topic, c.id, name, newArea)}
-                      onSaved={(record) => {
-                        onChange(() => record)
-                        setEditing(null)
-                      }}
-                      onCancel={() => setEditing(null)}
-                    />
-                  ) : (
-                    <Stack direction="horizontal" gap={2} className="flex-wrap">
-                      <span>{c.name}</span>
-                      <span className="text-body-secondary small ms-auto">
-                        <ProblemCount
-                          count={conceptUsage(topic, c.id).problems}
-                          name={c.name}
-                          to={problemsOf(c.name)}
-                        />
-                        , {plural(c.questions, 'question')}
-                      </span>
-                      <Stack direction="horizontal" gap={2}>
-                        <Button
-                          size="sm"
-                          variant="outline-primary"
-                          aria-label={`Edit ${c.name}`}
-                          disabled={disabled || editing !== null}
-                          onClick={() => setEditing(c.id)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline-danger"
-                          aria-label={`Delete ${c.name}`}
-                          disabled={disabled || editing !== null}
-                          onClick={() => remove(c.id, c.name)}
-                        >
-                          Delete
-                        </Button>
+              {concepts.map((c) => {
+                const problemCount = conceptUsage(topic, c.id).problems
+                return (
+                  <ListGroup.Item as="li" key={c.id} aria-label={c.name}>
+                    {editing === c.id ? (
+                      <ConceptForm
+                        label={`Edit ${c.name}`}
+                        submit="Save"
+                        initial={{ name: c.name, area }}
+                        disabled={disabled}
+                        onSave={(name, newArea) => editConcept(topic, c.id, name, newArea)}
+                        onSaved={(record) => {
+                          onChange(() => record)
+                          setEditing(null)
+                        }}
+                        onCancel={() => setEditing(null)}
+                      />
+                    ) : (
+                      <Stack direction="horizontal" gap={2} className="flex-wrap">
+                        <span>{c.name}</span>
+                        <span className="text-body-secondary small ms-auto">
+                          <ProblemCount
+                            count={problemCount}
+                            name={c.name}
+                            to={
+                              problemCount
+                                ? problemsOf(c.name)
+                                : { page: 'add-problems', topic: topic.id, concepts: [c.name] }
+                            }
+                          />
+                          , {plural(c.questions, 'question')}
+                        </span>
+                        <Stack direction="horizontal" gap={2}>
+                          <Button
+                            size="sm"
+                            variant="outline-primary"
+                            aria-label={`Edit ${c.name}`}
+                            disabled={disabled || editing !== null}
+                            onClick={() => setEditing(c.id)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline-danger"
+                            aria-label={`Delete ${c.name}`}
+                            disabled={disabled || editing !== null}
+                            onClick={() => remove(c.id, c.name)}
+                          >
+                            Delete
+                          </Button>
+                        </Stack>
                       </Stack>
-                    </Stack>
-                  )}
-                </ListGroup.Item>
-              ))}
+                    )}
+                  </ListGroup.Item>
+                )
+              })}
             </ListGroup>
           </section>
         ))
@@ -142,10 +149,13 @@ export function TopicConcepts({ topic, file, locked, onChange, ...props }: Props
   )
 }
 
+// A count links to the problems, or to adding the first ones.
 function ProblemCount({ count, name, to }: { count: number; name: string; to: Route }) {
-  if (count === 0) return plural(count, 'problem')
   return (
-    <Link to={to} aria-label={`${plural(count, 'problem')} of ${name}`}>
+    <Link
+      to={to}
+      aria-label={count ? `${plural(count, 'problem')} of ${name}` : `Add problems of ${name}`}
+    >
       {plural(count, 'problem')}
     </Link>
   )
