@@ -39,6 +39,10 @@ const namedConcepts = conceptList(ConceptSchema.omit({ id: true }), (c) =>
 export const DIFFICULTIES = ['Easy', 'Medium', 'Hard'] as const
 export const DifficultySchema = z.enum(DIFFICULTIES)
 
+export const SOURCES = ['built-in', 'user', 'ai'] as const
+export type Source = (typeof SOURCES)[number]
+const SourceSchema = z.enum(SOURCES)
+
 export const ProblemSchema = z.object({
   id,
   concepts: conceptIds,
@@ -51,7 +55,7 @@ export const ProblemSchema = z.object({
   visible_tests: z.array(text).min(1, 'needs at least one visible test'),
   hints: z.array(text).length(3, 'needs exactly three hints'),
   summary: text,
-  source: z.enum(['built-in', 'user', 'ai']),
+  source: SourceSchema,
 })
 
 // What a person or a chat writes: the app assigns id and source, and concepts are named, not referenced.
@@ -74,7 +78,7 @@ export const QuestionSchema = z.object({
   answers: z.array(z.number().int().min(0)).min(1, 'needs at least one answer'),
   explanation: text,
   summary: text,
-  source: z.enum(['built-in', 'user', 'ai']),
+  source: SourceSchema,
 })
 
 export const DraftQuestionSchema = QuestionSchema.omit({ id: true, source: true }).extend({

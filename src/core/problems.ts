@@ -2,6 +2,7 @@ import {
   conceptNames,
   type Difficulty,
   type Problem,
+  type Source,
   type Topic,
   type TopicFile,
 } from '@/content/schema'
@@ -19,15 +20,17 @@ export interface ProblemFilter {
   offConcepts?: string[]
   difficulty?: Difficulty
   status?: ProblemStatus
+  source?: Source
 }
 
-// What the filters read: the problems list and the history of graded attempts both have it.
+// What the filters read: the problems list, the history of graded attempts and the library have it.
 export interface Filterable {
   topic: { id: string; name: string }
   title: string
   concepts: EntryConcept[]
   difficulty: string
-  status: ProblemStatus
+  status?: ProblemStatus
+  source?: Source
 }
 
 // A concept no longer in its topic has no area.
@@ -44,6 +47,7 @@ export interface ConceptGroup {
 export interface ProblemEntry extends Filterable {
   topic: Topic
   problem: Problem
+  status: ProblemStatus
   latest?: Attempt
   graded?: Attempt
 }
@@ -82,6 +86,7 @@ export function filterEntries<T extends Filterable>(entries: T[], filter: Proble
       (!filter.offConcepts || e.concepts.some((c) => !filter.offConcepts?.includes(c.name))) &&
       (!filter.difficulty || e.difficulty === filter.difficulty) &&
       (!filter.status || e.status === filter.status) &&
+      (!filter.source || e.source === filter.source) &&
       words.every((w) =>
         [e.title, ...e.concepts.map((c) => c.name)].join(' ').toLowerCase().includes(w),
       ),
@@ -110,9 +115,9 @@ export function conceptGroups(entries: Filterable[], topic?: string): ConceptGro
   }))
 }
 
-// A topic from an old address may be gone, and a status may be one the list cannot have; each
-// would hide every entry while its field reads "All", so it is dropped. Unchecked concepts are
-// kept only while the topic offers them, so all checked always reads as no filter.
+// A topic from an old address may be gone, and a status or a source may be one the list cannot
+// have; each would hide every entry while its field reads "All", so it is dropped. Unchecked
+// concepts are kept only while the topic offers them, so all checked always reads as no filter.
 export function applicableFilter(
   filter: ProblemFilter,
   entries: Filterable[],
@@ -122,5 +127,8 @@ export function applicableFilter(
   const offered = new Set(conceptGroups(entries, topic).flatMap((g) => g.names))
   const off = [...new Set(filter.offConcepts)].filter((name) => offered.has(name))
   const status = statuses.find((s) => s === filter.status)
-  return { ...filter, topic, offConcepts: off.length ? off : undefined, status }
+  const source = entries.some((e) => e.source && e.source === filter.source)
+    ? filter.source
+    : undefined
+  return { ...filter, topic, offConcepts: off.length ? off : undefined, status, source }
 }

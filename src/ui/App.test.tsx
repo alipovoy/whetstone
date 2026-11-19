@@ -12,6 +12,10 @@ import { App, type AppRunner, type AppStorage } from './App'
 import { href, type Route } from './route'
 import { applyTheme, setScheme, setThemeChoice } from './theme'
 
+// Settings has a Coding problems entry too.
+const mainLink = (name: string) =>
+  within(screen.getByRole('navigation', { name: 'Main' })).getByRole('link', { name })
+
 const problem = (id: string, title: string): TopicFile['problems'][number] => ({
   id,
   concepts: ['c'],
@@ -278,7 +282,7 @@ describe('App', () => {
 
   it('returns to the problem list from the menu, and Home from the logo', async () => {
     await startFirst()
-    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
+    await userEvent.click(mainLink('Coding problems'))
     expect(problemRow('Second problem')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('link', { name: 'Whetstone' }))
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Practise')
@@ -324,7 +328,7 @@ describe('App', () => {
       expect.objectContaining({ problem: 'one', grade: expect.objectContaining({ score: 50 }) }),
     )
     expect(screen.getByText('Reference solution')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
+    await userEvent.click(mainLink('Coding problems'))
     expect(problemRow('First problem')).toHaveTextContent('Last score 50')
   })
 
@@ -503,6 +507,12 @@ describe('App', () => {
     await userEvent.selectOptions(screen.getByLabelText('Topic'), 'Other')
     expect(window.location.hash).toBe('#/coding?topic=u')
     expect(conceptsToggle()).toHaveTextContent('All concepts')
+
+    await userEvent.click(within(menu).getByRole('checkbox', { name: 'H' }))
+    expect(window.location.hash).toBe('#/coding?topic=u&without=D')
+    expect(within(menu).getByRole('checkbox', { name: 'D' })).not.toBeChecked()
+    await userEvent.click(within(menu).getByRole('checkbox', { name: 'H' }))
+    expect(window.location.hash).toBe('#/coding?topic=u')
   })
 
   it('collapses either pane but not both, resizes them, and keeps the layout', async () => {
@@ -525,7 +535,7 @@ describe('App', () => {
       collapsed: 'left',
     })
 
-    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
+    await userEvent.click(mainLink('Coding problems'))
     await userEvent.click(screen.getByRole('button', { name: 'Resume First problem' }))
     expect(screen.queryByRole('region', { name: 'Problem' })).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'Expand Problem' }))
@@ -745,7 +755,7 @@ describe('Layout', () => {
     await startFirst(runner)
     const at = window.location.hash
     await userEvent.click(screen.getByRole('button', { name: 'Run' }))
-    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
+    await userEvent.click(mainLink('Coding problems'))
     act(() => {
       window.history.replaceState(null, '', '#/quizzes')
       window.dispatchEvent(new HashChangeEvent('hashchange'))
@@ -753,7 +763,7 @@ describe('Layout', () => {
     expect(window.location.hash).toBe(at)
     expect(screen.getByRole('button', { name: 'Grade' })).toBeInTheDocument()
     await act(async () => finish())
-    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
+    await userEvent.click(mainLink('Coding problems'))
     expect(problemRow('First problem')).toBeInTheDocument()
   })
 })
@@ -853,7 +863,7 @@ describe('Topics', () => {
       'Copied',
     )
 
-    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
+    await userEvent.click(mainLink('Coding problems'))
     await userEvent.click(screen.getByRole('button', { name: 'Start Reverse words' }))
     expect(screen.getByRole('heading', { name: /Reverse words/ })).toBeInTheDocument()
   })
@@ -1055,7 +1065,7 @@ describe('Topics', () => {
       expect.objectContaining({ problems: [{ ...shared, concepts: ['d'] }] }),
     )
 
-    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
+    await userEvent.click(mainLink('Coding problems'))
     await userEvent.click(conceptsToggle())
     expect(screen.getByRole('group', { name: 'H' })).toHaveTextContent('Dee')
   })
@@ -1070,7 +1080,7 @@ describe('Topics', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Renamed')
 
     await userEvent.click(screen.getByRole('switch', { name: 'Enabled' }))
-    await userEvent.click(screen.getByRole('link', { name: 'Coding problems' }))
+    await userEvent.click(mainLink('Coding problems'))
     expect(screen.queryByRole('listitem', { name: 'First problem' })).toBeNull()
     expect(screen.getByText(/No problems to practise/)).toBeInTheDocument()
 
@@ -1079,6 +1089,155 @@ describe('Topics', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete topic' }))
     expect(put.topics.delete).toHaveBeenCalledWith('t')
     expect(screen.getByText('No topics yet.')).toBeInTheDocument()
+  })
+
+  describe('library', () => {
+    const settingsLink = (name: string) =>
+      within(screen.getByRole('navigation', { name: 'Settings' })).getByRole('link', { name })
+    const off: TopicFile = {
+      topic: { id: 'u', name: 'Off', concepts: [{ id: 'd', name: 'D', group: 'H' }] },
+      problems: [{ ...problem('three', 'Third problem'), concepts: ['d'], source: 'user' }],
+      questions: [],
+    }
+    const stored = (): TopicRecord[] => [
+      {
+        ...topicFromFile(topic, 0),
+        problems: [
+          ...topic.problems,
+          { ...problem('broken', 'Broken problem'), hints: [] },
+          {
+            ...problem('twice', 'Twice worded'),
+            wordings: [
+              problem('x', 'Twice worded').wordings[0],
+              { ...problem('x', 'Said again').wordings[0], statement: 'Second wording' },
+            ],
+          },
+        ],
+      },
+      { ...topicFromFile(off, 1), enabled: false },
+    ]
+
+    it('lists every stored problem, disabled topics on request, filtered in the address', async () => {
+      renderApp(fakeRunner(), { topics: stored() })
+      await userEvent.click(screen.getByRole('link', { name: 'Settings' }))
+      await userEvent.click(settingsLink('Coding problems'))
+      expect(window.location.hash).toBe('#/settings/problems')
+      const rows = () =>
+        within(screen.getByRole('region', { name: 'Problems' }))
+          .getAllByRole('listitem')
+          .filter((li) => li.classList.contains('ws-problem'))
+          .map((li) => li.getAttribute('aria-label'))
+      expect(rows()).toEqual(['First problem', 'Second problem', 'Broken problem', 'Twice worded'])
+      expect(screen.getByRole('listitem', { name: 'Broken problem' })).toHaveTextContent(
+        'Not served: hints: needs exactly three hints',
+      )
+      expect(screen.getByRole('listitem', { name: 'First problem' })).toHaveTextContent('Built-in')
+
+      await userEvent.click(screen.getByRole('switch', { name: 'Show disabled topics' }))
+      expect(window.location.hash).toBe('#/settings/problems?disabled=shown')
+      expect(screen.getByRole('listitem', { name: 'Third problem' })).toHaveTextContent(
+        'Off (disabled)',
+      )
+      await userEvent.selectOptions(screen.getByLabelText('Source'), 'Added by you')
+      expect(window.location.hash).toBe('#/settings/problems?source=user&disabled=shown')
+      expect(rows()).toEqual(['Third problem'])
+
+      // The source no problem of an enabled topic has is dropped with them.
+      await userEvent.click(screen.getByRole('switch', { name: 'Show disabled topics' }))
+      expect(window.location.hash).toBe('#/settings/problems')
+      expect(rows()).toHaveLength(4)
+    })
+
+    it('opens a problem as the solver sees it, with its hints, reference and tests, to try it', async () => {
+      renderApp(fakeRunner(), { topics: stored() }, { page: 'library' })
+      await userEvent.click(screen.getByRole('link', { name: 'Twice worded' }))
+      expect(window.location.hash).toBe('#/settings/problems/t/twice')
+      expect(screen.getByRole('heading', { level: 1, name: 'Twice worded' })).toBeVisible()
+      await userEvent.click(screen.getByRole('tab', { name: 'Wording 2' }))
+      expect(screen.getByRole('heading', { level: 1, name: 'Said again' })).toBeVisible()
+      expect(screen.getByText('Second wording')).toBeVisible()
+      expect(screen.getByRole('region', { name: 'Hints' })).toHaveTextContent('123')
+      expect(screen.getByRole('textbox', { name: 'Reference solution' })).toHaveTextContent(
+        'return x',
+      )
+      expect(screen.getByRole('region', { name: 'Tests' })).toHaveTextContent(
+        'The solver sees only test_a; the rest are hidden.',
+      )
+
+      await userEvent.click(screen.getByRole('button', { name: 'Try it' }))
+      expect(window.location.hash).toBe('#/coding/t/twice')
+      expect(screen.getByRole('textbox', { name: 'Solution code' })).toBeInTheDocument()
+    })
+
+    it('shows why a problem is not served, and deletes it', async () => {
+      vi.spyOn(window, 'confirm').mockReturnValue(true)
+      const put = renderApp(fakeRunner(), { topics: stored() }, { page: 'library' })
+      await userEvent.click(screen.getByRole('link', { name: 'Broken problem' }))
+      expect(screen.getByRole('alert')).toHaveTextContent('hints: needs exactly three hints')
+      expect(screen.getByRole('textbox', { name: 'Stored problem' })).toHaveTextContent(
+        '"id": "broken"',
+      )
+      expect(screen.queryByRole('button', { name: 'Try it' })).toBeNull()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+      expect(window.confirm).toHaveBeenCalledWith(
+        'Delete "Broken problem"? Its past attempts will be kept.',
+      )
+      expect(put.topics.put.mock.lastCall![0].problems.map((p) => p.id)).toEqual([
+        'one',
+        'two',
+        'twice',
+      ])
+      expect(window.location.hash).toBe('#/settings/problems')
+      expect(screen.queryByRole('link', { name: 'Broken problem' })).toBeNull()
+    })
+
+    it('offers no Try it for a disabled topic, and says when a problem is gone', async () => {
+      renderApp(
+        fakeRunner(),
+        { topics: stored() },
+        {
+          page: 'library-problem',
+          topic: 'u',
+          problem: 'three',
+        },
+      )
+      expect(screen.getByRole('heading', { level: 1, name: 'Third problem' })).toBeVisible()
+      expect(screen.queryByRole('button', { name: 'Try it' })).toBeNull()
+      act(() => {
+        window.location.hash = href({ page: 'library-problem', topic: 'u', problem: 'gone' })
+      })
+      expect(await screen.findByText('This problem is not available')).toBeInTheDocument()
+    })
+
+    it('opens from the problem count of a concept on the topic page', async () => {
+      const two: TopicFile = {
+        ...topic,
+        topic: {
+          ...topic.topic,
+          concepts: [...topic.topic.concepts, { id: 'e', name: 'E', group: 'G' }],
+        },
+        problems: [
+          ...topic.problems,
+          { ...problem('three', 'Third problem'), concepts: ['e'] },
+          { ...problem('broken', 'Broken problem'), hints: [] },
+          { ...problem('lost', 'Lost problem'), concepts: ['gone'] },
+        ],
+      }
+      renderApp(fakeRunner(), { topics: [topicFromFile(two, 0)] })
+      await openTopic('Topic')
+      // Broken problems count too, as the library lists them; one of no known concept is in no link.
+      await userEvent.click(screen.getByRole('link', { name: '3 problems of C' }))
+      expect(window.location.hash).toBe('#/settings/problems?topic=t&without=E&without=gone')
+      expect(screen.getByText('3 of 5 problems')).toBeInTheDocument()
+      await userEvent.click(conceptsToggle())
+      const area = screen.getByRole('checkbox', { name: 'G' })
+      expect(area).not.toBeChecked()
+      expect(area).toHaveProperty('indeterminate', true)
+      await userEvent.click(area)
+      expect(window.location.hash).toBe('#/settings/problems?topic=t&without=gone')
+      expect(area).toHaveProperty('indeterminate', false)
+    })
   })
 
   describe('quizzes', () => {

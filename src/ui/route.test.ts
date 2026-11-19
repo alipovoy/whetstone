@@ -20,6 +20,9 @@ describe('routes', () => {
     { page: 'appearance' },
     { page: 'topics' },
     { page: 'topic', id: 't1' },
+    { page: 'library' },
+    { page: 'library', filter: { topic: 't', source: 'user' }, disabled: true },
+    { page: 'library-problem', topic: 'my topic', problem: 'a/b' },
   ]
 
   it('reads back every address it writes, ids with any characters included', () => {
@@ -35,6 +38,9 @@ describe('routes', () => {
       '#/coding/only-topic',
       '#/quizzes/a/b',
       '#/reports/quizzes/a',
+      '#/settings/problems/only-topic',
+      '#/settings/topics/a/b',
+      '#/coding/a/b/c',
       '#/%E0',
     ])
       expect(parseRoute(hash)).toEqual({ page: 'home' })
@@ -47,8 +53,11 @@ describe('routes', () => {
 
   it('drops unknown or empty filter values', () => {
     expect(
-      parseRoute('#/coding?difficulty=Insane&status=done&search=&area=X&without=&without=Y'),
+      parseRoute(
+        '#/coding?difficulty=Insane&status=done&source=me&search=&area=X&without=&without=Y',
+      ),
     ).toEqual({ page: 'problems', filter: { offConcepts: ['Y'] } })
+    expect(parseRoute('#/settings/problems?disabled=yes')).toEqual({ page: 'library' })
     expect(parseRoute('#/coding?')).toEqual({ page: 'problems' })
     expect(href({ page: 'problems', filter: {} })).toBe('#/coding')
   })
@@ -66,6 +75,9 @@ describe('routes', () => {
       'reports',
       'reports',
       'reports',
+      'settings',
+      'settings',
+      'settings',
       'settings',
       'settings',
       'settings',

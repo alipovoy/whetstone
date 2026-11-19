@@ -59,8 +59,13 @@ test('create a topic, fill it from a chat, solve a problem from it', async ({ pa
   expect(await copied()).toContain('do not repeat them:\n- Count vowels')
 
   await page.reload()
-  await page.getByRole('link', { name: 'Coding problems' }).click()
-  await page.getByRole('button', { name: 'Start Count vowels' }).click()
+  await page
+    .getByRole('navigation', { name: 'Settings' })
+    .getByRole('link', { name: 'Coding problems' })
+    .click()
+  await page.getByRole('link', { name: 'Count vowels' }).click()
+  await expect(page.getByRole('region', { name: 'Reference solution' })).toBeVisible()
+  await page.getByRole('button', { name: 'Try it' }).click()
   const editor = page.getByRole('textbox', { name: 'Solution code' })
   await editor.click()
   await page.keyboard.press('ControlOrMeta+a')

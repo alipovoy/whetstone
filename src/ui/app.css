@@ -640,9 +640,11 @@ a[aria-disabled='true'] {
 }
 .ws-concepts-menu legend {
   margin-bottom: 0.15rem;
-  color: var(--ws-muted);
   font-size: 0.8125rem;
   font-weight: 600;
+}
+.ws-concepts-menu legend label {
+  color: var(--ws-muted);
 }
 .ws-concepts-menu .form-check {
   white-space: nowrap;
@@ -786,6 +788,18 @@ a[aria-disabled='true'] {
   display: flex;
   justify-content: flex-end;
   gap: 0.4rem;
+}
+.ws-library-problem {
+  grid-template-columns: minmax(0, 1fr) 4.5rem 8rem;
+}
+.ws-problem-errors {
+  margin: 0.25rem 0 0;
+  color: var(--bs-warning-text-emphasis);
+  font-size: 0.8125rem;
+}
+.ws-source {
+  color: var(--ws-muted);
+  font-size: 0.875rem;
 }
 
 /* Reports */

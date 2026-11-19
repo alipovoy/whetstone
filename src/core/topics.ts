@@ -60,14 +60,27 @@ export interface Served {
 const known = (item: { concepts: string[] }, concepts: Set<string>) =>
   item.concepts.every((c) => concepts.has(c))
 
+type Read<T> = { ok: true; item: T } | { ok: false; errors: string[] }
+
+// A stored problem is served only while it follows the current rules.
+export function readProblem(raw: unknown, concepts: Set<string>): Read<Problem> {
+  const parsed = ProblemSchema.safeParse(raw)
+  if (!parsed.success) return { ok: false, errors: issues(parsed.error) }
+  const errors = [
+    ...parsed.data.concepts
+      .filter((c) => !concepts.has(c))
+      .map((c) => `concepts: “${c}” is not a concept of the topic`),
+    ...testErrors(parsed.data),
+  ]
+  return errors.length ? { ok: false, errors } : { ok: true, item: parsed.data }
+}
+
 export function served(record: TopicRecord): Served {
   const concepts = new Set(record.concepts.map((c) => c.id))
   const problems: Problem[] = []
   for (const raw of record.problems) {
-    const parsed = ProblemSchema.safeParse(raw)
-    if (parsed.success && known(parsed.data, concepts) && !testErrors(parsed.data).length) {
-      problems.push(parsed.data)
-    }
+    const read = readProblem(raw, concepts)
+    if (read.ok) problems.push(read.item)
   }
   const questions: Question[] = []
   for (const raw of record.questions) {
@@ -146,8 +159,7 @@ export function addQuestions(
   })
 }
 
-type Reading<T> = { ok: true; item: T } | { ok: false; errors: string[] }
-type Reader<T> = (raw: unknown, concepts: Concept[], id: string, source: unknown) => Reading<T>
+type Reader<T> = (raw: unknown, concepts: Concept[], id: string, source: unknown) => Read<T>
 
 function addItems<T extends { id: string }>(
   record: TopicRecord,
@@ -186,7 +198,7 @@ function finish<T>(
   concepts: Concept[],
   id: string,
   source: unknown,
-): Reading<T> {
+): Read<T> {
   const ids = named.map((name) => {
     let concept = concepts.find((c) => conceptKey(c.name) === conceptKey(name.name))
     if (!concept) {
@@ -207,7 +219,7 @@ function finish<T>(
 const SourceSchema = ProblemSchema.shape.source
 
 // A problem's title, or a question's summary, to name it in errors.
-function titleOf(raw: unknown): string | undefined {
+export function titleOf(raw: unknown): string | undefined {
   const item = raw as { wordings?: { title?: unknown }[]; summary?: unknown } | null
   const title = item?.wordings?.[0]?.title ?? item?.summary
   return typeof title === 'string' && title.trim() ? title : undefined

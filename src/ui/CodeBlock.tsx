@@ -1,5 +1,6 @@
 import { json } from '@codemirror/lang-json'
 import { markdown } from '@codemirror/lang-markdown'
+import { python } from '@codemirror/lang-python'
 import {
   defaultHighlightStyle,
   LanguageDescription,
@@ -19,6 +20,7 @@ const LANGUAGES = {
     markdown({
       codeLanguages: [LanguageDescription.of({ name: 'json', support: json() })],
     }),
+  python: () => python(),
 }
 
 interface Props {
@@ -42,7 +44,8 @@ export function CodeBlock({ value, language, label }: Props) {
         LANGUAGES[language](),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         EditorState.readOnly.of(true),
-        EditorView.lineWrapping,
+        // Wrapped Python reads as other code; it scrolls instead.
+        language === 'python' ? [] : EditorView.lineWrapping,
         EditorView.theme({ '&': { maxHeight: '24rem' }, '.cm-scroller': { overflow: 'auto' } }),
         theme.of([]),
         EditorView.contentAttributes.of({ 'aria-label': label }),

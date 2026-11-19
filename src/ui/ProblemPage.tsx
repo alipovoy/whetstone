@@ -11,17 +11,17 @@ import {
 } from '@/core/attempt'
 import { problemStatus } from '@/core/problems'
 import { failureText, hintCap, MAX_HINTS } from '@/core/scoring'
-import { conceptNames, type Problem, type Topic } from '@/content/schema'
+import type { Problem, Topic } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
 import { RUN_LIMIT_MS, type RunnerStatus, type RunResult, type TestResult } from '@/runner/types'
 import { CodeEditor } from './CodeEditor'
 import { Countdown } from './Countdown'
 import { Icon } from './icons'
 import { Link } from './Link'
-import { Markdown } from './Markdown'
-import { ConceptTags, StatusPill, TestMarks } from './progress'
+import { StatusPill, TestMarks } from './progress'
 import type { Route } from './route'
 import { SplitView } from './SplitView'
+import { Statement } from './Statement'
 
 export type Runner = Pick<PyodideRunner, 'run' | 'test' | 'status' | 'subscribe'>
 
@@ -152,37 +152,10 @@ export function ProblemPage({
       )
     })
 
-  const concepts = conceptNames(topic, problem.concepts)
   const status = problemStatus(attempt, attempt)
 
   const statement = (
-    <div className="ws-statement">
-      <h1 className="h3">{wording.title}</h1>
-      <p className="ws-statement-meta">
-        <span className="ws-difficulty" data-level={problem.difficulty}>
-          {problem.difficulty}
-        </span>
-        {topic.name}
-      </p>
-      <ConceptTags names={concepts} />
-      <Markdown source={wording.statement} />
-      {wording.examples.map((example, i) => (
-        <div key={i}>
-          <h2 className="h6">Example {i + 1}</h2>
-          <pre className="ws-example">{`Input: ${example.input}\nOutput: ${example.output}`}</pre>
-          {example.explanation && <p className="small">{example.explanation}</p>}
-        </div>
-      ))}
-      {wording.constraints.length > 0 && (
-        <>
-          <h2 className="h6">Constraints</h2>
-          <ul className="small">
-            {wording.constraints.map((c) => (
-              <li key={c}>{c}</li>
-            ))}
-          </ul>
-        </>
-      )}
+    <Statement topic={topic} problem={problem} wording={wording}>
       <Hints
         hints={problem.hints.slice(0, hintsShown)}
         onMore={
@@ -199,7 +172,7 @@ export function ProblemPage({
           <pre>{problem.reference_solution}</pre>
         </details>
       )}
-    </div>
+    </Statement>
   )
 
   const editor = (

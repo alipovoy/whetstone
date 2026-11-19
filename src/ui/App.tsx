@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Alert } from 'react-bootstrap'
 import { latestAttempt, startAttempt, type Attempt, type Grade } from '@/core/attempt'
 import { startQuiz, submitQuiz, type Quiz, type QuizSetup } from '@/core/quiz'
-import { newTopic, served, type TopicRecord } from '@/core/topics'
+import { libraryEntries } from '@/core/library'
+import { deleteItem, newTopic, served, type TopicRecord } from '@/core/topics'
 import type { Problem, Topic } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
 import type { Records } from '@/storage/database'
@@ -14,6 +15,7 @@ import { QuizPage } from './QuizPage'
 import { QuizzesPage } from './QuizzesPage'
 import { TopicPage } from './TopicPage'
 import { TopicsPage } from './TopicsPage'
+import { LibraryPage, LibraryProblem } from './LibraryPages'
 import { Link } from './Link'
 import { href, navigate, replaceRoute, sectionOf, useRoute, type Route } from './route'
 import { AttemptReport, CodingReport, QuizReport } from './ReportsPages'
@@ -143,6 +145,12 @@ export function App({ runner, storage }: Props) {
   }
   const resume = (topic: Topic, problem: Problem) =>
     navigate({ page: 'solve', topic: topic.id, problem: problem.id })
+  // An open attempt is resumed, so trying a problem never throws away work.
+  const tryProblem = (topic: Topic, problem: Problem) => {
+    const latest = latestAttempt(attempts, topic.id, problem.id)
+    if (latest && !latest.grade) resume(topic, problem)
+    else start(topic, problem)
+  }
   // Every open attempt goes: Start over, before Discard replaced it, left one behind the latest.
   const discard = (topic: Topic, problem: Problem) => {
     const ids = attempts
@@ -167,12 +175,21 @@ export function App({ runner, storage }: Props) {
   if (route.page === 'reports' && route.section === 'coding' && href(route) !== href(history))
     setHistory(route)
 
+  // The same for the library.
+  const [library, setLibrary] = useState<Route>({ page: 'library' })
+  if (route.page === 'library' && href(route) !== href(library)) setLibrary(route)
+  const stored = useMemo(() => libraryEntries(topics), [topics])
+
   const section = sectionOf(route)
   const topic = route.page === 'topic' ? topics.find((t) => t.id === route.id) : undefined
   const quiz = route.page === 'quiz' ? quizzes.find((q) => q.id === route.id) : undefined
   const graded =
     route.page === 'attempt'
       ? attempts.find((a): a is Attempt & { grade: Grade } => a.id === route.id && !!a.grade)
+      : undefined
+  const entry =
+    route.page === 'library-problem'
+      ? stored.find((e) => e.topic.id === route.topic && e.id === route.problem)
       : undefined
   const servedProblem = (attempt: Attempt): Route | undefined =>
     enabled.some(
@@ -193,6 +210,11 @@ export function App({ runner, storage }: Props) {
             label: 'Topics',
             to: { page: 'topics' },
             current: route.page === 'topics' || route.page === 'topic',
+          },
+          {
+            label: 'Coding problems',
+            to: library,
+            current: route.page === 'library' || route.page === 'library-problem',
           },
         ]}
       >
@@ -357,6 +379,34 @@ export function App({ runner, storage }: Props) {
               />
             ) : (
               <Missing what="This topic" back={{ page: 'topics' }} />
+            ),
+          )}
+        {route.page === 'library' &&
+          settings(
+            <LibraryPage
+              entries={stored}
+              filter={route.filter ?? {}}
+              disabled={route.disabled ?? false}
+              onFilter={(filter, disabled) =>
+                replaceRoute({ page: 'library', filter, disabled: disabled || undefined })
+              }
+            />,
+          )}
+        {route.page === 'library-problem' &&
+          settings(
+            entry ? (
+              <LibraryProblem
+                key={`${entry.topic.id}/${entry.id}`}
+                entry={entry}
+                back={library}
+                onTry={tryProblem}
+                onDelete={() => {
+                  updateTopic(entry.topic.id, (t) => deleteItem(t, 'problems', entry.id))
+                  navigate(library)
+                }}
+              />
+            ) : (
+              <Missing what="This problem" back={library} why="It was deleted." />
             ),
           )}
       </main>
