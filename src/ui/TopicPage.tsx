@@ -33,6 +33,7 @@ function Header({ topic, onChange, onDelete }: HeaderProps) {
       <h1 className="h3">{topic.name}</h1>
       <Stack direction="horizontal" gap={3} className="flex-wrap">
         <Form
+          className="ws-topic-rename"
           onSubmit={(event) => {
             event.preventDefault()
             if (name.trim()) onChange((t) => ({ ...t, name: name.trim() }))
@@ -41,6 +42,8 @@ function Header({ topic, onChange, onDelete }: HeaderProps) {
           <Stack direction="horizontal" gap={2}>
             <Form.Control
               aria-label="Topic name"
+              className="ws-topic-name"
+              htmlSize={Math.max(name.length, 12)}
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
