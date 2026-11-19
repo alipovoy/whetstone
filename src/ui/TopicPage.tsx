@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Alert, Badge, Button, Form, ListGroup, Stack, Tab, Tabs } from 'react-bootstrap'
 import {
   PROBLEM_TEMPLATE,
@@ -52,6 +52,7 @@ interface Row {
 
 export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) {
   const [checking, setChecking] = useState(false)
+  const [editors, setEditors] = useState<ItemList[]>([])
   const { file, unreadable } = served(topic)
 
   useEffect(() => onBusy(checking), [checking, onBusy])
@@ -71,13 +72,25 @@ export function TopicPage({ topic, runner, onChange, onDelete, onBusy }: Props) 
     text: itemText(q, topic.concepts),
   }))
   const request = { topic: topic.name, concepts: topic.concepts }
-  const shared = { topic, runner, checking, onChecking: setChecking, onChange }
+  const onEditor = useCallback(
+    (list: ItemList, open: boolean) =>
+      setEditors((lists) => [...lists.filter((l) => l !== list), ...(open ? [list] : [])]),
+    [],
+  )
+  const shared = { topic, runner, checking, onChecking: setChecking, onChange, onEditor }
 
   return (
     <Stack gap={4}>
       <Header topic={topic} onChange={onChange} onDelete={onDelete} disabled={checking} />
 
-      <TopicConcepts topic={topic} file={file} disabled={checking} onChange={onChange} />
+      <TopicConcepts
+        topic={topic}
+        file={file}
+        disabled={checking}
+        // An open item editor holds concept names; a change under it would bring them back.
+        locked={editors.length > 0}
+        onChange={onChange}
+      />
 
       {/* Mounted when first shown; an open editor survives switching tabs. */}
       <Tabs defaultActiveKey="problems" mountOnEnter>
@@ -117,11 +130,14 @@ interface ItemsProps {
   checking: boolean
   onChecking: (checking: boolean) => void
   onChange: Props['onChange']
+  onEditor: (list: ItemList, open: boolean) => void
   children: ReactNode
 }
 
-function Items({ list, rows, unreadable, children, onChange, ...editor }: ItemsProps) {
+function Items({ list, rows, unreadable, children, onChange, onEditor, ...editor }: ItemsProps) {
   const [editing, setEditing] = useState<Editing | null>(null)
+  const open = editing !== null
+  useEffect(() => onEditor(list, open), [list, open, onEditor])
   return (
     <section aria-label={`Topic ${list}`} className="pt-3">
       {unreadable > 0 && (

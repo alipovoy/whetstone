@@ -1029,6 +1029,13 @@ describe('Topics', () => {
       }),
     )
 
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Second problem' }))
+    expect(within(concepts).getByRole('button', { name: 'Delete C' })).toBeDisabled()
+    expect(within(adding).getByRole('textbox', { name: 'Concept name' })).toBeEnabled()
+    expect(concepts).toHaveTextContent('Save or cancel the open problem or question first')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(within(concepts).getByRole('button', { name: 'Delete C' })).toBeEnabled()
+
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     await userEvent.click(within(concepts).getByRole('button', { name: 'Delete E' }))
     expect(confirm).toHaveBeenLastCalledWith('Delete the concept “E”?')

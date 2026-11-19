@@ -16,12 +16,14 @@ interface Props {
   topic: TopicRecord
   file: TopicFile
   disabled: boolean
+  locked: boolean
   onChange: (change: (topic: TopicRecord) => TopicRecord) => void
 }
 
 const AREAS = 'concept-areas'
 
-export function TopicConcepts({ topic, file, disabled, onChange }: Props) {
+export function TopicConcepts({ topic, file, locked, onChange, ...props }: Props) {
+  const disabled = props.disabled || locked
   const [editing, setEditing] = useState<string | null>(null)
   const areas = [...new Set(topic.concepts.map((c) => c.group))]
 
@@ -46,6 +48,11 @@ export function TopicConcepts({ topic, file, disabled, onChange }: Props) {
           <option key={area} value={area} />
         ))}
       </datalist>
+      {locked && (
+        <p className="text-body-secondary small">
+          Save or cancel the open problem or question first to change concepts.
+        </p>
+      )}
       <ConceptForm
         label="New concept"
         submit="New concept"
