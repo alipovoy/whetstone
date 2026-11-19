@@ -9,7 +9,7 @@ import { candidates, startQuiz, submitQuiz, type Quiz } from '@/core/quiz'
 import { itemText, topicFromFile, type TopicRecord } from '@/core/topics'
 import { App, type AppRunner, type AppStorage } from './App'
 import { href, type Route } from './route'
-import { applyPreferences, setScheme, setSideMenu, setThemeChoice } from './theme'
+import { applyTheme, setScheme, setThemeChoice } from './theme'
 
 // Settings has a Coding problems entry too.
 const mainLink = (name: string) =>
@@ -586,7 +586,6 @@ describe('Layout', () => {
   afterEach(() => {
     setThemeChoice('system')
     setScheme('slate')
-    setSideMenu('open')
   })
 
   it('continues the latest unfinished problem from Home, and lists recent results', async () => {
@@ -669,32 +668,28 @@ describe('Layout', () => {
     expect(document.querySelector('.ws-app')).toHaveAttribute('data-ws-section', 'settings')
 
     localStorage.setItem('whetstone.scheme', 'mint')
-    act(() => applyPreferences())
+    act(() => applyTheme())
     expect(screen.getByRole('radio', { name: /Mint/ })).toBeChecked()
     localStorage.setItem('whetstone.scheme', 'unknown')
-    act(() => applyPreferences())
+    act(() => applyTheme())
     expect(screen.getByRole('radio', { name: /Slate/ })).toBeChecked()
   })
 
-  it('collapses the Settings menu and keeps it so on load', async () => {
+  it('collapses the Settings menu, which opens again on the next page', async () => {
     renderApp(fakeRunner(), {}, { page: 'appearance' })
     await userEvent.click(screen.getByRole('button', { name: 'Hide the Settings menu' }))
-    const show = screen.getByRole('button', { name: 'Show the Settings menu' })
-    expect(show).toHaveAttribute('aria-expanded', 'false')
-    expect(document.querySelector('.ws-sub')).toHaveAttribute('data-side', 'closed')
-    expect(localStorage.getItem('whetstone.side-menu')).toBe('closed')
-
-    localStorage.setItem('whetstone.side-menu', 'open')
-    act(() => applyPreferences())
-    expect(screen.getByRole('button', { name: 'Hide the Settings menu' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    )
-    localStorage.setItem('whetstone.side-menu', 'closed')
-    act(() => applyPreferences())
     expect(screen.getByRole('button', { name: 'Show the Settings menu' })).toHaveAttribute(
       'aria-expanded',
       'false',
+    )
+    expect(document.querySelector('.ws-sub')).toHaveAttribute('data-side', 'closed')
+
+    const main = within(screen.getByRole('navigation', { name: 'Main' }))
+    await userEvent.click(main.getByRole('link', { name: 'Coding problems' }))
+    await userEvent.click(main.getByRole('link', { name: 'Settings' }))
+    expect(screen.getByRole('button', { name: 'Hide the Settings menu' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
     )
   })
 

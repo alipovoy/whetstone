@@ -1,15 +1,8 @@
-import { useId, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { Icon, Logo, type IconName } from './icons'
 import { Link } from './Link'
 import type { Route, Section } from './route'
-import {
-  THEME_CHOICES,
-  setSideMenu,
-  setThemeChoice,
-  useSideMenu,
-  useThemeChoice,
-  type ThemeChoice,
-} from './theme'
+import { THEME_CHOICES, setThemeChoice, useThemeChoice, type ThemeChoice } from './theme'
 
 const MENU: { section: Section; label: string; icon: IconName; to: Route }[] = [
   { section: 'coding', label: 'Coding problems', icon: 'code', to: { page: 'problems' } },
@@ -91,7 +84,7 @@ interface SubMenuPageProps {
 
 export function SubMenuPage({ label, items, placement, held = false, children }: SubMenuPageProps) {
   const id = useId()
-  const side = useSideMenu()
+  const [open, setOpen] = useState(true)
   const nav = (
     <nav id={id} className="ws-sub-menu" aria-label={label}>
       {items.map((item) => (
@@ -106,12 +99,11 @@ export function SubMenuPage({ label, items, placement, held = false, children }:
       ))}
     </nav>
   )
-  const open = side === 'open'
   return (
     <div
       className="ws-sub"
       data-placement={placement}
-      data-side={placement === 'side' ? side : undefined}
+      data-side={placement === 'side' ? (open ? 'open' : 'closed') : undefined}
     >
       {placement === 'side' ? (
         <div className="ws-sub-side">
@@ -123,7 +115,7 @@ export function SubMenuPage({ label, items, placement, held = false, children }:
               aria-expanded={open}
               aria-label={`${open ? 'Hide' : 'Show'} the ${label} menu`}
               title={`${open ? 'Hide' : 'Show'} the menu`}
-              onClick={() => setSideMenu(open ? 'closed' : 'open')}
+              onClick={() => setOpen(!open)}
             >
               <Icon name={open ? 'chevron-left' : 'chevron-right'} />
             </button>

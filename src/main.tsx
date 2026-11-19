@@ -9,9 +9,9 @@ import { createPyodideRunner } from './runner'
 import { topicFromFile } from './core/topics'
 import { openDatabase } from './storage/database'
 import { App, type AppStorage } from './ui/App'
-import { applyPreferences } from './ui/theme'
+import { applyTheme } from './ui/theme'
 
-applyPreferences()
+applyTheme()
 
 async function openStorage(): Promise<AppStorage> {
   try {
