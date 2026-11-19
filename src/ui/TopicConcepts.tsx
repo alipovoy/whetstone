@@ -19,15 +19,13 @@ import type { Route } from './route'
 interface Props {
   topic: TopicRecord
   file: TopicFile
-  disabled: boolean
   locked: boolean
   onChange: (change: (topic: TopicRecord) => TopicRecord) => void
 }
 
 const AREAS = 'concept-areas'
 
-export function TopicConcepts({ topic, file, locked, onChange, ...props }: Props) {
-  const disabled = props.disabled || locked
+export function TopicConcepts({ topic, file, locked, onChange }: Props) {
   const [editing, setEditing] = useState<string | null>(null)
   const areas = [...new Set(topic.concepts.map((c) => c.group))]
   // The library lists every stored problem, served or not, and filters by the concepts left
@@ -63,14 +61,14 @@ export function TopicConcepts({ topic, file, locked, onChange, ...props }: Props
       </datalist>
       {locked && (
         <p className="text-body-secondary small">
-          Save or cancel the open problem or question first to change concepts.
+          Save or cancel the open question first to change concepts.
         </p>
       )}
       <ConceptForm
         label="New concept"
         submit="New concept"
         className="mb-3"
-        disabled={disabled}
+        disabled={locked}
         clearOnSave
         onSave={(name, area) => addConcept(topic, name, area)}
         onSaved={(record) => onChange(() => record)}
@@ -93,7 +91,7 @@ export function TopicConcepts({ topic, file, locked, onChange, ...props }: Props
                         label={`Edit ${c.name}`}
                         submit="Save"
                         initial={{ name: c.name, area }}
-                        disabled={disabled}
+                        disabled={locked}
                         onSave={(name, newArea) => editConcept(topic, c.id, name, newArea)}
                         onSaved={(record) => {
                           onChange(() => record)
@@ -121,7 +119,7 @@ export function TopicConcepts({ topic, file, locked, onChange, ...props }: Props
                             size="sm"
                             variant="outline-primary"
                             aria-label={`Edit ${c.name}`}
-                            disabled={disabled || editing !== null}
+                            disabled={locked || editing !== null}
                             onClick={() => setEditing(c.id)}
                           >
                             Edit
@@ -130,7 +128,7 @@ export function TopicConcepts({ topic, file, locked, onChange, ...props }: Props
                             size="sm"
                             variant="outline-danger"
                             aria-label={`Delete ${c.name}`}
-                            disabled={disabled || editing !== null}
+                            disabled={locked || editing !== null}
                             onClick={() => remove(c.id, c.name)}
                           >
                             Delete

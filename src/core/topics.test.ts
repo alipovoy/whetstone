@@ -206,6 +206,22 @@ describe('addProblems', () => {
     expect(text).not.toHaveProperty('source')
   })
 
+  it('writes a stored problem that breaks the rules as it is, an unknown concept by its id', () => {
+    const text = JSON.parse(
+      itemText({ id: 'p', concepts: ['two-pointers', 'gone'], hints: 1 }, topic.concepts),
+    )
+    expect(text).toEqual({
+      concepts: [
+        { name: 'Two pointers', group: 'Arrays' },
+        { name: 'gone', group: '' },
+      ],
+      hints: 1,
+    })
+    expect(JSON.parse(itemText({ id: 'p', concepts: 'x' }, topic.concepts))).toEqual({
+      concepts: 'x',
+    })
+  })
+
   it('adds problems with new ids, finding a concept by name or adding it once', () => {
     const added = addProblems(
       topic,

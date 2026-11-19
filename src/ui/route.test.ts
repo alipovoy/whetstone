@@ -24,6 +24,7 @@ describe('routes', () => {
     { page: 'library', filter: { topic: 't', source: 'user' }, disabled: true },
     { page: 'library-problem', topic: 'my topic', problem: 'a/b' },
     { page: 'add-problems' },
+    { page: 'edit-problem', topic: 'my topic', problem: 'a/b' },
     { page: 'add-problems', topic: 'a&b', concepts: ['X, y', 'Z'], difficulty: 'Medium' },
   ]
 
@@ -43,6 +44,8 @@ describe('routes', () => {
       '#/settings/problems/only-topic',
       '#/settings/topics/a/b',
       '#/coding/a/b/c',
+      '#/settings/problems/t/p/view',
+      '#/settings/problems/t/p/edit/more',
       '#/%E0',
     ])
       expect(parseRoute(hash)).toEqual({ page: 'home' })
@@ -77,6 +80,7 @@ describe('routes', () => {
       'reports',
       'reports',
       'reports',
+      'settings',
       'settings',
       'settings',
       'settings',

@@ -23,6 +23,7 @@ export type Route =
   // Settings, Coding problems: every stored problem; those of disabled topics on request.
   | { page: 'library'; filter?: ProblemFilter; disabled?: boolean }
   | { page: 'library-problem'; topic: string; problem: string }
+  | { page: 'edit-problem'; topic: string; problem: string }
   // Prefilled from where it was opened: concepts by name.
   | { page: 'add-problems'; topic?: string; concepts?: string[]; difficulty?: Difficulty }
 
@@ -43,9 +44,12 @@ export function parseRoute(hash: string): Route {
         return p
       }
     })
-  const [first, second, third, fourth, ...rest] = parts
+  const [first, second, third, fourth, fifth, ...rest] = parts
   if (rest.length > 0) return { page: 'home' }
   if (first === 'settings' && second === 'problems') {
+    if (fifth === EDIT && third && fourth)
+      return { page: 'edit-problem', topic: third, problem: fourth }
+    if (fifth) return { page: 'home' }
     if (third && fourth) return { page: 'library-problem', topic: third, problem: fourth }
     if (third === ADD) return addRoute(query)
     if (third) return { page: 'home' }
@@ -108,6 +112,8 @@ export function href(route: Route): string {
     }
     case 'library-problem':
       return path('settings', 'problems', route.topic, route.problem)
+    case 'edit-problem':
+      return path('settings', 'problems', route.topic, route.problem, EDIT)
     case 'add-problems': {
       const params = new URLSearchParams()
       if (route.topic) params.set('topic', route.topic)
@@ -122,6 +128,7 @@ const TEXT_FILTERS = ['search', 'topic'] as const
 const OFF_CONCEPTS = 'without'
 const DISABLED = 'disabled'
 const ADD = 'add'
+const EDIT = 'edit'
 const CONCEPT = 'concept'
 const SHOWN = 'shown'
 
@@ -214,16 +221,30 @@ export function sectionOf(route: Route): Section {
     case 'library':
     case 'library-problem':
     case 'add-problems':
+    case 'edit-problem':
       return 'settings'
   }
 }
 
 const listeners = new Set<() => void>()
 
+// A page with unsaved work asks before it is left; false keeps it.
+let mayLeave: (() => boolean) | null = null
+export function guardLeaving(guard: (() => boolean) | null): void {
+  mayLeave = guard
+}
+
+// The app's own navigation passed the guard already, and may come as a check ends, before the
+// page is told it is no longer held.
+let navigating = false
+
 // Shows the page at once; the browser's hashchange arrives later and finds it shown.
 export function navigate(route: Route): void {
+  if (mayLeave && !mayLeave()) return
   window.location.hash = href(route)
+  navigating = true
   listeners.forEach((l) => l())
+  navigating = false
 }
 
 // For changes within a page, such as a filter: Back skips them. replaceState fires no hashchange.
@@ -232,8 +253,9 @@ export function replaceRoute(route: Route): void {
   listeners.forEach((l) => l())
 }
 
-// While `held`, a change of address (Back, a typed URL) is undone, so a running check is not
-// left behind. pushState does not fire hashchange, so undoing does not loop.
+// While `held`, or when the page asks to stay, a change of address (Back, a typed URL) is
+// undone, so a running check or unsaved work is not left behind. pushState does not fire
+// hashchange, so undoing does not loop.
 export function useRoute(held: boolean): Route {
   const [hash, setHash] = useState(() => window.location.hash)
   const shown = useRef(hash)
@@ -245,7 +267,7 @@ export function useRoute(held: boolean): Route {
     const onChange = () => {
       const next = window.location.hash
       if (next === shown.current) return
-      if (holding.current) {
+      if (!navigating && (holding.current || (mayLeave && !mayLeave()))) {
         window.history.pushState(null, '', shown.current || '#/')
         return
       }

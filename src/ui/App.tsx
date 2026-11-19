@@ -21,6 +21,7 @@ import { href, navigate, replaceRoute, sectionOf, useRoute, type Route } from '.
 import { AttemptReport, CodingReport, QuizReport } from './ReportsPages'
 import { AppearancePage } from './SectionPages'
 import { AddProblemsPage } from './AddProblemsPage'
+import { EditProblemPage } from './EditProblemPage'
 
 export type AppRunner = Pick<PyodideRunner, 'run' | 'test' | 'warmUp' | 'status' | 'subscribe'>
 
@@ -209,9 +210,10 @@ export function App({ runner, storage }: Props) {
       ? attempts.find((a): a is Attempt & { grade: Grade } => a.id === route.id && !!a.grade)
       : undefined
   const entry =
-    route.page === 'library-problem'
+    route.page === 'library-problem' || route.page === 'edit-problem'
       ? stored.find((e) => e.topic.id === route.topic && e.id === route.problem)
       : undefined
+  const entryRecord = entry && topics.find((t) => t.id === entry.topic.id)
   const servedProblem = (attempt: Attempt): Route | undefined =>
     enabled.some(
       (f) => f.topic.id === attempt.topic && f.problems.some((p) => p.id === attempt.problem),
@@ -396,10 +398,8 @@ export function App({ runner, storage }: Props) {
               <TopicPage
                 key={topic.id}
                 topic={topic}
-                runner={runner}
                 onChange={(change) => updateTopic(topic.id, change)}
                 onDelete={() => deleteTopic(topic.id)}
-                onBusy={setBusy}
               />
             ) : (
               <Missing what="This topic" back={{ page: 'topics' }} />
@@ -418,6 +418,27 @@ export function App({ runner, storage }: Props) {
               }
             />,
           )}
+        {route.page === 'edit-problem' &&
+          (entry && entryRecord ? (
+            <div className="ws-solve">
+              <EditProblemPage
+                key={`${entry.topic.id}/${entry.id}`}
+                record={entryRecord}
+                entry={entry}
+                runner={runner}
+                back={{ page: 'library-problem', topic: entry.topic.id, problem: entry.id }}
+                onBusy={setBusy}
+                onSave={(next) => {
+                  putTopic({ ...next, updated_at: Date.now() })
+                  navigate({ page: 'library-problem', topic: entry.topic.id, problem: entry.id })
+                }}
+              />
+            </div>
+          ) : (
+            <div className="ws-page">
+              <Missing what="This problem" back={library} why="It was deleted." />
+            </div>
+          ))}
         {route.page === 'add-problems' &&
           settings(
             <AddProblemsPage

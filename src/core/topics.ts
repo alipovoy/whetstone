@@ -102,13 +102,16 @@ export function served(record: TopicRecord): Served {
   }
 }
 
-// The authoring shape: without the fields the app assigns, with the concepts named.
-export function itemText(item: Problem | Question, concepts: Concept[]): string {
+// The authoring shape: without the fields the app assigns, with the concepts named. A stored item
+// that breaks the rules keeps what it has, a concept the topic lacks named by its id.
+export function itemText(item: Record<string, unknown>, concepts: Concept[]): string {
   const { id: _id, source: _source, concepts: ids, ...rest } = item
-  const named = ids.map((id) => {
-    const concept = concepts.find((c) => c.id === id)
-    return { name: concept?.name ?? id, group: concept?.group ?? '' }
-  })
+  const named = Array.isArray(ids)
+    ? ids.map((id) => {
+        const concept = concepts.find((c) => c.id === id)
+        return { name: concept?.name ?? id, group: concept?.group ?? '' }
+      })
+    : ids
   return JSON.stringify({ concepts: named, ...rest }, null, 2)
 }
 
