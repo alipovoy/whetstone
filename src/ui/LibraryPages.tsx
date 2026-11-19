@@ -197,17 +197,7 @@ export function LibraryProblem({
       confirmDelete="Its past attempts will be kept."
       onDelete={onDelete}
       actions={
-        <>
-          {problem && topic.enabled && (
-            <Button onClick={() => onTry(topic, problem)}>Try it</Button>
-          )}
-          <Link
-            className={`btn ${problem ? 'btn-outline-primary' : 'btn-primary'}`}
-            to={{ page: 'edit-problem', topic: topic.id, problem: entry.id }}
-          >
-            Edit
-          </Link>
-        </>
+        problem && topic.enabled && <Button onClick={() => onTry(topic, problem)}>Try it</Button>
       }
     >
       {problem && <ProblemView topic={topic} problem={problem} />}
@@ -219,11 +209,7 @@ export function LibraryQuestion({ entry, back, onDelete }: ItemProps<Question>) 
   const { topic, item: question } = entry
   return (
     <LibraryItem list="questions" entry={entry} back={back} onDelete={onDelete}>
-      {question && (
-        <div className="ws-panel">
-          <QuestionView topic={topic} question={question} />
-        </div>
-      )}
+      {question && <QuestionView topic={topic} question={question} />}
     </LibraryItem>
   )
 }
@@ -259,6 +245,12 @@ function LibraryItem({
         </Link>
         <div className="d-flex gap-2 ms-auto">
           {actions}
+          <Link
+            className={`btn ${entry.item ? 'btn-outline-primary' : 'btn-primary'}`}
+            to={{ page: 'edit-item', list, topic: entry.topic.id, item: entry.id }}
+          >
+            Edit
+          </Link>
           <Button variant="outline-danger" onClick={remove}>
             Delete
           </Button>
@@ -320,7 +312,8 @@ export function ProblemView({ topic, problem }: { topic: Topic; problem: Problem
 interface QuestionViewProps {
   topic: Topic
   question: Question
-  // A preview inside another page names the question below that page's title.
+  // A preview inside another page names the question below that page's title, and sits in
+  // that page's panel.
   preview?: boolean
 }
 
@@ -344,7 +337,7 @@ export function QuestionView({ topic, question, preview }: QuestionViewProps) {
       </ul>
     </>
   )
-  return (
+  const statement = (
     <div className="ws-statement">
       <Title className="h3">{question.summary}</Title>
       <p className="ws-statement-meta">
@@ -372,6 +365,7 @@ export function QuestionView({ topic, question, preview }: QuestionViewProps) {
       </section>
     </div>
   )
+  return preview ? statement : <div className="ws-panel">{statement}</div>
 }
 
 function Broken({ list, entry }: { list: ItemList; entry: LibraryEntry }) {
@@ -382,8 +376,7 @@ function Broken({ list, entry }: { list: ItemList; entry: LibraryEntry }) {
         <h1 className="h3">{entry.title}</h1>
         <p className="text-body-secondary">{entry.topic.name}</p>
         <Alert variant="warning" className="mb-0">
-          This {noun} is not served: it breaks the current content rules.
-          {list === 'problems' && ' Edit it to fix it.'}
+          This {noun} is not served: it breaks the current content rules. Edit it to fix it.
           <ul className="mb-0 mt-2">
             {entry.errors.map((e) => (
               <li key={e}>{e}</li>

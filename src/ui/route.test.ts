@@ -26,7 +26,8 @@ describe('routes', () => {
     { page: 'library', list: 'questions', filter: { type: 'multiple', difficulty: 'Hard' } },
     { page: 'library-item', list: 'questions', topic: 'my topic', item: 'a/b' },
     { page: 'add-items', list: 'problems' },
-    { page: 'edit-problem', topic: 'my topic', problem: 'a/b' },
+    { page: 'edit-item', list: 'problems', topic: 'my topic', item: 'a/b' },
+    { page: 'edit-item', list: 'questions', topic: 't', item: 'q' },
     {
       page: 'add-items',
       list: 'problems',
@@ -55,7 +56,6 @@ describe('routes', () => {
       '#/coding/a/b/c',
       '#/settings/problems/t/p/view',
       '#/settings/problems/t/p/edit/more',
-      '#/settings/questions/t/q/edit',
       '#/%E0',
     ])
       expect(parseRoute(hash)).toEqual({ page: 'home' })
@@ -93,6 +93,7 @@ describe('routes', () => {
       'reports',
       'reports',
       'reports',
+      'settings',
       'settings',
       'settings',
       'settings',

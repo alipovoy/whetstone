@@ -825,6 +825,11 @@ describe('Topics', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'New topic name' }), 'Strings')
     await userEvent.click(screen.getByRole('button', { name: 'Create topic' }))
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Strings')
+    // Concepts come with the first items, which the topic page links to adding.
+    expect(screen.getByRole('link', { name: 'add questions' })).toHaveAttribute(
+      'href',
+      expect.stringMatching(/^#\/settings\/questions\/add\?topic=/),
+    )
 
     await userEvent.click(
       within(screen.getByRole('navigation', { name: 'Settings' })).getByRole('link', {
@@ -1052,7 +1057,7 @@ describe('Topics', () => {
     renderApp(
       fakeRunner(),
       { topics: [{ ...topicFromFile(topic, 0), problems: [broken] }] },
-      { page: 'edit-problem', topic: 't', problem: 'bad' },
+      { page: 'edit-item', list: 'problems', topic: 't', item: 'bad' },
     )
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Not served, because:hints: needs exactly three hints',
@@ -1085,9 +1090,9 @@ describe('Topics', () => {
     expect(window.location.hash).toBe('#/coding')
   })
 
-  it('adds checked questions from a chat answer without running Python, then edits and deletes them', async () => {
+  it('adds checked questions from a chat answer without running Python', async () => {
     const runner = fakeRunner()
-    renderApp(runner, {}, { page: 'library', list: 'questions' })
+    const put = renderApp(runner, {}, { page: 'library', list: 'questions' })
     const question = (summary: string) => ({
       concepts: [{ name: 'C', group: 'G' }],
       type: 'multiple',
@@ -1128,21 +1133,9 @@ describe('Topics', () => {
     expect(screen.getByText('Added 1 question to Topic.')).toBeInTheDocument()
     expect(screen.getByRole('listitem', { name: 'Good' })).toHaveTextContent('Multiple choice')
 
-    await openTopic('Topic')
-    expect(screen.getByRole('link', { name: 'Add questions' })).toHaveAttribute(
-      'href',
-      '#/settings/questions/add?topic=t',
-    )
-    const questions = screen.getByRole('region', { name: 'Questions' })
-    await userEvent.click(screen.getByRole('button', { name: 'Edit Good' }))
-    const editor = EditorView.findFromDOM(screen.getByRole('textbox', { name: 'Question JSON' }))!
-    enter('Question JSON', editor.state.doc.toString().replace('"Good"', '"Better"'))
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
-    expect(within(questions).getByRole('listitem', { name: 'Better' })).toBeInTheDocument()
-
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
-    await userEvent.click(screen.getByRole('button', { name: 'Delete Better' }))
-    expect(within(questions).queryByRole('listitem')).toBeNull()
+    expect(put.topics.put.mock.lastCall![0].questions).toEqual([
+      expect.objectContaining({ summary: 'Good', concepts: ['c'], source: 'user' }),
+    ])
   })
 
   it('lists topics with their counts and enables one in place', async () => {
@@ -1168,7 +1161,6 @@ describe('Topics', () => {
           concepts: [...topic.topic.concepts, { id: 'd', name: 'D', group: 'G' }],
         },
         problems: [topic.problems[0], shared],
-        questions: [{ ...choiceQuestion('q', 'single', ['a', 'b'], [0]), concepts: ['d'] }],
       },
       0,
     )
@@ -1209,13 +1201,6 @@ describe('Topics', () => {
         ],
       }),
     )
-
-    await userEvent.click(screen.getByRole('button', { name: 'Edit q' }))
-    expect(within(concepts).getByRole('button', { name: 'Delete C' })).toBeDisabled()
-    expect(within(adding).getByRole('textbox', { name: 'Concept name' })).toBeEnabled()
-    expect(concepts).toHaveTextContent('Save or cancel the open question first')
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(within(concepts).getByRole('button', { name: 'Delete C' })).toBeEnabled()
 
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     await userEvent.click(within(concepts).getByRole('button', { name: 'Delete E' }))
@@ -1508,7 +1493,6 @@ describe('Topics', () => {
         { page: 'library-item', list: 'questions', topic: 't', item: 'broken' },
       )
       expect(screen.getByRole('alert')).toHaveTextContent('a single choice has exactly one answer')
-      expect(screen.getByRole('alert')).not.toHaveTextContent('Edit it to fix it.')
       expect(screen.getByRole('textbox', { name: 'Stored question' })).toHaveTextContent(
         '"id": "broken"',
       )
@@ -1530,6 +1514,59 @@ describe('Topics', () => {
         })
       })
       expect(await screen.findByText('This question is not available')).toBeInTheDocument()
+    })
+
+    it('edits a question as JSON beside a live preview, checked without Python', async () => {
+      const runner = fakeRunner()
+      const put = renderApp(
+        runner,
+        { topics: stored() },
+        { page: 'library-item', list: 'questions', topic: 't', item: 'pick-one' },
+      )
+      await userEvent.click(screen.getByRole('link', { name: 'Edit' }))
+      expect(window.location.hash).toBe('#/settings/questions/t/pick-one/edit')
+      const preview = screen.getByRole('region', { name: 'Preview' })
+      const text = EditorView.findFromDOM(
+        screen.getByRole('textbox', { name: 'Question JSON' }),
+      )!.state.doc.toString()
+      expect(text).toContain('"name": "C"')
+
+      enter('Question JSON', text.replace('"right"', '"correct"'))
+      expect(
+        within(preview)
+          .getAllByRole('listitem')
+          .map((li) => li.textContent),
+      ).toContain('correctCorrect')
+      enter('Question JSON', text.replace('"answers": [\n    1\n  ]', '"answers": [0, 1]'))
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+      expect(screen.getByRole('alert')).toHaveTextContent('a single choice has exactly one answer')
+      expect(put.topics.put).not.toHaveBeenCalled()
+
+      enter('Question JSON', text.replace('"right"', '"correct"'))
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+      expect(window.location.hash).toBe('#/settings/questions/t/pick-one')
+      expect(put.topics.put.mock.lastCall![0].questions[0]).toMatchObject({
+        id: 'pick-one',
+        wordings: [{ options: ['wrong', 'correct'] }],
+        source: 'user',
+      })
+      expect(runner.test).not.toHaveBeenCalled()
+    })
+
+    it('opens a broken question to fix it', async () => {
+      renderApp(
+        fakeRunner(),
+        { topics: stored() },
+        { page: 'library-item', list: 'questions', topic: 't', item: 'broken' },
+      )
+      expect(screen.getByRole('alert')).toHaveTextContent('Edit it to fix it.')
+      await userEvent.click(screen.getByRole('link', { name: 'Edit' }))
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Not served, because:a single choice has exactly one answer',
+      )
+      expect(screen.getByRole('region', { name: 'Preview' })).toHaveTextContent(
+        'The preview shows once the JSON reads as a question.',
+      )
     })
 
     it('opens from the question count of a concept on the topic page', async () => {

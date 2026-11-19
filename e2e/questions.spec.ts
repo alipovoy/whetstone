@@ -98,3 +98,24 @@ test('filter the quiz questions, read one with its answers, delete it', async ({
   await expect(page.getByRole('link', { name: summary })).toHaveCount(0)
   await expect.poll(() => savedQuestions(page)).toBe(builtIn.length - 1)
 })
+
+test('edit a question beside its preview', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  const summary = 'Precondition of the inward two-pointer pair search'
+  await page.goto('./#/settings/questions')
+  await page.getByRole('link', { name: summary }).click()
+  await page.getByRole('link', { name: 'Edit' }).click()
+  // The editor renders only the lines in view, so the text goes out and back by the clipboard.
+  await page.getByRole('textbox', { name: 'Question JSON' }).click()
+  await page.keyboard.press('ControlOrMeta+a')
+  await page.keyboard.press('ControlOrMeta+c')
+  const text = await page.evaluate(() => navigator.clipboard.readText())
+  await page.keyboard.insertText(text.replace('"It is sorted"', '"The list is sorted"'))
+  const preview = page.getByRole('region', { name: 'Preview' })
+  await expect(preview.locator('li[data-correct]').first()).toContainText('The list is sorted')
+
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(page).toHaveURL(/#\/settings\/questions\/algorithms\/[^/]+$/)
+  await expect(page.getByRole('heading', { level: 1, name: summary })).toBeVisible()
+  await expect(page.getByText('The list is sorted').first()).toBeVisible()
+})

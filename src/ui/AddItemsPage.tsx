@@ -1,81 +1,15 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert, Button, Form, Tab, Tabs } from 'react-bootstrap'
-import type { Difficulty, Problem, Question, Topic, TopicFile } from '@/content/schema'
-import {
-  PROBLEM_TEMPLATE,
-  problemRequest,
-  QUESTION_TEMPLATE,
-  questionRequest,
-  readItems,
-  type ItemOrder,
-  type PromptRequest,
-} from '@/core/bridge'
-import {
-  addProblems,
-  addQuestions,
-  readDrafts,
-  served,
-  type Adder,
-  type Draft,
-  type ItemList,
-  type TopicRecord,
-} from '@/core/topics'
-import { checkProblem } from './check'
+import type { Difficulty } from '@/content/schema'
+import { readItems } from '@/core/bridge'
+import { readDrafts, served, type Draft, type ItemList, type TopicRecord } from '@/core/topics'
 import { CodeBlock } from './CodeBlock'
 import { CodeEditor } from './CodeEditor'
 import { capital } from './format'
 import { ItemOrderForm, type Order } from './ItemOrderForm'
-import { QuestionView } from './LibraryPages'
+import { KINDS, type Check, type Kind } from './kinds'
 import { Link } from './Link'
-import type { Runner } from './ProblemPage'
 import type { Route } from './route'
-import { Statement } from './Statement'
-
-type Check = Pick<Runner, 'test'>
-
-// What sets adding problems apart from adding questions.
-interface Kind<T> {
-  list: ItemList
-  noun: string
-  back: string
-  template: string
-  request: (request: PromptRequest, order: ItemOrder) => string
-  existing: (file: TopicFile) => string[]
-  add: Adder<T>
-  // How an item is checked, beyond the content rules when `check` is given.
-  rules: string
-  check?: (runner: Check, item: T) => Promise<string[]>
-  preview: (topic: Topic, item: T) => ReactNode
-}
-
-const PROBLEMS: Kind<Problem> = {
-  list: 'problems',
-  noun: 'problem',
-  back: 'Back to coding problems',
-  template: PROBLEM_TEMPLATE,
-  request: problemRequest,
-  existing: (file) => file.problems.map((p) => p.wordings[0].title),
-  add: addProblems,
-  rules:
-    'Each problem is run in Python: its reference solution must pass every test and its starter code must fail one.',
-  check: checkProblem,
-  preview: (topic, problem) => (
-    <Statement topic={topic} problem={problem} wording={problem.wordings[0]} preview />
-  ),
-}
-
-const QUESTIONS: Kind<Question> = {
-  list: 'questions',
-  noun: 'question',
-  back: 'Back to quiz questions',
-  template: QUESTION_TEMPLATE,
-  request: questionRequest,
-  existing: (file) => file.questions.map((q) => q.summary),
-  add: addQuestions,
-  rules:
-    'Each question is checked: its answers must be options, a single choice has one, and at least one option is wrong.',
-  preview: (topic, question) => <QuestionView topic={topic} question={question} preview />,
-}
 
 interface Props {
   list: ItemList
@@ -90,9 +24,9 @@ interface Props {
 
 export function AddItemsPage({ list, ...props }: Props) {
   return list === 'problems' ? (
-    <AddItems kind={PROBLEMS} {...props} />
+    <AddItems kind={KINDS.problems} {...props} />
   ) : (
-    <AddItems kind={QUESTIONS} {...props} />
+    <AddItems kind={KINDS.questions} {...props} />
   )
 }
 
@@ -148,7 +82,7 @@ function AddItems<T>({
 
   const text = texts[source]
   const prompt = kind.request(
-    { topic: record.name, concepts: record.concepts, existing: kind.existing(served(record).file) },
+    { topic: record.name, concepts: record.concepts, existing: kind.existing(served(record)) },
     order,
   )
   // A change to what is checked makes the results stale.

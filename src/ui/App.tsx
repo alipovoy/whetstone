@@ -29,7 +29,7 @@ import { href, navigate, replaceRoute, sectionOf, useRoute, type Route } from '.
 import { AttemptReport, CodingReport, QuizReport } from './ReportsPages'
 import { AppearancePage } from './SectionPages'
 import { AddItemsPage } from './AddItemsPage'
-import { EditProblemPage } from './EditProblemPage'
+import { EditItemPage } from './EditItemPage'
 
 export type AppRunner = Pick<PyodideRunner, 'run' | 'test' | 'warmUp' | 'status' | 'subscribe'>
 
@@ -144,7 +144,7 @@ export function App({ runner, storage }: Props) {
       topics
         .filter((t) => t.enabled)
         .toSorted((a, b) => a.created_at - b.created_at)
-        .map((t) => served(t).file),
+        .map(served),
     [topics],
   )
 
@@ -232,16 +232,12 @@ export function App({ runner, storage }: Props) {
     route.page === 'attempt'
       ? attempts.find((a): a is Attempt & { grade: Grade } => a.id === route.id && !!a.grade)
       : undefined
-  const entry =
-    route.page === 'edit-problem'
-      ? findEntry(storedProblems, route.topic, route.problem)
-      : route.page === 'library-item' && route.list === 'problems'
-        ? findEntry(storedProblems, route.topic, route.item)
-        : undefined
+  const at = route.page === 'library-item' || route.page === 'edit-item' ? route : undefined
+  const problemEntry =
+    at?.list === 'problems' ? findEntry(storedProblems, at.topic, at.item) : undefined
   const questionEntry =
-    route.page === 'library-item' && route.list === 'questions'
-      ? findEntry(storedQuestions, route.topic, route.item)
-      : undefined
+    at?.list === 'questions' ? findEntry(storedQuestions, at.topic, at.item) : undefined
+  const entry: LibraryEntry | undefined = problemEntry ?? questionEntry
   const entryRecord = entry && topics.find((t) => t.id === entry.topic.id)
   const servedProblem = (attempt: Attempt): Route | undefined =>
     enabled.some(
@@ -455,25 +451,30 @@ export function App({ runner, storage }: Props) {
               }
             />,
           )}
-        {route.page === 'edit-problem' &&
+        {route.page === 'edit-item' &&
           (entry && entryRecord ? (
             <div className="ws-solve">
-              <EditProblemPage
-                key={`${entry.topic.id}/${entry.id}`}
+              <EditItemPage
+                key={`${route.list}/${entry.topic.id}/${entry.id}`}
+                list={route.list}
                 record={entryRecord}
                 entry={entry}
                 runner={runner}
-                back={problemPage(entry)}
+                back={itemPage(route.list, entry)}
                 onBusy={setBusy}
                 onSave={(next) => {
                   putTopic({ ...next, updated_at: Date.now() })
-                  navigate(problemPage(entry))
+                  navigate(itemPage(route.list, entry))
                 }}
               />
             </div>
           ) : (
             <div className="ws-page">
-              <Missing what="This problem" back={libraries.problems} why="It was deleted." />
+              <Missing
+                what={`This ${NOUN[route.list]}`}
+                back={libraries[route.list]}
+                why="It was deleted."
+              />
             </div>
           ))}
         {route.page === 'add-items' &&
@@ -492,13 +493,13 @@ export function App({ runner, storage }: Props) {
         {route.page === 'library-item' &&
           settings(
             route.list === 'problems' ? (
-              entry ? (
+              problemEntry ? (
                 <LibraryProblem
-                  key={`${entry.topic.id}/${entry.id}`}
-                  entry={entry}
+                  key={`${problemEntry.topic.id}/${problemEntry.id}`}
+                  entry={problemEntry}
                   back={libraries.problems}
                   onTry={tryProblem}
-                  onDelete={() => deleteFrom('problems', entry)}
+                  onDelete={() => deleteFrom('problems', problemEntry)}
                 />
               ) : (
                 <Missing what="This problem" back={libraries.problems} why="It was deleted." />
@@ -540,9 +541,9 @@ function Missing({ what, back, why = 'It was deleted, or its topic is disabled.'
 const findEntry = <T,>(entries: LibraryEntry<T>[], topic: string, id: string) =>
   entries.find((e) => e.topic.id === topic && e.id === id)
 
-const problemPage = ({ topic, id }: LibraryEntry): Route => ({
+const itemPage = (list: ItemList, { topic, id }: LibraryEntry): Route => ({
   page: 'library-item',
-  list: 'problems',
+  list,
   topic: topic.id,
   item: id,
 })
