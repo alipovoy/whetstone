@@ -203,6 +203,9 @@ export function App({ runner, storage }: Props) {
   }
 
   const section = sectionOf(route)
+  // Collapsed while moving between Settings pages; open again on coming back.
+  const [settingsMenu, setSettingsMenu] = useState(true)
+  if (!settingsMenu && section !== 'settings') setSettingsMenu(true)
   const topic = route.page === 'topic' ? topics.find((t) => t.id === route.id) : undefined
   const quiz = route.page === 'quiz' ? quizzes.find((q) => q.id === route.id) : undefined
   const graded =
@@ -225,7 +228,7 @@ export function App({ runner, storage }: Props) {
     <div className="ws-page">
       <SubMenuPage
         label="Settings"
-        placement="side"
+        side={{ open: settingsMenu, onToggle: () => setSettingsMenu(!settingsMenu) }}
         held={busy}
         items={[
           { label: 'Appearance', to: { page: 'appearance' }, current: route.page === 'appearance' },
@@ -338,7 +341,6 @@ export function App({ runner, storage }: Props) {
           <div className="ws-page">
             <SubMenuPage
               label="Reports"
-              placement="top"
               items={[
                 {
                   label: 'Coding problems',

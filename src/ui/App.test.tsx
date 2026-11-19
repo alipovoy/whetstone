@@ -675,6 +675,26 @@ describe('Layout', () => {
     expect(screen.getByRole('radio', { name: /Slate/ })).toBeChecked()
   })
 
+  it('keeps the Settings menu collapsed within Settings, and opens it on coming back', async () => {
+    renderApp(fakeRunner(), {}, { page: 'appearance' })
+    await userEvent.click(screen.getByRole('button', { name: 'Hide the Settings menu' }))
+    expect(document.querySelector('.ws-sub')).toHaveAttribute('data-side', 'closed')
+
+    await userEvent.click(screen.getByRole('link', { name: 'Topics' }))
+    expect(screen.getByRole('button', { name: 'Show the Settings menu' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+
+    const main = within(screen.getByRole('navigation', { name: 'Main' }))
+    await userEvent.click(main.getByRole('link', { name: 'Coding problems' }))
+    await userEvent.click(main.getByRole('link', { name: 'Settings' }))
+    expect(screen.getByRole('button', { name: 'Hide the Settings menu' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+  })
+
   it('shows Reports with a menu of its reports', async () => {
     renderApp(fakeRunner(), {}, { page: 'reports', section: 'coding' })
     const side = within(screen.getByRole('navigation', { name: 'Reports' }))
