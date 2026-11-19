@@ -168,7 +168,7 @@ function Items({ list, rows, unreadable, children, onChange, onEditor, ...editor
                   aria-label={`Delete ${title}`}
                   disabled={editing !== null}
                   onClick={() => {
-                    const kept = list === 'problems' ? ' Its past attempts are kept.' : ''
+                    const kept = list === 'problems' ? ' Its past attempts will be kept.' : ''
                     if (confirm(`Delete "${title}"?${kept}`))
                       onChange((t) => deleteItem(t, list, id))
                   }}
@@ -367,7 +367,8 @@ function Header({ topic, onChange, onDelete, disabled }: HeaderProps) {
           className="ms-auto"
           disabled={disabled}
           onClick={() => {
-            if (confirm(`Delete the topic "${topic.name}"? Past attempts are kept.`)) onDelete()
+            if (confirm(`Delete the topic "${topic.name}"? Its past attempts will be kept.`))
+              onDelete()
           }}
         >
           Delete topic

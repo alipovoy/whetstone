@@ -36,7 +36,8 @@ export function TopicConcepts({ topic, file, locked, onChange, ...props }: Props
     const one = problems + questions === 1
     if (problems + questions > 0)
       message += ` ${capital(items(problems, questions))} ${one ? 'has' : 'have'} no other concept and will be deleted too.`
-    if (problems > 0) message += ' Past attempts will be kept.'
+    if (problems > 0)
+      message += ` Past attempts at the deleted ${problems === 1 ? 'problem' : 'problems'} will be kept.`
     if (confirm(message)) onChange((t) => deleteConcept(t, id))
   }
 
