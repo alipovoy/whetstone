@@ -109,7 +109,7 @@ export function itemText(item: Record<string, unknown>, concepts: Concept[]): st
 export type ItemList = 'problems' | 'questions'
 
 export function deleteItem(record: TopicRecord, list: ItemList, id: string): TopicRecord {
-  return { ...record, [list]: record[list].filter((item) => item.id !== id) }
+  return withoutUnused({ ...record, [list]: record[list].filter((item) => item.id !== id) })
 }
 
 export type Adding<T> =
@@ -202,7 +202,7 @@ function addItems<T extends { id: string }>(
   if (errors.length) return { ok: false, errors }
   const kept: { id: string }[] = current.filter((item) => item.id !== replaced?.id)
   kept.splice(replaced ? current.indexOf(replaced) : kept.length, 0, ...added)
-  return { ok: true, record: { ...record, concepts, [list]: kept }, added }
+  return { ok: true, record: withoutUnused({ ...record, concepts, [list]: kept }), added }
 }
 
 const conceptKey = (name: string) => name.trim().toLowerCase()
@@ -294,79 +294,19 @@ export function conceptMap(concepts: Concept[]): { area: string; concepts: Conce
   }))
 }
 
-export type ConceptChange = { ok: true; record: TopicRecord } | { ok: false; error: string }
-
-// Concepts are found by name when items are added, so two of the same name cannot be told apart.
-function conceptChange(
-  record: TopicRecord,
-  name: string,
-  area: string,
-  change: (concept: { name: string; group: string }) => TopicRecord['concepts'],
-  id?: string,
-): ConceptChange {
-  const concept = { name: name.trim(), group: area.trim() }
-  if (!concept.name) return { ok: false, error: 'A concept needs a name.' }
-  if (!concept.group) return { ok: false, error: 'A concept needs an area.' }
-  if (record.concepts.some((c) => c.id !== id && conceptKey(c.name) === conceptKey(name)))
-    return { ok: false, error: `The topic already has a concept named “${concept.name}”.` }
-  return { ok: true, record: { ...record, concepts: change(concept) } }
-}
-
-export function addConcept(record: TopicRecord, name: string, area: string): ConceptChange {
-  return conceptChange(record, name, area, (concept) => [
-    ...record.concepts,
-    { id: conceptId(concept.name, record.concepts), ...concept },
-  ])
-}
-
-export function editConcept(
-  record: TopicRecord,
-  id: string,
-  name: string,
-  area: string,
-): ConceptChange {
-  const change = (concept: { name: string; group: string }) =>
-    record.concepts.map((c) => (c.id === id ? { id, ...concept } : c))
-  return conceptChange(record, name, area, change, id)
-}
-
 type Stored = TopicRecord['problems'][number]
 const storedConcepts = (item: Stored): unknown[] =>
   Array.isArray(item.concepts) ? item.concepts : []
 
-export interface ConceptUsage {
-  // Items, served or not, that use the concept.
-  problems: number
-  questions: number
-  // Of those, the items that have no other concept.
-  only: { problems: number; questions: number }
+// Items, served or not, that use the concept.
+export function conceptUsage(record: TopicRecord, id: string): Record<ItemList, number> {
+  const count = (items: Stored[]) =>
+    items.filter((item) => storedConcepts(item).includes(id)).length
+  return { problems: count(record.problems), questions: count(record.questions) }
 }
 
-export function conceptUsage(record: TopicRecord, id: string): ConceptUsage {
-  const count = (items: Stored[], only: boolean) =>
-    items.filter((item) => {
-      const concepts = storedConcepts(item)
-      return concepts.includes(id) && (!only || concepts.every((c) => c === id))
-    }).length
-  return {
-    problems: count(record.problems, false),
-    questions: count(record.questions, false),
-    only: { problems: count(record.problems, true), questions: count(record.questions, true) },
-  }
-}
-
-// Removes the concept from every item; an item left without concepts is deleted with it.
-export function deleteConcept(record: TopicRecord, id: string): TopicRecord {
-  const without = (items: Stored[]) =>
-    items.flatMap((item) => {
-      if (!storedConcepts(item).includes(id)) return [item]
-      const concepts = storedConcepts(item).filter((c) => c !== id)
-      return concepts.length ? [{ ...item, concepts }] : []
-    })
-  return {
-    ...record,
-    concepts: record.concepts.filter((c) => c.id !== id),
-    problems: without(record.problems),
-    questions: without(record.questions),
-  }
+// A concept stays while an item, served or not, uses it.
+function withoutUnused(record: TopicRecord): TopicRecord {
+  const used = new Set([...record.problems, ...record.questions].flatMap(storedConcepts))
+  return { ...record, concepts: record.concepts.filter((c) => used.has(c.id)) }
 }

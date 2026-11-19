@@ -961,26 +961,27 @@ describe('Topics', () => {
     expect(window.location.hash).toBe('#/settings/problems?difficulty=Easy')
   })
 
-  it('opens Add problems prefilled from a concept without problems and from an empty list', async () => {
-    const two: TopicFile = {
-      ...topic,
-      topic: {
-        ...topic.topic,
-        concepts: [...topic.topic.concepts, { id: 'e', name: 'E', group: 'G' }],
+  it('opens Add problems prefilled from an empty filtered list', async () => {
+    const shared = { ...problem('two', 'Second problem'), concepts: ['c', 'd'] }
+    const stored = topicFromFile(
+      {
+        ...topic,
+        topic: {
+          ...topic.topic,
+          concepts: [...topic.topic.concepts, { id: 'd', name: 'D', group: 'G' }],
+        },
+        problems: [topic.problems[0], shared],
       },
-    }
-    renderApp(fakeRunner(), { topics: [topicFromFile(two, 0)] })
+      0,
+    )
+    renderApp(fakeRunner(), { topics: [stored] })
     await userEvent.click(conceptsToggle())
-    await userEvent.click(screen.getByRole('checkbox', { name: 'C' }))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'D' }))
     await userEvent.selectOptions(screen.getByLabelText('Topic'), 'Topic')
     await userEvent.click(screen.getByRole('button', { name: 'Hard' }))
     await userEvent.click(screen.getByRole('link', { name: 'Add problems' }))
-    expect(window.location.hash).toBe('#/settings/problems/add?topic=t&difficulty=Hard')
-
-    await openTopic('Topic')
-    await userEvent.click(screen.getByRole('link', { name: 'Add problems of E' }))
-    expect(window.location.hash).toBe('#/settings/problems/add?topic=t&concept=E')
-    expect(conceptsToggle()).toHaveTextContent('E')
+    expect(window.location.hash).toBe('#/settings/problems/add?topic=t&concept=C&difficulty=Hard')
+    expect(conceptsToggle()).toHaveTextContent('C')
     const copy = vi.fn(async (_text: string) => undefined)
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText: copy },
@@ -993,20 +994,16 @@ describe('Topics', () => {
         'Write one new Python coding interview problem for the topic "Topic".',
       ),
     )
-    expect(copy).toHaveBeenLastCalledWith(expect.stringContaining('Focus on this concept: E.'))
+    expect(copy).toHaveBeenLastCalledWith(expect.stringContaining('Focus on this concept: C.'))
   })
 
-  it('opens Add questions from a concept without questions and the quiz builder', async () => {
+  it('opens Add questions from the quiz builder', async () => {
     renderApp(fakeRunner(), {}, { page: 'quizzes' })
     expect(screen.getByText('No questions to quiz on')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('link', { name: 'Add questions' }))
     expect(window.location.hash).toBe('#/settings/questions/add')
     expect(screen.getByRole('heading', { level: 1, name: 'Add questions' })).toBeInTheDocument()
 
-    await openTopic('Topic')
-    await userEvent.click(screen.getByRole('link', { name: 'Add questions of C' }))
-    expect(window.location.hash).toBe('#/settings/questions/add?topic=t&concept=C')
-    expect(conceptsToggle()).toHaveTextContent('C')
     await userEvent.click(screen.getByRole('link', { name: 'Back to quiz questions' }))
     expect(window.location.hash).toBe('#/settings/questions')
   })
@@ -1158,14 +1155,14 @@ describe('Topics', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Topic')
   })
 
-  it('adds, edits and deletes the concepts of a topic', async () => {
+  it('lists the concepts of a topic, and drops one with its last item', async () => {
     const shared = { ...problem('two', 'Second problem'), concepts: ['c', 'd'] }
     const stored = topicFromFile(
       {
         ...topic,
         topic: {
           ...topic.topic,
-          concepts: [...topic.topic.concepts, { id: 'd', name: 'D', group: 'G' }],
+          concepts: [...topic.topic.concepts, { id: 'd', name: 'D', group: 'H' }],
         },
         problems: [topic.problems[0], shared],
       },
@@ -1174,60 +1171,25 @@ describe('Topics', () => {
     const put = renderApp(fakeRunner(), { topics: [stored] })
     await openTopic('Topic')
     const concepts = screen.getByRole('region', { name: 'Concepts' })
-    const adding = within(concepts).getByRole('form', { name: 'New concept' })
-    await userEvent.type(within(adding).getByRole('textbox', { name: 'Concept name' }), ' c ')
-    await userEvent.type(within(adding).getByRole('combobox', { name: 'Area' }), 'H')
-    await userEvent.click(within(adding).getByRole('button', { name: 'New concept' }))
-    expect(within(adding).getByRole('alert')).toHaveTextContent('already has a concept named “c”')
-
-    await userEvent.clear(within(adding).getByRole('textbox', { name: 'Concept name' }))
-    await userEvent.type(within(adding).getByRole('textbox', { name: 'Concept name' }), 'E')
-    await userEvent.click(within(adding).getByRole('button', { name: 'New concept' }))
-    const h = within(concepts).getByRole('region', { name: 'H' })
-    expect(within(h).getByRole('listitem', { name: 'E' })).toHaveTextContent('E0 problems')
-    expect(within(adding).getByRole('textbox', { name: 'Concept name' })).toHaveValue('')
-
-    await userEvent.click(within(concepts).getByRole('button', { name: 'Edit D' }))
-    const editing = within(concepts).getByRole('form', { name: 'Edit D' })
-    await userEvent.clear(within(editing).getByRole('textbox', { name: 'Concept name' }))
-    await userEvent.type(within(editing).getByRole('textbox', { name: 'Concept name' }), 'Dee')
-    await userEvent.clear(within(editing).getByRole('combobox', { name: 'Area' }))
-    await userEvent.type(within(editing).getByRole('combobox', { name: 'Area' }), 'H')
-    await userEvent.click(within(editing).getByRole('button', { name: 'Save' }))
+    expect(within(concepts).queryByRole('form')).toBeNull()
+    expect(within(concepts).queryByRole('button')).toBeNull()
+    const d = within(concepts).getByRole('listitem', { name: 'D' })
+    expect(d).toHaveTextContent('D1 problem, 0 questions')
     expect(
-      within(h)
-        .getAllByRole('listitem')
-        .map((li) => li.getAttribute('aria-label')),
-    ).toEqual(['Dee', 'E'])
+      within(d)
+        .getAllByRole('link')
+        .map((a) => a.getAttribute('aria-label')),
+    ).toEqual(['1 problem of D'])
+
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    act(() => navigate({ page: 'library-item', list: 'problems', topic: 't', item: 'two' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
     expect(put.topics.put).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        concepts: [
-          { id: 'c', name: 'C', group: 'G' },
-          { id: 'd', name: 'Dee', group: 'H' },
-          { id: 'e', name: 'E', group: 'H' },
-        ],
-      }),
+      expect.objectContaining({ concepts: [{ id: 'c', name: 'C', group: 'G' }] }),
     )
-
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
-    await userEvent.click(within(concepts).getByRole('button', { name: 'Delete E' }))
-    expect(confirm).toHaveBeenLastCalledWith('Delete the concept “E”?')
-    await userEvent.click(within(concepts).getByRole('button', { name: 'Delete C' }))
-    expect(confirm).toHaveBeenLastCalledWith(
-      'Delete the concept “C”? It will be removed from 2 problems. 1 problem has no other concept and will be deleted too. Past attempts at the deleted problem will be kept.',
-    )
-    expect(within(concepts).getByRole('listitem', { name: 'C' })).toBeInTheDocument()
-
-    confirm.mockReturnValue(true)
-    await userEvent.click(within(concepts).getByRole('button', { name: 'Delete C' }))
-    expect(within(concepts).queryByRole('listitem', { name: 'C' })).toBeNull()
-    expect(put.topics.put).toHaveBeenLastCalledWith(
-      expect.objectContaining({ problems: [{ ...shared, concepts: ['d'] }] }),
-    )
-
-    await userEvent.click(mainLink('Coding problems'))
-    await userEvent.click(conceptsToggle())
-    expect(screen.getByRole('group', { name: 'H' })).toHaveTextContent('Dee')
+    await openTopic('Topic')
+    expect(screen.queryByRole('listitem', { name: 'D' })).toBeNull()
+    expect(screen.getByRole('listitem', { name: 'C' })).toBeInTheDocument()
   })
 
   it('renames, disables and deletes a topic', async () => {

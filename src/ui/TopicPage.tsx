@@ -15,7 +15,7 @@ export function TopicPage({ topic, onChange, onDelete }: Props) {
   return (
     <Stack gap={4}>
       <Header topic={topic} onChange={onChange} onDelete={onDelete} />
-      <TopicConcepts topic={topic} onChange={onChange} />
+      <TopicConcepts topic={topic} />
     </Stack>
   )
 }

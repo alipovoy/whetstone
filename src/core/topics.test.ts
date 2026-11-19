@@ -1,15 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Problem, Question } from '@/content/schema'
 import {
-  addConcept,
   addProblems,
   addQuestions,
   checkErrors,
   conceptMap,
   conceptUsage,
-  deleteConcept,
   deleteItem,
-  editConcept,
   itemText,
   newTopic,
   readDrafts,
@@ -94,60 +91,13 @@ describe('conceptMap', () => {
   })
 })
 
-describe('concepts', () => {
-  const concept = topic.concepts[0]
-
-  it('adds a concept with a new id, trimmed, unless its name is taken', () => {
-    const added = addConcept(topic, ' Two  pointers ', ' Arrays ')
-    expect(added.ok && added.record.concepts[1]).toEqual({
-      id: 'two-pointers-2',
-      name: 'Two  pointers',
-      group: 'Arrays',
-    })
-    expect(addConcept(topic, ' two POINTERS', 'X')).toEqual({
-      ok: false,
-      error: 'The topic already has a concept named “two POINTERS”.',
-    })
-    expect(addConcept(topic, ' ', 'X')).toEqual({ ok: false, error: 'A concept needs a name.' })
-    expect(addConcept(topic, 'Y', ' ')).toEqual({ ok: false, error: 'A concept needs an area.' })
-  })
-
-  it('renames a concept and moves it to another area, keeping its id', () => {
-    const edited = editConcept(topic, concept.id, 'TWO pointers', 'Lists')
-    expect(edited.ok && edited.record.concepts).toEqual([
-      { id: 'two-pointers', name: 'TWO pointers', group: 'Lists' },
-    ])
-    const other = { id: 'hashing', name: 'Hashing', group: 'Arrays' }
-    const both = { ...topic, concepts: [concept, other] }
-    expect(editConcept(both, 'hashing', 'two pointers', 'Arrays').ok).toBe(false)
-  })
-
-  it('counts the items that use a concept, served or not, and those it is the only one of', () => {
+describe('conceptUsage', () => {
+  it('counts the items that use a concept, served or not', () => {
     const shared = { ...problem, id: 'b', concepts: ['two-pointers', 'hashing'] }
     const broken = { ...question, id: 'q2', answers: [5] }
     const record = { ...topic, problems: [problem, shared], questions: [question, broken] }
-    expect(conceptUsage(record, concept.id)).toEqual({
-      problems: 2,
-      questions: 2,
-      only: { problems: 1, questions: 2 },
-    })
-    expect(conceptUsage(record, 'hashing')).toEqual({
-      problems: 1,
-      questions: 0,
-      only: { problems: 0, questions: 0 },
-    })
-  })
-
-  it('deletes a concept from its items, and the items it was the only concept of', () => {
-    const hashing = { id: 'hashing', name: 'Hashing', group: 'Arrays' }
-    const shared = { ...problem, id: 'b', concepts: ['two-pointers', 'hashing'] }
-    const record = { ...topic, concepts: [concept, hashing], problems: [problem, shared] }
-    expect(deleteConcept(record, concept.id)).toEqual({
-      ...record,
-      concepts: [hashing],
-      problems: [{ ...shared, concepts: ['hashing'] }],
-      questions: [],
-    })
+    expect(conceptUsage(record, 'two-pointers')).toEqual({ problems: 2, questions: 2 })
+    expect(conceptUsage(record, 'hashing')).toEqual({ problems: 1, questions: 0 })
   })
 })
 
@@ -180,6 +130,14 @@ describe('deleteItem', () => {
   it('deletes the item of that id from its list', () => {
     const record = { ...topic, problems: [problem, { ...problem, id: 'q1' }] }
     expect(deleteItem(record, 'questions', 'q1')).toEqual({ ...record, questions: [] })
+  })
+
+  it('drops the concepts no item uses any more, served or not', () => {
+    const hashing = { id: 'hashing', name: 'Hashing', group: 'Arrays' }
+    const broken = { ...question, id: 'q2', concepts: ['hashing'], answers: [5] }
+    const record = { ...topic, concepts: [...topic.concepts, hashing], questions: [broken] }
+    expect(deleteItem(record, 'problems', 'p').concepts).toEqual([hashing])
+    expect(deleteItem(record, 'questions', 'q2').concepts).toEqual(topic.concepts)
   })
 })
 
@@ -256,6 +214,15 @@ describe('addProblems', () => {
       'p',
     )
     expect(added.ok && added.record.problems).toEqual([{ ...problem, summary: 'new' }, other])
+  })
+
+  it('drops a concept an edit leaves unused', () => {
+    const record = { ...topic, questions: [] }
+    const moved = authored({ concepts: [{ name: 'Hashing', group: 'Arrays' }] })
+    const added = addProblems(record, [moved], nextId, 'p')
+    expect(added.ok && added.record.concepts).toEqual([
+      { id: 'hashing', name: 'Hashing', group: 'Arrays' },
+    ])
   })
 
   it('adds nothing when any problem is invalid, and says why', () => {
