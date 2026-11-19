@@ -1670,14 +1670,12 @@ a[aria-disabled='true'] {
 }
 @media (min-width: 901px) {
   .ws-sub[data-placement='side'] {
-    --ws-side-width: 12.25rem;
+    --ws-side-width: 13.75rem;
     grid-template-columns: auto minmax(0, 1fr);
     column-gap: 1.25rem;
-    /* The menu hangs into the page's margin as far as it fits, so the content keeps the place it has on other pages. */
+    /* The menu hangs into the page's margin as far as it fits, so the content keeps the place it has on other pages.
+       Collapsed, the content grows into the menu's place. */
     margin-left: calc(-1 * min(var(--ws-side-width), max(0px, (100vw - 1180px) / 2) + 1rem));
-  }
-  .ws-sub[data-side='closed'] {
-    --ws-side-width: 2.75rem;
   }
   .ws-sub-side {
     position: sticky;
@@ -1688,8 +1686,8 @@ a[aria-disabled='true'] {
   }
   [data-placement='side'] .ws-sub-menu {
     flex-direction: column;
-    width: 9.5rem;
-    padding-right: 0.5rem;
+    width: 11rem;
+    padding-right: 0.75rem;
     overflow-x: visible;
     box-shadow: none;
   }
