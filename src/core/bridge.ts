@@ -1,4 +1,4 @@
-import { MAX_CONCEPTS } from '@/content/schema'
+import { MAX_CONCEPTS, type Difficulty } from '@/content/schema'
 import type { ItemList } from './topics'
 
 export const MAX_ITEMS = 10
@@ -8,6 +8,13 @@ export interface PromptRequest {
   concepts: { name: string; group: string }[]
   // Titles of the problems, or summaries of the questions, already in the topic.
   existing: string[]
+}
+
+// What to add: concepts by name, none meaning any of the topic.
+export interface ProblemOrder {
+  focus: string[]
+  difficulty: Difficulty | 'Mixed'
+  count: number
 }
 
 const PROBLEM = {
@@ -56,9 +63,23 @@ const QUESTION = {
 export const PROBLEM_TEMPLATE = JSON.stringify(PROBLEM, null, 2)
 export const QUESTION_TEMPLATE = JSON.stringify(QUESTION, null, 2)
 
-export function problemRequest({ topic, concepts, existing }: PromptRequest): string {
+export function problemRequest(
+  { topic, concepts, existing }: PromptRequest,
+  { focus, difficulty, count }: ProblemOrder,
+): string {
+  const one = count === 1
   return [
-    `Write 3 new Python coding interview problems for the topic "${topic}", from Easy to Hard.`,
+    `Write ${one ? 'one new Python coding interview problem' : `${count} new Python coding interview problems`} for the topic "${topic}".`,
+    ...(difficulty !== 'Mixed'
+      ? [`${one ? 'The problem is' : 'Every problem is'} ${difficulty}.`]
+      : one
+        ? []
+        : ['Mix the difficulties, from Easy to Hard.']),
+    ...(focus.length
+      ? [
+          `Focus on ${focus.length === 1 ? 'this concept' : 'these concepts'}: ${focus.join('; ')}. Another concept may join, an existing one or a new one.`,
+        ]
+      : []),
     ...shape('problems', PROBLEM),
     'Rules:',
     `- \`concepts\` lists the 1 to ${MAX_CONCEPTS} different ideas the problem practises; reuse existing concepts when they fit.`,

@@ -6,7 +6,7 @@ import { CodeBlock } from './CodeBlock'
 import { Filters } from './Filters'
 import { Link } from './Link'
 import { ConceptTags } from './progress'
-import type { Route } from './route'
+import { addProblemsFor, type Route } from './route'
 import { Statement } from './Statement'
 
 const SOURCE_LABEL: Record<Source, string> = {
@@ -19,10 +19,20 @@ interface LibraryProps {
   entries: LibraryEntry[]
   filter: ProblemFilter
   disabled: boolean
+  // Said once after problems are added.
+  notice?: string
+  onDismiss: () => void
   onFilter: (filter: ProblemFilter, disabled: boolean) => void
 }
 
-export function LibraryPage({ entries: all, filter: asked, disabled, onFilter }: LibraryProps) {
+export function LibraryPage({
+  entries: all,
+  filter: asked,
+  disabled,
+  notice,
+  onDismiss,
+  onFilter,
+}: LibraryProps) {
   const listed = (withDisabled: boolean) =>
     withDisabled ? all : all.filter((e) => e.topic.enabled)
   const entries = listed(disabled)
@@ -36,16 +46,23 @@ export function LibraryPage({ entries: all, filter: asked, disabled, onFilter }:
 
   return (
     <section aria-labelledby="library-title" className="d-grid gap-3">
-      <h1 id="library-title" className="h3 mb-0">
-        Coding problems
-      </h1>
+      <div className="d-flex flex-wrap align-items-center gap-2">
+        <h1 id="library-title" className="h3 mb-0 me-auto">
+          Coding problems
+        </h1>
+        <Link className="btn btn-primary" to={addProblemsFor(filter, entries)}>
+          Add problems
+        </Link>
+      </div>
+      {notice && (
+        <Alert variant="success" dismissible onClose={onDismiss} className="mb-0">
+          {notice}
+        </Alert>
+      )}
       {all.length === 0 ? (
         <div className="ws-panel ws-empty">
           <h2 className="h5 mb-0">No problems yet</h2>
-          <p className="text-body-secondary">Problems are added to a topic.</p>
-          <Link className="btn btn-primary" to={{ page: 'topics' }}>
-            Open Topics
-          </Link>
+          <p className="text-body-secondary">Add problems to a topic.</p>
         </div>
       ) : (
         <>

@@ -3,7 +3,7 @@ import { Alert } from 'react-bootstrap'
 import { latestAttempt, startAttempt, type Attempt, type Grade } from '@/core/attempt'
 import { startQuiz, submitQuiz, type Quiz, type QuizSetup } from '@/core/quiz'
 import { libraryEntries } from '@/core/library'
-import { deleteItem, newTopic, served, type TopicRecord } from '@/core/topics'
+import { addProblems, deleteItem, newTopic, served, type TopicRecord } from '@/core/topics'
 import type { Problem, Topic } from '@/content/schema'
 import type { PyodideRunner } from '@/runner/pyodide'
 import type { Records } from '@/storage/database'
@@ -20,6 +20,7 @@ import { Link } from './Link'
 import { href, navigate, replaceRoute, sectionOf, useRoute, type Route } from './route'
 import { AttemptReport, CodingReport, QuizReport } from './ReportsPages'
 import { AppearancePage } from './SectionPages'
+import { AddProblemsPage } from './AddProblemsPage'
 
 export type AppRunner = Pick<PyodideRunner, 'run' | 'test' | 'warmUp' | 'status' | 'subscribe'>
 
@@ -179,6 +180,26 @@ export function App({ runner, storage }: Props) {
   const [library, setLibrary] = useState<Route>({ page: 'library' })
   if (route.page === 'library' && href(route) !== href(library)) setLibrary(route)
   const stored = useMemo(() => libraryEntries(topics), [topics])
+  // Said on the library page it was left for, until that page changes.
+  const [notice, setNotice] = useState<{ at: string; text: string } | null>(null)
+  if (notice && href(route) !== notice.at) setNotice(null)
+  const addTo = (id: string, items: unknown[]) => {
+    const record = topicsNow.current.find((t) => t.id === id)
+    const added = record && addProblems(record, items, () => crypto.randomUUID())
+    if (!record || !added?.ok) return
+    putTopic({ ...added.record, updated_at: Date.now() })
+    const to: Route = {
+      page: 'library',
+      filter: { topic: id },
+      disabled: !record.enabled || undefined,
+    }
+    const count = added.added.length
+    setNotice({
+      at: href(to),
+      text: `Added ${count === 1 ? '1 problem' : `${count} problems`} to ${record.name}.`,
+    })
+    navigate(to)
+  }
 
   const section = sectionOf(route)
   const topic = route.page === 'topic' ? topics.find((t) => t.id === route.id) : undefined
@@ -214,7 +235,10 @@ export function App({ runner, storage }: Props) {
           {
             label: 'Coding problems',
             to: library,
-            current: route.page === 'library' || route.page === 'library-problem',
+            current:
+              route.page === 'library' ||
+              route.page === 'library-problem' ||
+              route.page === 'add-problems',
           },
         ]}
       >
@@ -387,9 +411,23 @@ export function App({ runner, storage }: Props) {
               entries={stored}
               filter={route.filter ?? {}}
               disabled={route.disabled ?? false}
+              notice={notice?.text}
+              onDismiss={() => setNotice(null)}
               onFilter={(filter, disabled) =>
                 replaceRoute({ page: 'library', filter, disabled: disabled || undefined })
               }
+            />,
+          )}
+        {route.page === 'add-problems' &&
+          settings(
+            <AddProblemsPage
+              key={href(route)}
+              topics={topics}
+              initial={route}
+              runner={runner}
+              back={library}
+              onBusy={setBusy}
+              onAdd={addTo}
             />,
           )}
         {route.page === 'library-problem' &&

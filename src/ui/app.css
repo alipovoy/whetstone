@@ -640,11 +640,9 @@ a[aria-disabled='true'] {
 }
 .ws-concepts-menu legend {
   margin-bottom: 0.15rem;
+  color: var(--ws-muted);
   font-size: 0.8125rem;
   font-weight: 600;
-}
-.ws-concepts-menu legend label {
-  color: var(--ws-muted);
 }
 .ws-concepts-menu .form-check {
   white-space: nowrap;
@@ -800,6 +798,69 @@ a[aria-disabled='true'] {
 .ws-source {
   color: var(--ws-muted);
   font-size: 0.875rem;
+}
+
+/* Add problems */
+.ws-order {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-end;
+}
+.ws-order > * {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.ws-order > legend {
+  flex-basis: 100%;
+}
+.ws-order > .ws-order-difficulty {
+  flex: 0 1 auto;
+}
+.ws-order > .ws-order-count {
+  flex: 0 1 7rem;
+}
+.ws-answer .cm-scroller {
+  min-height: 10rem;
+}
+.ws-order .form-label {
+  margin-bottom: 0.3rem;
+  color: var(--ws-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.ws-drafts {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+.ws-draft {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--ws-radius);
+}
+.ws-draft .form-check-label {
+  font-weight: 700;
+}
+.ws-draft-ok,
+.ws-draft-errors {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+}
+.ws-draft-ok {
+  color: var(--bs-success-text-emphasis);
+}
+.ws-draft-errors {
+  color: var(--bs-danger-text-emphasis);
+  white-space: pre-wrap;
+}
+.ws-draft details {
+  margin-top: 0.5rem;
+}
+.ws-draft .ws-statement {
+  padding: 0.75rem 0 0;
 }
 
 /* Reports */

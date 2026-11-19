@@ -23,6 +23,8 @@ describe('routes', () => {
     { page: 'library' },
     { page: 'library', filter: { topic: 't', source: 'user' }, disabled: true },
     { page: 'library-problem', topic: 'my topic', problem: 'a/b' },
+    { page: 'add-problems' },
+    { page: 'add-problems', topic: 'a&b', concepts: ['X, y', 'Z'], difficulty: 'Medium' },
   ]
 
   it('reads back every address it writes, ids with any characters included', () => {
@@ -75,6 +77,8 @@ describe('routes', () => {
       'reports',
       'reports',
       'reports',
+      'settings',
+      'settings',
       'settings',
       'settings',
       'settings',
