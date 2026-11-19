@@ -1659,8 +1659,9 @@ a[aria-disabled='true'] {
 }
 .ws-sub-menu {
   display: flex;
+  /* Tabs that do not fit wrap to a second row, so none is hidden off screen. */
+  flex-wrap: wrap;
   gap: 2px;
-  overflow-x: auto;
   /* Inset, so the current tab's underline covers it. */
   box-shadow: inset 0 -1px var(--bs-border-color);
 }
@@ -1700,7 +1701,6 @@ a[aria-disabled='true'] {
     flex-direction: column;
     width: 11rem;
     padding-right: 0.75rem;
-    overflow-x: visible;
     box-shadow: none;
   }
   [data-side='closed'] .ws-sub-menu {
@@ -1867,9 +1867,17 @@ a[aria-disabled='true'] {
   .ws-pane-body {
     overflow: visible;
   }
+  /* The editor fits its code, within limits, so the buttons stay close to it. */
   .ws-code-editor {
     flex: none;
-    height: 60vh;
+    min-height: 0;
+  }
+  .ws-code-editor .cm-editor {
+    height: auto;
+    max-height: 60vh;
+  }
+  .ws-code-editor .cm-scroller {
+    min-height: 8rem;
   }
   .ws-results {
     max-height: none;
