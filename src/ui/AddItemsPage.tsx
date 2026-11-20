@@ -59,6 +59,8 @@ function AddItems<T>({
       focus: (initial.concepts ?? []).filter((n) => names.has(n)),
       difficulty: initial.difficulty ?? 'Mixed',
       count: 3,
+      style: 'Interview',
+      special: '',
     }
   })
   const [source, setSource] = useState<Source>('chat')

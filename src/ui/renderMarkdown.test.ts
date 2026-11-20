@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { renderMarkdown } from './renderMarkdown'
+import { renderInlineMarkdown, renderMarkdown } from './renderMarkdown'
 
 describe('renderMarkdown', () => {
   it('renders Markdown', () => {
@@ -11,5 +11,12 @@ describe('renderMarkdown', () => {
       '<script>alert(1)</script>\n\n<img src="x" onerror="alert(2)">\n\n[a](javascript:alert(3))',
     )
     expect(html).not.toMatch(/script|onerror|javascript:/)
+  })
+})
+
+describe('renderInlineMarkdown', () => {
+  it('renders one line without a paragraph, and removes scripts', () => {
+    expect(renderInlineMarkdown('`x += 1`')).toBe('<code>x += 1</code>')
+    expect(renderInlineMarkdown('<img src="x" onerror="alert(1)">')).not.toMatch(/onerror/)
   })
 })

@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import { Button, Dropdown, Form } from 'react-bootstrap'
 import { DIFFICULTIES } from '@/content/schema'
-import { MAX_ITEMS, type ItemOrder } from '@/core/bridge'
+import { MAX_ITEMS, STYLES, type ItemOrder } from '@/core/bridge'
 import type { TopicRecord } from '@/core/topics'
 
 export interface Order extends ItemOrder {
@@ -15,7 +15,7 @@ interface Props {
   disabled?: boolean
 }
 
-// What to add: the topic, its concepts to focus on, the difficulty and how many.
+// What to add: the topic, its concepts to focus on, the difficulty, the style and how many.
 export function ItemOrderForm({ topics, value, onChange, disabled }: Props) {
   const id = useId()
   const set = (change: Partial<Order>) => onChange({ ...value, ...change })
@@ -42,23 +42,20 @@ export function ItemOrderForm({ topics, value, onChange, disabled }: Props) {
         focus={value.focus}
         onChange={(focus) => set({ focus })}
       />
-      <div className="ws-order-difficulty">
-        <span className="form-label d-block" id={`${id}-difficulty`}>
-          Difficulty
-        </span>
-        <div className="ws-seg ws-seg-text" role="group" aria-labelledby={`${id}-difficulty`}>
-          {[...DIFFICULTIES, 'Mixed' as const].map((d) => (
-            <button
-              key={d}
-              type="button"
-              aria-pressed={value.difficulty === d}
-              onClick={() => set({ difficulty: d })}
-            >
-              {d}
-            </button>
-          ))}
-        </div>
-      </div>
+      <Choice
+        className="ws-order-difficulty"
+        label="Difficulty"
+        options={[...DIFFICULTIES, 'Mixed' as const]}
+        value={value.difficulty}
+        onChange={(difficulty) => set({ difficulty })}
+      />
+      <Choice
+        className="ws-order-style"
+        label="Style"
+        options={STYLES}
+        value={value.style}
+        onChange={(style) => set({ style })}
+      />
       <Form.Group controlId={`${id}-count`} className="ws-order-count">
         <Form.Label>How many</Form.Label>
         <Form.Select value={value.count} onChange={(e) => set({ count: Number(e.target.value) })}>
@@ -67,7 +64,41 @@ export function ItemOrderForm({ topics, value, onChange, disabled }: Props) {
           ))}
         </Form.Select>
       </Form.Group>
+      <Form.Group controlId={`${id}-special`} className="ws-order-special">
+        <Form.Label>Special request</Form.Label>
+        <Form.Control
+          value={value.special}
+          placeholder="Optional: a payments setting, asyncio only…"
+          onChange={(e) => set({ special: e.target.value })}
+        />
+      </Form.Group>
     </fieldset>
+  )
+}
+
+interface ChoiceProps<T extends string> {
+  className: string
+  label: string
+  options: readonly T[]
+  value: T
+  onChange: (value: T) => void
+}
+
+function Choice<T extends string>({ className, label, options, value, onChange }: ChoiceProps<T>) {
+  const id = useId()
+  return (
+    <div className={className}>
+      <span className="form-label d-block" id={id}>
+        {label}
+      </span>
+      <div className="ws-seg ws-seg-text" role="group" aria-labelledby={id}>
+        {options.map((o) => (
+          <button key={o} type="button" aria-pressed={value === o} onClick={() => onChange(o)}>
+            {o}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 

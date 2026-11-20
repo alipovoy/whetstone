@@ -98,7 +98,7 @@ function Taking({ quiz, onChange }: Props) {
                 checked={picks.includes(o)}
                 onChange={() => onChange((q) => choose(q, index, o, Date.now()))}
               />
-              <span>{option}</span>
+              <Markdown source={option} inline />
             </label>
           ))}
         </fieldset>
@@ -371,7 +371,7 @@ function Answer({ index, shown, picks, score }: AnswerProps) {
           const picked = picks.includes(o)
           return (
             <li key={o} data-correct={correct || undefined} data-picked={picked || undefined}>
-              <span>{option}</span>
+              <Markdown source={option} inline />
               {picked && <span className="ws-tag">Your answer</span>}
               {correct && <span className="ws-tag ws-tag-correct">Correct</span>}
             </li>

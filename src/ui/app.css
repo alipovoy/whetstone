@@ -817,8 +817,12 @@ a[aria-disabled='true'] {
 .ws-order > legend {
   flex-basis: 100%;
 }
-.ws-order > .ws-order-difficulty {
+.ws-order > .ws-order-difficulty,
+.ws-order > .ws-order-style {
   flex: 0 1 auto;
+}
+.ws-order > .ws-order-special {
+  flex: 1 1 16rem;
 }
 .ws-order > .ws-order-count {
   flex: 0 1 7rem;
@@ -1319,6 +1323,11 @@ a[aria-disabled='true'] {
 .ws-flagged .ws-icon {
   width: 15px;
   height: 15px;
+}
+.markdown pre {
+  padding: 0.6rem 0.8rem;
+  background: var(--ws-sunken);
+  border-radius: var(--ws-radius);
 }
 .ws-question-text {
   max-width: 70ch;
