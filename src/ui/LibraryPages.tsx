@@ -329,7 +329,7 @@ export function QuestionView({ topic, question, preview }: QuestionViewProps) {
           const correct = answers.includes(o)
           return (
             <li key={o} data-correct={correct || undefined}>
-              <span>{option}</span>
+              <Markdown source={option} inline />
               {correct && <span className="ws-tag ws-tag-correct">Correct</span>}
             </li>
           )

@@ -1,7 +1,11 @@
 import { useMemo } from 'react'
-import { renderMarkdown } from './renderMarkdown'
+import { renderInlineMarkdown, renderMarkdown } from './renderMarkdown'
 
-export function Markdown({ source }: { source: string }) {
-  const html = useMemo(() => renderMarkdown(source), [source])
-  return <div className="markdown" dangerouslySetInnerHTML={{ __html: html }} />
+export function Markdown({ source, inline }: { source: string; inline?: boolean }) {
+  const html = useMemo(
+    () => (inline ? renderInlineMarkdown : renderMarkdown)(source),
+    [source, inline],
+  )
+  const Tag = inline ? 'span' : 'div'
+  return <Tag className="markdown" dangerouslySetInnerHTML={{ __html: html }} />
 }

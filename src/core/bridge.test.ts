@@ -70,6 +70,9 @@ describe('questionRequest', () => {
       'Write one new interview quiz question for the topic "Strings".\nThe question is Medium.\nFocus on this concept: Hashing.',
     )
     expect(one).not.toContain('Mix single')
+    expect(one).toContain(
+      'Code longer than a name or a short expression goes in a fenced `python` block',
+    )
   })
 
   it('shows an example answer that is valid, as is the template', () => {

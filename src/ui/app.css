@@ -1324,6 +1324,11 @@ a[aria-disabled='true'] {
   width: 15px;
   height: 15px;
 }
+.markdown pre {
+  padding: 0.6rem 0.8rem;
+  background: var(--ws-sunken);
+  border-radius: var(--ws-radius);
+}
 .ws-question-text {
   max-width: 70ch;
   font-size: 1.0625rem;

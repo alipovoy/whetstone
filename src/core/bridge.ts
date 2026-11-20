@@ -115,6 +115,7 @@ export function questionRequest(
     '- `answers` lists the indexes of the correct options, counted from 0. At least one option is wrong.',
     '- Extra `wordings` may ask the same question in other words; they keep the same options in the same order.',
     '- `text`, `options` and `explanation` are Markdown. The explanation says why each answer is right or wrong.',
+    '- Code longer than a name or a short expression goes in a fenced `python` block in `text`. Each option is one line; code in it is inline.',
     '- `summary` is a short phrase naming what the question checks.',
     ...context('Questions', concepts, existing),
   ].join('\n')
