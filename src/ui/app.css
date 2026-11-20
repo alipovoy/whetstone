@@ -817,8 +817,12 @@ a[aria-disabled='true'] {
 .ws-order > legend {
   flex-basis: 100%;
 }
-.ws-order > .ws-order-difficulty {
+.ws-order > .ws-order-difficulty,
+.ws-order > .ws-order-style {
   flex: 0 1 auto;
+}
+.ws-order > .ws-order-special {
+  flex: 1 1 16rem;
 }
 .ws-order > .ws-order-count {
   flex: 0 1 7rem;

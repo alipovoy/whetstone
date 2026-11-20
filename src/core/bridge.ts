@@ -10,11 +10,16 @@ export interface PromptRequest {
   existing: string[]
 }
 
-// What to add: concepts by name, none meaning any of the topic.
+export const STYLES = ['Interview', 'Classic'] as const
+export type Style = (typeof STYLES)[number]
+
+// What to add: concepts by name, none meaning any of the topic. `special` is added as written.
 export interface ItemOrder {
   focus: string[]
   difficulty: Difficulty | 'Mixed'
   count: number
+  style: Style
+  special: string
 }
 
 const PROBLEM = {
@@ -69,9 +74,16 @@ export function problemRequest(
 ): string {
   return [
     ...ask(order, topic, 'Python coding interview problem', 'problem'),
+    ...interview(order, [
+      '- Set each problem in a realistic situation and never name the technique in its title or statement: recognising it is part of the task.',
+      '- Practise the topic itself: a language topic gets tasks on its features and standard library, an algorithms topic gets algorithm tasks.',
+      '- A statement may leave details to infer from its examples, as an interviewer would; the tests stay exact.',
+      '- Avoid the best-known textbook problems, and give each problem its own setting and angle.',
+    ]),
+    ...specialRequest(order),
     ...shape('problems', PROBLEM),
     'Rules:',
-    `- \`concepts\` lists the 1 to ${MAX_CONCEPTS} different ideas the problem practises; reuse existing concepts when they fit.`,
+    `- \`concepts\` lists the 1 to ${MAX_CONCEPTS} different ideas the problem practises. Reuse an existing concept when it fits; otherwise add a new one, with its area as \`group\`.`,
     '- `difficulty` is Easy, Medium or Hard. `statement` is Markdown.',
     '- `tests` is a Python module: it imports from `solution` and defines functions named `test_*`, each with a one-line docstring and plain `assert`s.',
     '- `visible_tests` names some of the tests; at least one test stays hidden.',
@@ -89,9 +101,15 @@ export function questionRequest(
   return [
     ...ask(order, topic, 'interview quiz question', 'question'),
     ...(order.count > 1 ? ['Mix single and multiple choice.'] : []),
+    ...interview(order, [
+      '- Ask how things behave rather than what they are called: what a short snippet prints or returns, which edge case breaks it, which of two ways is right and why.',
+      '- Practise the specifics of the topic, the details an interviewer probes.',
+      '- Avoid the best-known trivia, and give each question its own angle.',
+    ]),
+    ...specialRequest(order),
     ...shape('questions', QUESTION),
     'Rules:',
-    `- \`concepts\` lists the 1 to ${MAX_CONCEPTS} different ideas the question checks; reuse existing concepts when they fit.`,
+    `- \`concepts\` lists the 1 to ${MAX_CONCEPTS} different ideas the question checks. Reuse an existing concept when it fits; otherwise add a new one, with its area as \`group\`.`,
     '- `type` is `single` (exactly one correct option) or `multiple` (one or more correct options).',
     '- `difficulty` is Easy, Medium or Hard: about 1, 2 or 3 minutes to answer.',
     '- `answers` lists the indexes of the correct options, counted from 0. At least one option is wrong.',
@@ -123,6 +141,15 @@ function ask(
         ]
       : []),
   ]
+}
+
+function interview({ style }: ItemOrder, rules: string[]): string[] {
+  return style === 'Interview' ? ['', 'Write in the style of current interviews:', ...rules] : []
+}
+
+function specialRequest({ special }: ItemOrder): string[] {
+  const text = special.trim()
+  return text ? ['', `Special request: ${text}`] : []
 }
 
 function shape(list: ItemList, example: object): string[] {

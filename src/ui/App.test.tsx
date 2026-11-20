@@ -995,6 +995,15 @@ describe('Topics', () => {
       ),
     )
     expect(copy).toHaveBeenLastCalledWith(expect.stringContaining('Focus on this concept: C.'))
+    expect(copy).toHaveBeenLastCalledWith(expect.stringContaining('style of current interviews'))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Classic' }))
+    await userEvent.type(screen.getByLabelText('Special request'), 'asyncio only')
+    await userEvent.click(screen.getByRole('button', { name: 'Copy Prompt' }))
+    expect(copy).toHaveBeenLastCalledWith(expect.stringContaining('Special request: asyncio only'))
+    expect(copy).not.toHaveBeenLastCalledWith(
+      expect.stringContaining('style of current interviews'),
+    )
   })
 
   it('opens Add questions from the quiz builder', async () => {
