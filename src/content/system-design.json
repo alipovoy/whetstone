@@ -1,0 +1,561 @@
+{
+  "topic": {
+    "id": "system-design",
+    "name": "System design",
+    "concepts": [
+      {
+        "id": "requirements-and-estimation",
+        "name": "Requirements and estimation",
+        "group": "Approach"
+      },
+      {
+        "id": "api-design",
+        "name": "API design",
+        "group": "Approach"
+      },
+      {
+        "id": "load-balancing",
+        "name": "Load balancing",
+        "group": "Scaling"
+      },
+      {
+        "id": "caching",
+        "name": "Caching",
+        "group": "Scaling"
+      },
+      {
+        "id": "partitioning-and-replication",
+        "name": "Partitioning and replication",
+        "group": "Scaling"
+      },
+      {
+        "id": "consistency-and-cap",
+        "name": "Consistency and CAP",
+        "group": "Data"
+      },
+      {
+        "id": "queues-and-async",
+        "name": "Queues and async processing",
+        "group": "Reliability"
+      },
+      {
+        "id": "rate-limiting-and-fault-tolerance",
+        "name": "Rate limiting and fault tolerance",
+        "group": "Reliability"
+      }
+    ]
+  },
+  "problems": [],
+  "questions": [
+    {
+      "id": "q-clarify-first",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "requirements-and-estimation"
+      ],
+      "wordings": [
+        {
+          "text": "In an interview you are asked to design a URL shortener. What should come first?",
+          "options": [
+            "Ask which features are needed and at what scale: custom links, expiry, reads and writes per second",
+            "Choose the database",
+            "Draw the services and how they connect",
+            "Write the function that shortens a URL"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The requirements decide the design: a hundred links a day and a billion a day need\ndifferent systems. Agreeing on features and numbers first also shows the interviewer\nhow you approach an open problem.",
+      "summary": "Starting a design with requirements",
+      "source": "built-in"
+    },
+    {
+      "id": "q-requests-per-second",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "requirements-and-estimation"
+      ],
+      "wordings": [
+        {
+          "text": "10 million users a day each make 20 requests. About how many requests per second is that on average?",
+          "options": [
+            "About 2,300",
+            "About 230",
+            "About 23,000",
+            "About 200,000"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "200 million requests over 86,400 seconds is about 2,300 a second. Rounding a day to\n100,000 seconds makes this quick: 200 million / 100,000 = 2,000. Peaks are often two to\nthree times the average.",
+      "summary": "Estimating requests per second",
+      "source": "built-in"
+    },
+    {
+      "id": "q-storage-estimate",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "requirements-and-estimation"
+      ],
+      "wordings": [
+        {
+          "text": "A service stores 1 million new records a day, 1 KB each, and keeps them for 5 years. About how much storage does it need, before replication?",
+          "options": [
+            "About 2 TB",
+            "About 200 GB",
+            "About 20 TB",
+            "About 2 PB"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "1 million × 1 KB = 1 GB a day; × 365 × 5 ≈ 1,800 GB, about 2 TB. Copies for replication\nand backups multiply it.",
+      "summary": "Estimating storage",
+      "source": "built-in"
+    },
+    {
+      "id": "q-idempotent-requests",
+      "type": "multiple",
+      "difficulty": "Medium",
+      "concepts": [
+        "api-design"
+      ],
+      "wordings": [
+        {
+          "text": "Which of these HTTP requests are idempotent, so that sending one twice has the same effect as sending it once? Choose all that apply.",
+          "options": [
+            "`GET /orders/42`",
+            "`PUT /orders/42` with the whole order",
+            "`DELETE /orders/42`",
+            "`POST /orders` with a new order"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "GET changes nothing, PUT sets the order to the same value again, and a second DELETE\nfinds nothing left to delete. Each POST creates another order, so retrying it can create\nduplicates.",
+      "summary": "Idempotent HTTP methods",
+      "source": "built-in"
+    },
+    {
+      "id": "q-idempotency-key",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "api-design",
+        "rate-limiting-and-fault-tolerance"
+      ],
+      "wordings": [
+        {
+          "text": "A phone app sends `POST /payments`, the connection times out, and the app sends it again. How can the server avoid charging twice?",
+          "options": [
+            "The app sends a unique key with each payment; the server stores the result per key and returns it for a repeat",
+            "The app never retries a payment",
+            "The server rejects two payments of the same amount within a minute",
+            "The server makes the timeout longer"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "An idempotency key makes a request safe to retry: the server sees the key again and\nreturns the first result instead of charging again. Never retrying loses payments when\nthe first request did not arrive, and two equal amounts can be real.",
+      "summary": "Safe retries with an idempotency key",
+      "source": "built-in"
+    },
+    {
+      "id": "q-cursor-pagination",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "api-design"
+      ],
+      "wordings": [
+        {
+          "text": "A feed returns posts newest first, 20 per page, with `?offset=20`. While a user reads, new posts arrive, and the next page repeats posts already seen. Which change fixes it?",
+          "options": [
+            "Pages start after the last post seen: `?after=<id of that post>`",
+            "Bigger pages",
+            "Caching each page for a minute",
+            "Returning the whole feed at once"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "An offset counts from the top, so every new post shifts the pages by one. A cursor names\nthe last item seen, so the next page starts after it whatever was added. A lookup on an\nindexed key is also faster than skipping many rows.",
+      "summary": "Cursor pagination against offset pagination",
+      "source": "built-in"
+    },
+    {
+      "id": "q-health-checks",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "load-balancing"
+      ],
+      "wordings": [
+        {
+          "text": "A server behind a load balancer starts failing its health checks. What does the load balancer do?",
+          "options": [
+            "Stops sending it requests until it passes again",
+            "Restarts it",
+            "Sends it fewer requests, in proportion to its errors",
+            "Nothing, until an operator removes it"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The load balancer regularly calls each server, for example on a health address, and\nsends traffic only to those that answer. Restarting or replacing servers is the job of\nother tools.",
+      "summary": "What a load balancer does with an unhealthy server",
+      "source": "built-in"
+    },
+    {
+      "id": "q-shared-sessions",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "load-balancing"
+      ],
+      "wordings": [
+        {
+          "text": "Web servers keep user sessions in their own memory. Behind a load balancer, users are logged out at random. Which fix also keeps users logged in when a server goes down?",
+          "options": [
+            "Keep sessions in a shared store that every server reads",
+            "Send each user to the same server every time",
+            "Add more servers",
+            "Make sessions last longer"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "With sessions in a shared store, the servers hold no user state, so any server can\nanswer any request and servers can be added or removed freely. Sending a user to the same\nserver works until that server goes down, and it can spread load unevenly.",
+      "summary": "Stateless servers behind a load balancer",
+      "source": "built-in"
+    },
+    {
+      "id": "q-cache-aside",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "caching"
+      ],
+      "wordings": [
+        {
+          "text": "An app reads through a cache in front of its database. A read finds nothing in the cache. What happens next?",
+          "options": [
+            "The app reads the database, puts the value in the cache and returns it",
+            "The app returns an error",
+            "The app returns an empty value and fills the cache later",
+            "The cache reloads the whole database"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "This is cache-aside: the cache holds only what has been read, and a miss costs one\ndatabase read. The next reads of the same key are served from the cache until the entry\nexpires or is removed.",
+      "summary": "A read miss in a cache-aside cache",
+      "source": "built-in"
+    },
+    {
+      "id": "q-stale-cache",
+      "type": "multiple",
+      "difficulty": "Medium",
+      "concepts": [
+        "caching"
+      ],
+      "wordings": [
+        {
+          "text": "Product prices are cached for an hour, and after a price change users still see the old price. Which changes help? Choose all that apply.",
+          "options": [
+            "Remove or update the cached price when the price changes",
+            "Cache prices for a shorter time",
+            "Add more cache servers",
+            "Cache prices for a day"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1
+      ],
+      "explanation": "Removing the entry on change keeps the cache current; a shorter expiry limits how long a\nstale value can live, at the cost of more database reads. More cache servers hold the\nsame stale values.",
+      "summary": "Keeping cached data fresh",
+      "source": "built-in"
+    },
+    {
+      "id": "q-cache-stampede",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "caching"
+      ],
+      "wordings": [
+        {
+          "text": "A very popular cache entry expires, and thousands of requests miss it at once and all query the database. Which fix stops this?",
+          "options": [
+            "Let one request rebuild the entry while the others wait or get the old value",
+            "Remove the cache",
+            "Make entries expire sooner",
+            "Retry failed database queries at once"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "This is a cache stampede. A lock per key, or serving the old value while one request\nrefreshes it, turns thousands of identical queries into one. Expiring sooner makes it\nhappen more often.",
+      "summary": "Preventing a cache stampede",
+      "source": "built-in"
+    },
+    {
+      "id": "q-shard-key",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "partitioning-and-replication"
+      ],
+      "wordings": [
+        {
+          "text": "A chat app splits its messages across database shards. Reads fetch one user's messages. Which shard key spreads the load and keeps such a read on one shard?",
+          "options": [
+            "A hash of the user id",
+            "The date of the message",
+            "The first letter of the user name",
+            "The user's country"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Hashing the user id spreads users evenly and keeps each user's messages together. By\ndate, all new messages go to one shard; first letters and countries are unevenly\ncommon, so some shards get far more load.",
+      "summary": "Choosing a shard key",
+      "source": "built-in"
+    },
+    {
+      "id": "q-consistent-hashing",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "partitioning-and-replication"
+      ],
+      "wordings": [
+        {
+          "text": "Keys are spread over N servers. Why use consistent hashing instead of `hash(key) mod N`?",
+          "options": [
+            "Adding or removing a server moves only about 1/N of the keys, not nearly all of them",
+            "It computes hashes faster",
+            "It needs no hash function",
+            "Every key is stored on every server"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "With mod N, changing N changes the server of almost every key, so a cache loses nearly\neverything. Consistent hashing places servers and keys on a ring; a new server takes\nover only the keys next to it.",
+      "summary": "Why consistent hashing",
+      "source": "built-in"
+    },
+    {
+      "id": "q-replica-lag",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "partitioning-and-replication",
+        "consistency-and-cap"
+      ],
+      "wordings": [
+        {
+          "text": "A read-heavy app sends writes to a primary database and reads to replicas that copy it. What must the app now handle?",
+          "options": [
+            "A read right after a write may return the old value",
+            "Writes may go to any replica",
+            "The primary no longer needs backups",
+            "Reads become slower"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Replicas copy changes after a short delay, the replication lag. Where a user must see\ntheir own change, such as a profile they just saved, read it from the primary.",
+      "summary": "Replication lag with read replicas",
+      "source": "built-in"
+    },
+    {
+      "id": "q-cap",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "consistency-and-cap"
+      ],
+      "wordings": [
+        {
+          "text": "The CAP theorem: when a network partition splits a distributed store, it must choose between which two properties?",
+          "options": [
+            "Consistency and availability",
+            "Consistency and partition tolerance",
+            "Latency and throughput",
+            "Availability and durability"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "During a partition, a node either refuses requests it cannot confirm, staying consistent,\nor answers with data that may be out of date, staying available. Partitions happen on\nreal networks, so partition tolerance is not optional.",
+      "summary": "The trade-off of the CAP theorem",
+      "source": "built-in"
+    },
+    {
+      "id": "q-eventual-consistency",
+      "type": "multiple",
+      "difficulty": "Medium",
+      "concepts": [
+        "consistency-and-cap"
+      ],
+      "wordings": [
+        {
+          "text": "Which of these can be eventually consistent, briefly out of date? Choose all that apply.",
+          "options": [
+            "The like count on a post",
+            "The order of posts in a news feed",
+            "The balance checked before a withdrawal",
+            "Whether a seat on a flight is still free when it is booked"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1
+      ],
+      "explanation": "A like count or a feed that is a few seconds behind harms no one. A stale balance can let\nan account be overdrawn, and a stale seat can be sold twice; these need strong\nconsistency where the decision is made.",
+      "summary": "Where eventual consistency is acceptable",
+      "source": "built-in"
+    },
+    {
+      "id": "q-why-queue",
+      "type": "multiple",
+      "difficulty": "Easy",
+      "concepts": [
+        "queues-and-async"
+      ],
+      "wordings": [
+        {
+          "text": "At sign-up, the welcome email is put on a queue and a separate worker sends it. What does this give? Choose all that apply.",
+          "options": [
+            "The sign-up request returns sooner",
+            "Sign-up keeps working while the email service is down; the messages wait",
+            "Workers can be scaled apart from the web servers",
+            "Each email is sent exactly once"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "A queue decouples the request from slow or unreliable work. It does not give exactly\nonce: most queues deliver at least once, so a message can arrive twice after a failure.",
+      "summary": "What a queue gives",
+      "source": "built-in"
+    },
+    {
+      "id": "q-at-least-once",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "queues-and-async"
+      ],
+      "wordings": [
+        {
+          "text": "A queue delivers each message at least once, so after a worker crash a message can be processed twice. How does the result stay correct?",
+          "options": [
+            "Make the handler idempotent, for example by recording the ids of processed messages",
+            "Use a faster worker",
+            "Process each message twice and compare the results",
+            "Delete the message before processing it"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A handler that recognises a repeat, or whose effect is the same when repeated, is safe\nunder at-least-once delivery. Deleting the message first loses it if the worker crashes\nmidway.",
+      "summary": "Handling duplicate messages",
+      "source": "built-in"
+    },
+    {
+      "id": "q-token-bucket",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "rate-limiting-and-fault-tolerance"
+      ],
+      "wordings": [
+        {
+          "text": "A rate limiter gives each client a bucket of up to 10 tokens, refilled at 1 token per second; each request takes a token. A client with a full bucket sends 15 requests at once. How many get through?",
+          "options": [
+            "10",
+            "1",
+            "15",
+            "0"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A full bucket allows a burst of 10; the other 5 are rejected. After that, the client can\nmake about one request per second, the refill rate.",
+      "summary": "How a token bucket limits requests",
+      "source": "built-in"
+    },
+    {
+      "id": "q-overloaded-service",
+      "type": "multiple",
+      "difficulty": "Medium",
+      "concepts": [
+        "rate-limiting-and-fault-tolerance"
+      ],
+      "wordings": [
+        {
+          "text": "A service is overloaded, and its clients retry every failed call. Which changes help it recover? Choose all that apply.",
+          "options": [
+            "Clients wait longer after each failure: exponential backoff",
+            "Clients add a random delay to each wait",
+            "Clients stop calling for a while after many failures: a circuit breaker",
+            "Clients retry at once, as often as needed"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "Immediate retries add load to a service that is already failing. Backoff spreads retries\nout, randomness keeps clients from retrying all at the same moment, and a circuit breaker\ngives the service time to recover.",
+      "summary": "Retrying without overloading a service",
+      "source": "built-in"
+    }
+  ]
+}

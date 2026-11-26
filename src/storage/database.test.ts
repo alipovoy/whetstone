@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { builtInTopics } from '@/content'
 import { startAttempt } from '@/core/attempt'
 import { startQuiz } from '@/core/quiz'
-import { topicFromFile } from '@/core/topics'
+import { topicFromFile, type TopicRecord } from '@/core/topics'
 import { openDatabase } from './database'
 
 const [builtIn] = builtInTopics
@@ -80,7 +80,7 @@ describe('openDatabase', () => {
   it('closes its connection when a newer version opens the database', async () => {
     const name = freshName()
     const { attempts } = await openDatabase(name)
-    const newer = await openDB(name, 9)
+    const newer = await openDB(name, 10)
     newer.close()
     await expect(attempts.put(startAttempt(ID, 't', problem, '', 1))).rejects.toThrow(
       'updated in another tab',
@@ -127,14 +127,29 @@ describe('openDatabase', () => {
     expect((await db.attempts.all()).records.map((a) => a.code)).toEqual(['kept'])
   })
 
-  it("adds the Python topics once, keeping the user's changes to the others", async () => {
-    const name = freshName()
-    const old = await openDB(name, 7, {
+  const python = ['python-basics', 'python-standard-library', 'python-advanced']
+  const design = ['object-oriented-design', 'testing', 'system-design']
+  const openVersion = (name: string, version: number) =>
+    openDB(name, version, {
       upgrade(db) {
         for (const store of ['attempts', 'topics', 'quizzes'])
           db.createObjectStore(store, { keyPath: 'id' })
       },
     })
+  const expectBuiltIns = (records: TopicRecord[], ids: string[]) => {
+    for (const id of ids) {
+      const file = builtInTopics.find((f) => f.topic.id === id)!
+      expect(records.find((t) => t.id === id)).toMatchObject({
+        name: file.topic.name,
+        problems: file.problems,
+        questions: file.questions,
+      })
+    }
+  }
+
+  it("adds the topics of later versions once, keeping the user's changes to the others", async () => {
+    const name = freshName()
+    const old = await openVersion(name, 7)
     const algorithms = topicFromFile(
       builtInTopics.find((f) => f.topic.id === 'algorithms')!,
       1,
@@ -144,17 +159,20 @@ describe('openDatabase', () => {
     old.close()
 
     const { records } = await (await openDatabase(name)).topics.all()
-    const python = ['python-basics', 'python-standard-library', 'python-advanced']
-    expect(records.map((t) => t.id)).toEqual(['algorithms', 'own', ...python].toSorted())
+    expect(records.map((t) => t.id)).toEqual(['algorithms', 'own', ...python, ...design].toSorted())
     expect(records.find((t) => t.id === 'algorithms')!.name).toBe('Renamed')
-    for (const id of python) {
-      const file = builtInTopics.find((f) => f.topic.id === id)!
-      expect(records.find((t) => t.id === id)).toMatchObject({
-        name: file.topic.name,
-        problems: file.problems,
-        questions: file.questions,
-      })
-    }
+    expectBuiltIns(records, [...python, ...design])
+  })
+
+  it('adds only the design topics to version 8, leaving out the built-ins the user deleted', async () => {
+    const name = freshName()
+    const old = await openVersion(name, 8)
+    await old.put('topics', own)
+    old.close()
+
+    const { records } = await (await openDatabase(name)).topics.all()
+    expect(records.map((t) => t.id)).toEqual(['own', ...design].toSorted())
+    expectBuiltIns(records, design)
   })
 
   it('gives stored questions a difficulty of Easy', async () => {
