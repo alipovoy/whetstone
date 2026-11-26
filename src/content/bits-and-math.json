@@ -1,0 +1,626 @@
+{
+  "topic": {
+    "id": "bits-and-math",
+    "name": "Bits and math",
+    "concepts": [
+      {
+        "id": "binary",
+        "name": "Binary and two's complement",
+        "group": "Bits"
+      },
+      {
+        "id": "bitwise-operators",
+        "name": "Bitwise operators and masks",
+        "group": "Bits"
+      },
+      {
+        "id": "bit-tricks",
+        "name": "Bit tricks",
+        "group": "Bits"
+      },
+      {
+        "id": "bit-vectors",
+        "name": "Bit vectors",
+        "group": "Encoding"
+      },
+      {
+        "id": "error-correction",
+        "name": "Parity and error correction",
+        "group": "Encoding"
+      },
+      {
+        "id": "primes-and-gcd",
+        "name": "Primes and GCD",
+        "group": "Number theory"
+      },
+      {
+        "id": "modular-arithmetic",
+        "name": "Modular arithmetic",
+        "group": "Number theory"
+      },
+      {
+        "id": "combinatorics",
+        "name": "Combinatorics and probability",
+        "group": "Counting"
+      }
+    ]
+  },
+  "problems": [
+    {
+      "id": "insert-bits",
+      "concepts": [
+        "bitwise-operators"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Insert bits into a number",
+          "statement": "Write `insert_bits(n, m, i, j)`. Bits are counted from 0 at the least significant end.\nReturn `n` with its bits `i` through `j` replaced by `m`: bit `i` of the result is bit 0\nof `m`, bit `i + 1` is bit 1 of `m`, and so on. All other bits of `n` stay as they are.\n\n`m` fits in the `j - i + 1` bits it replaces.",
+          "examples": [
+            {
+              "input": "n = 0b10000000000, m = 0b10011, i = 2, j = 6",
+              "output": "0b10001001100",
+              "explanation": "In decimal: n = 1024, m = 19, result 1100."
+            },
+            {
+              "input": "n = 0b11111111, m = 0b0, i = 1, j = 3",
+              "output": "0b11110001"
+            }
+          ],
+          "constraints": [
+            "0 <= n < 2³²",
+            "0 <= i <= j <= 31",
+            "0 <= m < 2^(j - i + 1)"
+          ]
+        }
+      ],
+      "starter_code": "def insert_bits(n, m, i, j):\n    \"\"\"Return n with bits i through j replaced by m.\"\"\"\n    pass",
+      "reference_solution": "def insert_bits(n, m, i, j):\n    \"\"\"Return n with bits i through j replaced by m.\"\"\"\n    mask = ((1 << (j - i + 1)) - 1) << i\n    return (n & ~mask) | (m << i)",
+      "tests": "import random\n\nfrom solution import *\n\n\ndef test_example_1():\n    \"\"\"Five bits inserted into zeros.\"\"\"\n    assert insert_bits(0b10000000000, 0b10011, 2, 6) == 0b10001001100\n\n\ndef test_example_2():\n    \"\"\"Inserting zeros clears bits that were set.\"\"\"\n    assert insert_bits(0b11111111, 0b0, 1, 3) == 0b11110001\n\n\ndef test_single_bit():\n    \"\"\"i equals j: one bit is set or cleared.\"\"\"\n    assert insert_bits(0, 1, 5, 5) == 32\n    assert insert_bits(0b111, 0, 1, 1) == 0b101\n\n\ndef test_lowest_bits():\n    \"\"\"The range starts at bit 0.\"\"\"\n    assert insert_bits(0b1111, 0b10, 0, 1) == 0b1110\n\n\ndef test_whole_width():\n    \"\"\"Bits 0 through 31 are all replaced.\"\"\"\n    assert insert_bits(2**32 - 1, 12345, 0, 31) == 12345\n\n\ndef test_high_bits():\n    \"\"\"The top bits of a 32-bit number.\"\"\"\n    assert insert_bits(0, 0b11, 30, 31) == 0b11 << 30\n\n\ndef test_random():\n    \"\"\"Random numbers, compared bit by bit.\"\"\"\n    rng = random.Random(5)\n    for _ in range(500):\n        n = rng.getrandbits(32)\n        i = rng.randint(0, 31)\n        j = rng.randint(i, 31)\n        m = rng.getrandbits(j - i + 1)\n        result = insert_bits(n, m, i, j)\n        for bit in range(32):\n            want = (m >> (bit - i)) & 1 if i <= bit <= j else (n >> bit) & 1\n            assert (result >> bit) & 1 == want",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Do it in two steps: first make bits i through j of n zero, then put m there.",
+        "A mask with ones in bits i through j: (1 << (j - i + 1)) - 1 gives j - i + 1 ones, and shifting left by i moves them into place.",
+        "Clear with n & ~mask, then combine with (m << i) using |. Skipping the clearing step leaves old ones from n in the range."
+      ],
+      "summary": "Replace a range of bits in a number using a mask",
+      "source": "built-in"
+    },
+    {
+      "id": "text-to-bits",
+      "concepts": [
+        "bit-vectors"
+      ],
+      "difficulty": "Easy",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Text to bits and back",
+          "statement": "Write two functions:\n\n- `to_bits(text)` encodes `text` as UTF-8 and returns a list of bits, 8 for each byte,\n  the most significant bit of each byte first\n- `from_bits(bits)` turns such a list back into the text\n\n`from_bits(to_bits(text))` gives back `text` for any text.",
+          "examples": [
+            {
+              "input": "to_bits(\"Hi\")",
+              "output": "[0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 1]",
+              "explanation": "\"H\" is byte 72 = 01001000, \"i\" is byte 105 = 01101001."
+            },
+            {
+              "input": "from_bits([0, 1, 0, 0, 0, 0, 0, 1])",
+              "output": "\"A\""
+            }
+          ],
+          "constraints": [
+            "0 <= length of text <= 10,000",
+            "from_bits gets a list whose length is a multiple of 8 and that encodes valid UTF-8"
+          ]
+        }
+      ],
+      "starter_code": "def to_bits(text):\n    \"\"\"Return the bits of text encoded as UTF-8, most significant bit of each byte first.\"\"\"\n    pass\n\n\ndef from_bits(bits):\n    \"\"\"Return the text whose UTF-8 bits, as to_bits gives them, are bits.\"\"\"\n    pass",
+      "reference_solution": "def to_bits(text):\n    \"\"\"Return the bits of text encoded as UTF-8, most significant bit of each byte first.\"\"\"\n    return [(byte >> shift) & 1 for byte in text.encode('utf-8') for shift in range(7, -1, -1)]\n\n\ndef from_bits(bits):\n    \"\"\"Return the text whose UTF-8 bits, as to_bits gives them, are bits.\"\"\"\n    data = bytearray()\n    for start in range(0, len(bits), 8):\n        byte = 0\n        for bit in bits[start : start + 8]:\n            byte = byte << 1 | bit\n        data.append(byte)\n    return data.decode('utf-8')",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"Two letters are two bytes.\"\"\"\n    assert to_bits('Hi') == [0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 1]\n\n\ndef test_example_2():\n    \"\"\"One byte back to a letter.\"\"\"\n    assert from_bits([0, 1, 0, 0, 0, 0, 0, 1]) == 'A'\n\n\ndef test_empty_text():\n    \"\"\"No text, no bits.\"\"\"\n    assert to_bits('') == []\n    assert from_bits([]) == ''\n\n\ndef test_bit_order():\n    \"\"\"The most significant bit of a byte comes first.\"\"\"\n    assert to_bits('\\x01') == [0, 0, 0, 0, 0, 0, 0, 1]\n    assert to_bits('\\x7f') == [0, 1, 1, 1, 1, 1, 1, 1]\n\n\ndef test_multi_byte_character():\n    \"\"\"\"é\" takes two bytes in UTF-8.\"\"\"\n    assert to_bits('é') == [1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1]\n\n\ndef test_round_trip():\n    \"\"\"Letters, accents, other scripts and emoji survive the round trip.\"\"\"\n    for text in ['plain', 'café', '日本語', 'a😀b', '\\n\\t ']:\n        bits = to_bits(text)\n        assert len(bits) == 8 * len(text.encode('utf-8'))\n        assert from_bits(bits) == text\n\n\ndef test_long_text():\n    \"\"\"10,000 characters.\"\"\"\n    text = 'whetstone ' * 1000\n    assert from_bits(to_bits(text)) == text",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Text is not bits yet: first turn it into bytes with an encoding. Then how do you get the 8 bits of one byte?",
+        "Encode as UTF-8. Bit k of a byte, counting from the least significant, is (byte >> k) & 1; take k from 7 down to 0.",
+        "For the way back, take the bits 8 at a time and rebuild each byte with byte = (byte << 1) | bit, then decode the bytes as UTF-8."
+      ],
+      "summary": "Convert text to a list of bits through UTF-8 bytes and back",
+      "source": "built-in"
+    },
+    {
+      "id": "fix-one-bit",
+      "concepts": [
+        "error-correction",
+        "bit-vectors"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Correct a flipped bit",
+          "statement": "A Hamming(7,4) code word carries 4 data bits in 7 bits, so that one flipped bit can be\nfound and corrected. Number the positions 1 to 7. Positions 1, 2 and 4 hold parity bits;\npositions 3, 5, 6 and 7 hold the data bits, in that order.\n\nThe parity bit at position p (1, 2 or 4) makes the number of ones even among all\npositions whose number has bit p set: position 1 covers 1, 3, 5, 7; position 2 covers 2,\n3, 6, 7; position 4 covers 4, 5, 6, 7.\n\nWrite `decode(word)`. `word` is a list of 7 bits, position 1 first, with at most one bit\nflipped. Return the 4 data bits, corrected.",
+          "examples": [
+            {
+              "input": "word = [0, 1, 1, 0, 0, 1, 1]",
+              "output": "[1, 0, 1, 1]",
+              "explanation": "No bit is flipped."
+            },
+            {
+              "input": "word = [0, 1, 1, 0, 1, 1, 1]",
+              "output": "[1, 0, 1, 1]",
+              "explanation": "Position 5 was flipped: the checks of 1 and 4 fail, and 1 + 4 = 5."
+            }
+          ],
+          "constraints": [
+            "word has exactly 7 bits",
+            "At most one bit is flipped"
+          ]
+        }
+      ],
+      "starter_code": "def decode(word):\n    \"\"\"Return the 4 data bits of a Hamming(7,4) word, correcting one flipped bit.\"\"\"\n    pass",
+      "reference_solution": "def decode(word):\n    \"\"\"Return the 4 data bits of a Hamming(7,4) word, correcting one flipped bit.\"\"\"\n    bits = [0] + list(word)\n    wrong = 0\n    for parity in (1, 2, 4):\n        ones = sum(bits[position] for position in range(1, 8) if position & parity)\n        if ones % 2:\n            wrong += parity\n    if wrong:\n        bits[wrong] ^= 1\n    return [bits[3], bits[5], bits[6], bits[7]]",
+      "tests": "from solution import *\n\n\ndef _encode(data):\n    bits = [0] * 8\n    for position, bit in zip((3, 5, 6, 7), data):\n        bits[position] = bit\n    for parity in (1, 2, 4):\n        bits[parity] = sum(bits[p] for p in range(1, 8) if p & parity and p != parity) % 2\n    return bits[1:]\n\n\ndef _all_data():\n    return [[(value >> shift) & 1 for shift in (3, 2, 1, 0)] for value in range(16)]\n\n\ndef test_example_1():\n    \"\"\"A word with no error.\"\"\"\n    assert decode([0, 1, 1, 0, 0, 1, 1]) == [1, 0, 1, 1]\n\n\ndef test_example_2():\n    \"\"\"A word with position 5 flipped.\"\"\"\n    assert decode([0, 1, 1, 0, 1, 1, 1]) == [1, 0, 1, 1]\n\n\ndef test_all_zeros_and_ones():\n    \"\"\"The words for 0000 and 1111.\"\"\"\n    assert decode([0] * 7) == [0, 0, 0, 0]\n    assert decode([1] * 7) == [1, 1, 1, 1]\n\n\ndef test_flipped_parity_bit():\n    \"\"\"A flipped parity bit leaves the data as it is.\"\"\"\n    assert decode([1, 1, 1, 0, 0, 1, 1]) == [1, 0, 1, 1]\n\n\ndef test_every_word_without_error():\n    \"\"\"All 16 data values, sent without error.\"\"\"\n    for data in _all_data():\n        assert decode(_encode(data)) == data\n\n\ndef test_every_single_flip():\n    \"\"\"All 16 data values with each of the 7 positions flipped.\"\"\"\n    for data in _all_data():\n        for position in range(7):\n            word = _encode(data)\n            word[position] ^= 1\n            assert decode(word) == data, (data, position + 1)\n\n\ndef test_input_unchanged():\n    \"\"\"The given word is not changed.\"\"\"\n    word = [0, 1, 1, 0, 1, 1, 1]\n    decode(word)\n    assert word == [0, 1, 1, 0, 1, 1, 1]",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Recompute each of the three parity checks on the received word. What do the checks that fail tell you?",
+        "A flipped bit breaks exactly the checks that cover its position. The positions of the failing parity bits add up to the position of the flipped bit.",
+        "For p in 1, 2, 4: count the ones at positions with position & p; if odd, add p. A sum of 0 means no error; otherwise flip that position on a copy, then return positions 3, 5, 6, 7."
+      ],
+      "summary": "Correct one flipped bit in a Hamming(7,4) code word with its parity checks",
+      "source": "built-in"
+    },
+    {
+      "id": "primes-up-to",
+      "concepts": [
+        "primes-and-gcd"
+      ],
+      "difficulty": "Easy",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Primes up to a limit",
+          "statement": "Write `primes_up_to(n)` that returns every prime number from 2 to `n`, inclusive, in\nascending order.\n\nCalls with `n` up to 1,000,000 must be fast.",
+          "examples": [
+            {
+              "input": "n = 10",
+              "output": "[2, 3, 5, 7]"
+            },
+            {
+              "input": "n = 1",
+              "output": "[]"
+            }
+          ],
+          "constraints": [
+            "0 <= n <= 1,000,000"
+          ]
+        }
+      ],
+      "starter_code": "def primes_up_to(n):\n    \"\"\"Return the primes from 2 to n, inclusive, in ascending order.\"\"\"\n    pass",
+      "reference_solution": "def primes_up_to(n):\n    \"\"\"Return the primes from 2 to n, inclusive, in ascending order.\"\"\"\n    if n < 2:\n        return []\n    prime = bytearray([1]) * (n + 1)\n    prime[0] = prime[1] = 0\n    for factor in range(2, int(n**0.5) + 1):\n        if prime[factor]:\n            prime[factor * factor :: factor] = bytes(len(range(factor * factor, n + 1, factor)))\n    return [value for value in range(n + 1) if prime[value]]",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"The primes below 10.\"\"\"\n    assert primes_up_to(10) == [2, 3, 5, 7]\n\n\ndef test_example_2():\n    \"\"\"There are no primes below 2.\"\"\"\n    assert primes_up_to(1) == []\n\n\ndef test_zero():\n    \"\"\"No primes up to 0.\"\"\"\n    assert primes_up_to(0) == []\n\n\ndef test_limit_is_included():\n    \"\"\"n itself is listed when it is prime.\"\"\"\n    assert primes_up_to(2) == [2]\n    assert primes_up_to(13) == [2, 3, 5, 7, 11, 13]\n\n\ndef test_squares_are_not_prime():\n    \"\"\"Squares of primes are crossed out.\"\"\"\n    assert 49 not in primes_up_to(50)\n    assert 121 not in primes_up_to(121)\n\n\ndef test_one_million():\n    \"\"\"78,498 primes up to a million.\"\"\"\n    primes = primes_up_to(1000000)\n    assert len(primes) == 78498\n    assert primes[-1] == 999983",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Testing each number separately for divisors repeats a lot of work. Can you instead cross out numbers that cannot be prime?",
+        "The sieve of Eratosthenes: mark every number as possibly prime, then for each prime cross out its multiples. What is left is prime.",
+        "Start crossing out at factor², since smaller multiples already have a smaller factor, and stop once factor² > n. The sieve costs O(n log log n)."
+      ],
+      "summary": "List all primes up to n with the sieve of Eratosthenes",
+      "source": "built-in"
+    }
+  ],
+  "questions": [
+    {
+      "id": "q-minus-one-in-binary",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "binary"
+      ],
+      "wordings": [
+        {
+          "text": "How is -1 written as an 8-bit two's complement number?",
+          "options": [
+            "11111111",
+            "10000001",
+            "10000000",
+            "01111111"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "In two's complement, -x is the bits of x inverted plus one: 00000001 inverted is 11111110,\nplus one is 11111111. 10000001 is -1 in sign-magnitude, and 10000000 is -128.",
+      "summary": "Two's complement form of -1",
+      "source": "built-in"
+    },
+    {
+      "id": "q-eight-bit-range",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "binary"
+      ],
+      "wordings": [
+        {
+          "text": "Which values does an 8-bit two's complement number hold?",
+          "options": [
+            "-128 to 127",
+            "-127 to 127",
+            "0 to 255",
+            "-256 to 255"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Of the 256 patterns, those starting with 0 are 0 to 127 and those starting with 1 are -128\nto -1. There is one zero, which leaves room for one more negative value.",
+      "summary": "Range of an 8-bit signed number",
+      "source": "built-in"
+    },
+    {
+      "id": "q-set-a-bit",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "bitwise-operators"
+      ],
+      "wordings": [
+        {
+          "text": "Bits are counted from 0 at the least significant end. Which expression sets bit i of x to 1 and leaves the other bits as they are?",
+          "options": [
+            "x | (1 << i)",
+            "x & (1 << i)",
+            "x ^ (1 << i)",
+            "x & ~(1 << i)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "OR with a single one sets that bit. AND with it keeps only that bit, XOR flips it, and AND\nwith its inverse clears it.",
+      "summary": "Setting one bit with OR",
+      "source": "built-in"
+    },
+    {
+      "id": "q-clear-low-bits",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "bitwise-operators"
+      ],
+      "wordings": [
+        {
+          "text": "Which expression clears the lowest i bits of x and keeps all higher bits?",
+          "options": [
+            "x & ~((1 << i) - 1)",
+            "x & ((1 << i) - 1)",
+            "x >> i",
+            "x | ((1 << i) - 1)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "(1 << i) - 1 has ones in the lowest i bits; inverting it gives a mask of ones above them.\nAND with the low mask keeps only the low bits, shifting moves the high bits down, and OR\nsets the low bits.",
+      "summary": "Mask that clears the lowest bits",
+      "source": "built-in"
+    },
+    {
+      "id": "q-power-of-two-check",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "bit-tricks"
+      ],
+      "wordings": [
+        {
+          "text": "For a positive integer x, what does x & (x - 1) == 0 test?",
+          "options": [
+            "x is a power of two",
+            "x is even",
+            "x is odd",
+            "x has all bits set"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Subtracting one turns the lowest set bit into 0 and the zeros below it into ones, so\nx & (x - 1) clears the lowest set bit. The result is 0 only when that was the only set\nbit.",
+      "summary": "Bit test for a power of two",
+      "source": "built-in"
+    },
+    {
+      "id": "q-lowest-set-bit",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "bit-tricks",
+        "binary"
+      ],
+      "wordings": [
+        {
+          "text": "In two's complement, what does x & (-x) give?",
+          "options": [
+            "The lowest set bit of x alone",
+            "The highest set bit of x alone",
+            "x with its lowest set bit cleared",
+            "The number of set bits of x"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "-x is ~x + 1: every bit above the lowest set bit is inverted, and that bit and the zeros\nbelow it are the same as in x. Only the lowest set bit survives the AND. Clearing it\ninstead is x & (x - 1).",
+      "summary": "Isolating the lowest set bit",
+      "source": "built-in"
+    },
+    {
+      "id": "q-bit-vector-size",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "bit-vectors"
+      ],
+      "wordings": [
+        {
+          "text": "A bit vector records which of the ids 0 to 999,999 have been seen, one bit per id. About how much memory does it take?",
+          "options": [
+            "125,000 bytes",
+            "1,000,000 bytes",
+            "8,000,000 bytes",
+            "31,250 bytes"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "One million bits at 8 bits a byte is 125,000 bytes. A set of ids stored as integers\nwould take several bytes per id seen.",
+      "summary": "Memory of a bit vector",
+      "source": "built-in"
+    },
+    {
+      "id": "q-utf8-bits",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "bit-vectors"
+      ],
+      "wordings": [
+        {
+          "text": "The text \"é\" (one character, code point U+00E9) is encoded as UTF-8 and turned into bits. How many bits do you get?",
+          "options": [
+            "16",
+            "8",
+            "21",
+            "32"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "UTF-8 uses one byte for code points below 128 and two bytes up to U+07FF, so \"é\" is 2 bytes,\n16 bits. Counting characters instead of bytes gets the length of encoded text wrong.",
+      "summary": "Size of a non-ASCII character in UTF-8",
+      "source": "built-in"
+    },
+    {
+      "id": "q-parity-bit",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "error-correction"
+      ],
+      "wordings": [
+        {
+          "text": "One even-parity bit is added to every byte that is sent. What can the receiver do with it?",
+          "options": [
+            "Detect that one bit flipped, but not tell which",
+            "Detect and correct any single flipped bit",
+            "Detect any number of flipped bits",
+            "Correct two flipped bits"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "One flipped bit, or any odd number, makes the count of ones odd. Two flips cancel out\nand go unnoticed, and the parity bit cannot say where the error is. Correcting needs\nmore checks, as in a Hamming code.",
+      "summary": "What a single parity bit can detect",
+      "source": "built-in"
+    },
+    {
+      "id": "q-hamming-position",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "error-correction"
+      ],
+      "wordings": [
+        {
+          "text": "A Hamming(7,4) word arrives with one bit flipped. Of the parity checks at positions 1, 2 and 4, the checks of 1 and 4 fail and the check of 2 passes. Which position was flipped?",
+          "options": [
+            "5",
+            "1",
+            "4",
+            "7"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Each check covers the positions whose number has that bit set, so the failing checks\nspell the position in binary: 1 + 4 = 5, which is 101.",
+      "summary": "Locating a flipped bit from failing Hamming checks",
+      "source": "built-in"
+    },
+    {
+      "id": "q-euclid-gcd",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "primes-and-gcd"
+      ],
+      "wordings": [
+        {
+          "text": "Euclid's algorithm repeats gcd(a, b) = gcd(b, a mod b) until b is 0. What is gcd(48, 18)?",
+          "options": [
+            "6",
+            "3",
+            "12",
+            "18"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "48 mod 18 = 12, 18 mod 12 = 6, 12 mod 6 = 0, so the answer is 6. The number of steps grows\nwith the number of digits, O(log min(a, b)).",
+      "summary": "Running Euclid's algorithm",
+      "source": "built-in"
+    },
+    {
+      "id": "q-trial-division-limit",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "primes-and-gcd"
+      ],
+      "wordings": [
+        {
+          "text": "To test whether n is prime, why is it enough to try divisors up to √n?",
+          "options": [
+            "If n = a · b with a ≤ b, then a ≤ √n",
+            "Every prime is smaller than √n",
+            "Divisors above √n are always even",
+            "It is not enough: all divisors up to n / 2 must be tried"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Divisors come in pairs a and n / a, and the smaller of a pair is at most √n. If none is\nfound up to √n, n has no divisor besides 1 and itself.",
+      "summary": "Why trial division stops at the square root",
+      "source": "built-in"
+    },
+    {
+      "id": "q-mod-identity",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "modular-arithmetic"
+      ],
+      "wordings": [
+        {
+          "text": "Which identity holds for all integers a and b and every m > 0?",
+          "options": [
+            "(a + b) mod m = ((a mod m) + (b mod m)) mod m",
+            "(a - b) mod m = (a mod m) - (b mod m)",
+            "(a / b) mod m = (a mod m) / (b mod m)",
+            "(a to the power b) mod m = (a mod m) to the power (b mod m)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Addition and multiplication can be reduced at every step, which keeps numbers small. The\ndifference needs a final mod m to stay non-negative, division needs a modular inverse,\nand an exponent cannot be reduced mod m.",
+      "summary": "Which operations can be reduced mod m",
+      "source": "built-in"
+    },
+    {
+      "id": "q-fast-power",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "modular-arithmetic"
+      ],
+      "wordings": [
+        {
+          "text": "aⁿ mod m is computed by repeated squaring: a², a⁴, a⁸, … combined according to the binary digits of n, reducing mod m after each multiplication. How many multiplications does it take?",
+          "options": [
+            "O(log n)",
+            "O(n)",
+            "O(√n)",
+            "O(1)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "n has about log₂ n binary digits, and each needs one squaring and at most one more\nmultiplication. Multiplying by a n times is O(n).",
+      "summary": "Cost of exponentiation by squaring",
+      "source": "built-in"
+    },
+    {
+      "id": "q-count-subsets",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "combinatorics"
+      ],
+      "wordings": [
+        {
+          "text": "How many subsets, including the empty set and the whole set, does a set of n elements have?",
+          "options": [
+            "2ⁿ",
+            "n!",
+            "n²",
+            "n(n - 1)/2"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Each element is either in a subset or not: two choices, n times. That is why trying every\nsubset is exponential. n! counts orderings and n(n - 1)/2 counts pairs.",
+      "summary": "Number of subsets of a set",
+      "source": "built-in"
+    },
+    {
+      "id": "q-two-dice",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "combinatorics"
+      ],
+      "wordings": [
+        {
+          "text": "Two fair six-sided dice are thrown. What is the probability that they sum to 7?",
+          "options": [
+            "1/6",
+            "1/12",
+            "7/36",
+            "1/36"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Of the 36 equally likely outcomes, 6 sum to 7: (1, 6), (2, 5), (3, 4), (4, 3), (5, 2),\n(6, 1). 6/36 = 1/6, the most likely sum.",
+      "summary": "Probability of a sum with two dice",
+      "source": "built-in"
+    }
+  ]
+}

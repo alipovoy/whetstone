@@ -1,17 +1,16 @@
 import { expect, test } from '@playwright/test'
-import { readFileSync } from 'node:fs'
+import { builtInTopics } from './content.ts'
 
-const topic = JSON.parse(readFileSync('src/content/algorithms.json', 'utf8'))
+const problems = builtInTopics.flatMap((t) => t.problems)
 const titles = (difficulty: string): string[] =>
-  topic.problems
-    .filter((p: { difficulty: string }) => p.difficulty === difficulty)
-    .map((p: { wordings: { title: string }[] }) => p.wordings[0].title)
+  problems.filter((p) => p.difficulty === difficulty).map((p) => p.wordings[0].title)
+const topicIds = builtInTopics.map((t) => t.topic.id).join('|')
 
 test('filter the problems, keep the filter, start a random match', async ({ page }) => {
   await page.goto('./#/')
   await page.getByRole('link', { name: 'Coding problems' }).click()
   const list = page.getByRole('region', { name: 'Problems' }).locator(':scope > ul > li')
-  await expect(list).toHaveCount(topic.problems.length)
+  await expect(list).toHaveCount(problems.length)
 
   await page.getByRole('button', { name: 'Easy' }).click()
   await page.getByLabel('Search').fill('zzz')
@@ -25,7 +24,7 @@ test('filter the problems, keep the filter, start a random match', async ({ page
   await expect(list).toHaveCount(titles('Easy').length)
 
   await page.getByRole('button', { name: 'Start a random one' }).click()
-  await expect(page).toHaveURL(new RegExp(`#/coding/${topic.topic.id}/`))
+  await expect(page).toHaveURL(new RegExp(`#/coding/(${topicIds})/`))
   const heading = await page.getByRole('heading', { level: 1 }).innerText()
   expect(titles('Easy').some((t) => heading.startsWith(t))).toBe(true)
 

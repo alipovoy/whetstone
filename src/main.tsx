@@ -4,7 +4,7 @@ import 'bootstrap/dist/css/bootstrap.min.css'
 import './ui/app.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { builtInTopic } from './content'
+import { builtInTopics } from './content'
 import { createPyodideRunner } from './runner'
 import { topicFromFile } from './core/topics'
 import { openDatabase } from './storage/database'
@@ -29,7 +29,8 @@ async function openStorage(): Promise<AppStorage> {
       skipped: attempts.skipped + topics.skipped + quizzes.skipped,
     }
   } catch (error) {
-    const topics = [topicFromFile(builtInTopic, Date.now())]
+    const now = Date.now()
+    const topics = builtInTopics.map((file) => topicFromFile(file, now))
     return { store: null, attempts: [], topics, quizzes: [], skipped: 0, error: String(error) }
   }
 }

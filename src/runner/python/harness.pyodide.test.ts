@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { loadPyodide, type PyodideInterface } from 'pyodide'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { builtInTopic } from '@/content'
+import { builtInTopics } from '@/content'
 import type { HarnessRun, HarnessTests } from '../protocol'
 import { RUN_LIMIT_MS } from '../types'
 import harness from './harness.py?raw'
@@ -52,7 +52,7 @@ describe('harness inside Pyodide', () => {
 
 // Python in the browser is slower than CPython in CI: reference solutions must stay well inside
 // the time the app allows.
-describe.each(builtInTopic.problems.map((p) => [p.id, p] as const))(
+describe.each(builtInTopics.flatMap((t) => t.problems).map((p) => [p.id, p] as const))(
   'built-in problem %s inside Pyodide',
   (_, problem) => {
     it('passes every test with the reference solution, in good time', () => {
