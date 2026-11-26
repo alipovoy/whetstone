@@ -80,7 +80,7 @@ describe('openDatabase', () => {
   it('closes its connection when a newer version opens the database', async () => {
     const name = freshName()
     const { attempts } = await openDatabase(name)
-    const newer = await openDB(name, 8)
+    const newer = await openDB(name, 9)
     newer.close()
     await expect(attempts.put(startAttempt(ID, 't', problem, '', 1))).rejects.toThrow(
       'updated in another tab',
@@ -125,6 +125,36 @@ describe('openDatabase', () => {
     })
     expect(records.find((t) => t.id === 'own')).toEqual(own)
     expect((await db.attempts.all()).records.map((a) => a.code)).toEqual(['kept'])
+  })
+
+  it("adds the Python topics once, keeping the user's changes to the others", async () => {
+    const name = freshName()
+    const old = await openDB(name, 7, {
+      upgrade(db) {
+        for (const store of ['attempts', 'topics', 'quizzes'])
+          db.createObjectStore(store, { keyPath: 'id' })
+      },
+    })
+    const algorithms = topicFromFile(
+      builtInTopics.find((f) => f.topic.id === 'algorithms')!,
+      1,
+    )
+    await old.put('topics', { ...algorithms, name: 'Renamed' })
+    await old.put('topics', own)
+    old.close()
+
+    const { records } = await (await openDatabase(name)).topics.all()
+    const python = ['python-basics', 'python-standard-library', 'python-advanced']
+    expect(records.map((t) => t.id)).toEqual(['algorithms', 'own', ...python].toSorted())
+    expect(records.find((t) => t.id === 'algorithms')!.name).toBe('Renamed')
+    for (const id of python) {
+      const file = builtInTopics.find((f) => f.topic.id === id)!
+      expect(records.find((t) => t.id === id)).toMatchObject({
+        name: file.topic.name,
+        problems: file.problems,
+        questions: file.questions,
+      })
+    }
   })
 
   it('gives stored questions a difficulty of Easy', async () => {

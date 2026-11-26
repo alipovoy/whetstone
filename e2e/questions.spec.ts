@@ -89,9 +89,9 @@ test('filter the quiz questions, read one with its answers, delete it', async ({
     all.filter((q) => q.type === type && (!of || q.concepts.includes(of))).length
   await expect(rows).toHaveCount(all.length)
 
-  await page.getByLabel('Type').selectOption({ label: 'Multiple choice' })
+  await page.getByLabel('Type', { exact: true }).selectOption({ label: 'Multiple choice' })
   await expect(rows).toHaveCount(count('multiple'))
-  await page.getByLabel('Type').selectOption({ label: 'Single choice' })
+  await page.getByLabel('Type', { exact: true }).selectOption({ label: 'Single choice' })
   await page.getByRole('button', { name: /^Concepts / }).click()
   await page.getByRole('button', { name: 'Clear', exact: true }).click()
   await page.getByRole('checkbox', { name: concept.name, exact: true }).click()

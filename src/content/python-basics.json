@@ -1,0 +1,766 @@
+{
+  "topic": {
+    "id": "python-basics",
+    "name": "Python basics",
+    "concepts": [
+      {
+        "id": "types-and-mutability",
+        "name": "Built-in types and mutability",
+        "group": "Types"
+      },
+      {
+        "id": "references-and-copies",
+        "name": "References and copies",
+        "group": "Types"
+      },
+      {
+        "id": "strings-and-formatting",
+        "name": "Strings and formatting",
+        "group": "Types"
+      },
+      {
+        "id": "arguments-and-defaults",
+        "name": "Arguments and defaults",
+        "group": "Functions"
+      },
+      {
+        "id": "lambdas-and-closures",
+        "name": "Lambdas and closures",
+        "group": "Functions"
+      },
+      {
+        "id": "built-in-functions",
+        "name": "Built-in functions",
+        "group": "Functions"
+      },
+      {
+        "id": "comprehensions",
+        "name": "Comprehensions and generator expressions",
+        "group": "Syntax"
+      },
+      {
+        "id": "exceptions",
+        "name": "Exceptions",
+        "group": "Syntax"
+      },
+      {
+        "id": "class-basics",
+        "name": "Class basics",
+        "group": "Classes"
+      }
+    ]
+  },
+  "problems": [
+    {
+      "id": "format-receipt",
+      "concepts": [
+        "strings-and-formatting"
+      ],
+      "difficulty": "Easy",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Format a receipt",
+          "statement": "Write `format_receipt(items)`. `items` is a list of `(name, price)` pairs. Return the\nreceipt as one string: a line for each item, then a line for the total, joined with\n`'\\n'`. Each line is 30 characters:\n\n- the name, left-aligned and padded with spaces to 20 characters; a name longer than 20\n  characters is cut to its first 17 followed by `...`\n- the price, right-aligned in 10 characters with two decimals\n\nThe total line has the name `Total` and the sum of the prices.",
+          "examples": [
+            {
+              "input": "format_receipt([(\"Tea\", 2.5), (\"Biscuits\", 1.25)])",
+              "output": "'Tea                       2.50\\n'\n'Biscuits                  1.25\\n'\n'Total                     3.75'"
+            },
+            {
+              "input": "format_receipt([])",
+              "output": "'Total                     0.00'"
+            }
+          ],
+          "constraints": [
+            "0 <= len(items) <= 1,000",
+            "0 <= price < 1,000,000, with at most two decimals"
+          ]
+        }
+      ],
+      "starter_code": "def format_receipt(items):\n    \"\"\"Return the receipt for (name, price) pairs, one 30-character line each, then the total.\"\"\"\n    pass",
+      "reference_solution": "def format_receipt(items):\n    \"\"\"Return the receipt for (name, price) pairs, one 30-character line each, then the total.\"\"\"\n    lines = [_line(name, price) for name, price in items]\n    lines.append(_line('Total', sum(price for _, price in items)))\n    return '\\n'.join(lines)\n\n\ndef _line(name, price):\n    if len(name) > 20:\n        name = name[:17] + '...'\n    return f'{name:<20}{price:>10.2f}'",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"Two items and their total.\"\"\"\n    assert format_receipt([('Tea', 2.5), ('Biscuits', 1.25)]) == (\n        'Tea                       2.50\\n'\n        'Biscuits                  1.25\\n'\n        'Total                     3.75'\n    )\n\n\ndef test_example_2():\n    \"\"\"No items: only the total.\"\"\"\n    assert format_receipt([]) == 'Total                     0.00'\n\n\ndef test_long_name():\n    \"\"\"A name of 21 characters is cut to 17 and three dots.\"\"\"\n    assert format_receipt([('a' * 21, 1)]).split('\\n')[0] == 'a' * 17 + '...' + '      1.00'\n\n\ndef test_name_of_twenty():\n    \"\"\"A name of exactly 20 characters stays whole.\"\"\"\n    assert format_receipt([('b' * 20, 0.5)]).split('\\n')[0] == 'b' * 20 + '      0.50'\n\n\ndef test_large_price():\n    \"\"\"A price that fills its 10 characters.\"\"\"\n    assert format_receipt([('Car', 999999.99)]).split('\\n')[0] == 'Car' + ' ' * 17 + '999999.99'.rjust(10)\n\n\ndef test_total_of_tenths():\n    \"\"\"Ten prices of 0.10 add up to 1.00 on the receipt.\"\"\"\n    assert format_receipt([('Gum', 0.1)] * 10).split('\\n')[-1] == 'Total                     1.00'\n\n\ndef test_every_line_is_thirty():\n    \"\"\"Many items, each on a line of 30 characters.\"\"\"\n    items = [(f'item {i}' * (i % 5), i * 1.5) for i in range(100)]\n    lines = format_receipt(items).split('\\n')\n    assert len(lines) == 101\n    assert all(len(line) == 30 for line in lines)",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "A format spec in an f-string sets width and alignment: f'{name:<20}' pads the name with spaces on the right to 20 characters.",
+        "f'{price:>10.2f}' right-aligns the price in 10 characters with two decimals.",
+        "Cut long names before padding them: name[:17] + '...'. Build a list of lines and join it with '\\n'.join(lines)."
+      ],
+      "summary": "Align columns of text with f-string format specs",
+      "source": "built-in"
+    },
+    {
+      "id": "merge-settings",
+      "concepts": [
+        "references-and-copies",
+        "types-and-mutability"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Merge nested settings",
+          "statement": "Write `merge_settings(defaults, overrides)`. Both are dicts whose values may be dicts,\nlists or plain values. Return a new dict with every key of both:\n\n- when both values of a key are dicts, merge them the same way\n- otherwise the value from `overrides` wins\n\nNeither input changes. Changing the result later, at any depth, doesn't change the inputs\neither.",
+          "examples": [
+            {
+              "input": "merge_settings({'ui': {'theme': 'light', 'size': 12}, 'beta': False}, {'ui': {'theme': 'dark'}})",
+              "output": "{'ui': {'theme': 'dark', 'size': 12}, 'beta': False}"
+            },
+            {
+              "input": "merge_settings({'tags': ['a'], 'ui': {'size': 12}}, {'tags': ['b'], 'ui': 'plain'})",
+              "output": "{'tags': ['b'], 'ui': 'plain'}",
+              "explanation": "Lists are replaced, not joined, and a dict replaced by another value is gone."
+            }
+          ],
+          "constraints": [
+            "The dicts nest at most 20 levels deep",
+            "Keys are strings"
+          ]
+        }
+      ],
+      "starter_code": "def merge_settings(defaults, overrides):\n    \"\"\"Return a new dict: defaults with overrides applied, nested dicts merged.\"\"\"\n    pass",
+      "reference_solution": "import copy\n\n\ndef merge_settings(defaults, overrides):\n    \"\"\"Return a new dict: defaults with overrides applied, nested dicts merged.\"\"\"\n    result = copy.deepcopy(defaults)\n    for key, value in overrides.items():\n        if isinstance(result.get(key), dict) and isinstance(value, dict):\n            result[key] = merge_settings(result[key], value)\n        else:\n            result[key] = copy.deepcopy(value)\n    return result",
+      "tests": "import copy\n\nfrom solution import *\n\n\ndef test_example_1():\n    \"\"\"A nested dict is merged key by key.\"\"\"\n    assert merge_settings(\n        {'ui': {'theme': 'light', 'size': 12}, 'beta': False}, {'ui': {'theme': 'dark'}}\n    ) == {'ui': {'theme': 'dark', 'size': 12}, 'beta': False}\n\n\ndef test_example_2():\n    \"\"\"Lists and plain values are replaced.\"\"\"\n    assert merge_settings({'tags': ['a'], 'ui': {'size': 12}}, {'tags': ['b'], 'ui': 'plain'}) == {\n        'tags': ['b'],\n        'ui': 'plain',\n    }\n\n\ndef test_value_replaced_by_dict():\n    \"\"\"A plain value replaced by a dict.\"\"\"\n    assert merge_settings({'ui': 'plain'}, {'ui': {'size': 9}}) == {'ui': {'size': 9}}\n\n\ndef test_empty():\n    \"\"\"Empty dicts on either side.\"\"\"\n    assert merge_settings({}, {}) == {}\n    assert merge_settings({'a': {'b': 1}}, {}) == {'a': {'b': 1}}\n    assert merge_settings({}, {'a': {'b': 1}}) == {'a': {'b': 1}}\n\n\ndef _sample():\n    defaults = {'ui': {'theme': 'light', 'panels': {'left': True}}, 'tags': ['a'], 'n': 1}\n    overrides = {'ui': {'panels': {'right': False}, 'fonts': ['mono']}, 'extra': {'x': [1]}}\n    return defaults, overrides\n\n\ndef test_inputs_unchanged():\n    \"\"\"Merging changes neither input.\"\"\"\n    defaults, overrides = _sample()\n    before = copy.deepcopy((defaults, overrides))\n    merge_settings(defaults, overrides)\n    assert (defaults, overrides) == before\n\n\ndef test_result_shares_nothing():\n    \"\"\"Changing the result at any depth leaves both inputs as they were.\"\"\"\n    defaults, overrides = _sample()\n    before = copy.deepcopy((defaults, overrides))\n    result = merge_settings(defaults, overrides)\n    result['ui']['theme'] = 'dark'\n    result['ui']['panels']['left'] = False\n    result['ui']['panels']['right'] = True\n    result['ui']['fonts'].append('serif')\n    result['tags'].append('b')\n    result['extra']['x'].append(2)\n    assert (defaults, overrides) == before\n\n\ndef test_deep():\n    \"\"\"Dicts nested 20 levels deep.\"\"\"\n    def nest(depth, leaf):\n        return leaf if depth == 0 else {'k': nest(depth - 1, leaf)}\n\n    merged = merge_settings(nest(19, {'a': 1}), nest(19, {'b': 2}))\n    assert merged == nest(19, {'a': 1, 'b': 2})",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "dict(defaults) or defaults.copy() copies only the top level: the nested dicts and lists are still the same objects as in defaults.",
+        "copy.deepcopy copies at every depth. Values taken from overrides need copying too: the result must not share a list or dict with either input.",
+        "Start from a deep copy of defaults. For each key in overrides, merge recursively when both values are dicts; otherwise store a deep copy of the override."
+      ],
+      "summary": "Merge nested dicts without sharing objects with the inputs",
+      "source": "built-in"
+    },
+    {
+      "id": "compose-functions",
+      "concepts": [
+        "lambdas-and-closures",
+        "arguments-and-defaults"
+      ],
+      "difficulty": "Easy",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Compose functions",
+          "statement": "Write `compose(*functions)`. It takes any number of one-argument functions and returns\none function that applies them from right to left: `compose(f, g, h)(x)` is\n`f(g(h(x)))`. With no functions, the returned function gives back its argument.\n\n`compose` itself calls none of the functions; they run each time the returned function\nis called.",
+          "examples": [
+            {
+              "input": "compose(lambda x: x + 1, lambda x: x * 2)(5)",
+              "output": "11",
+              "explanation": "Doubled first: 5 * 2 + 1."
+            },
+            {
+              "input": "compose()(\"same\")",
+              "output": "'same'"
+            }
+          ],
+          "constraints": [
+            "0 <= number of functions <= 1,000"
+          ]
+        }
+      ],
+      "starter_code": "def compose(*functions):\n    \"\"\"Return a function that applies functions from right to left.\"\"\"\n    pass",
+      "reference_solution": "def compose(*functions):\n    \"\"\"Return a function that applies functions from right to left.\"\"\"\n    def composed(value):\n        for function in reversed(functions):\n            value = function(value)\n        return value\n\n    return composed",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"The rightmost function runs first.\"\"\"\n    assert compose(lambda x: x + 1, lambda x: x * 2)(5) == 11\n\n\ndef test_example_2():\n    \"\"\"No functions: the argument comes back.\"\"\"\n    assert compose()('same') == 'same'\n\n\ndef test_one_function():\n    \"\"\"A single function is applied as it is.\"\"\"\n    assert compose(str.upper)('abc') == 'ABC'\n\n\ndef test_order():\n    \"\"\"Three functions applied right to left.\"\"\"\n    add = compose(lambda s: s + 'a', lambda s: s + 'b', lambda s: s + 'c')\n    assert add('') == 'cba'\n\n\ndef test_calls_only_when_used():\n    \"\"\"Functions run on each call of the result, not when composing.\"\"\"\n    calls = []\n\n    def record(x):\n        calls.append(x)\n        return x\n\n    composed = compose(record, record)\n    assert calls == []\n    composed(1)\n    composed(2)\n    assert calls == [1, 1, 2, 2]\n\n\ndef test_reusable():\n    \"\"\"The composed function can be called many times.\"\"\"\n    square_then_negate = compose(lambda x: -x, lambda x: x * x)\n    assert [square_then_negate(x) for x in range(4)] == [0, -1, -4, -9]\n\n\ndef test_many():\n    \"\"\"A thousand functions, each adding one.\"\"\"\n    assert compose(*[lambda x: x + 1] * 1000)(0) == 1000",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "A parameter written *functions collects all positional arguments into a tuple.",
+        "Define an inner function and return it. It can still use functions after compose returns: that is a closure.",
+        "In the inner function, loop over reversed(functions), passing each result on. With no functions the loop does nothing and the argument comes back."
+      ],
+      "summary": "Return a closure that chains functions",
+      "source": "built-in"
+    },
+    {
+      "id": "top-students",
+      "concepts": [
+        "built-in-functions",
+        "comprehensions"
+      ],
+      "difficulty": "Easy",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Top students",
+          "statement": "Write `top_students(scores, k)`. `scores` maps each student's name to a list of their\nscores. Return the `k` students with the highest average score, best first, as a list\nof `(name, average)` pairs, the average rounded to two decimals.\n\nStudents with equal averages are ordered by name. Rank by the exact average, not the\nrounded one. When there are fewer than `k` students, return them all.",
+          "examples": [
+            {
+              "input": "top_students({'ann': [90, 80], 'bob': [70], 'cy': [85, 85, 85]}, 2)",
+              "output": "[('ann', 85.0), ('cy', 85.0)]",
+              "explanation": "ann and cy both average 85, so they are ordered by name."
+            }
+          ],
+          "constraints": [
+            "0 <= k <= 10,000",
+            "At most 10,000 students, each with 1 to 100 integer scores"
+          ]
+        }
+      ],
+      "starter_code": "def top_students(scores, k):\n    \"\"\"Return the k (name, average) pairs with the best averages, ties by name.\"\"\"\n    pass",
+      "reference_solution": "def top_students(scores, k):\n    \"\"\"Return the k (name, average) pairs with the best averages, ties by name.\"\"\"\n    averages = {name: sum(marks) / len(marks) for name, marks in scores.items()}\n    ranked = sorted(averages, key=lambda name: (-averages[name], name))\n    return [(name, round(averages[name], 2)) for name in ranked[:k]]",
+      "tests": "import random\n\nfrom solution import *\n\n\ndef test_example_1():\n    \"\"\"Equal averages are ordered by name.\"\"\"\n    assert top_students({'ann': [90, 80], 'bob': [70], 'cy': [85, 85, 85]}, 2) == [\n        ('ann', 85.0),\n        ('cy', 85.0),\n    ]\n\n\ndef test_rounded():\n    \"\"\"Averages are rounded to two decimals.\"\"\"\n    assert top_students({'dee': [1, 2, 2]}, 1) == [('dee', 1.67)]\n\n\ndef test_rank_by_exact_average():\n    \"\"\"Two averages that round to 1.33 keep their exact order.\"\"\"\n    assert top_students({'a': [1] * 99 + [34], 'z': [1, 1, 2]}, 2) == [('z', 1.33), ('a', 1.33)]\n\n\ndef test_fewer_than_k():\n    \"\"\"Asking for more students than there are.\"\"\"\n    assert top_students({'solo': [50]}, 5) == [('solo', 50.0)]\n\n\ndef test_none():\n    \"\"\"k of 0 and no students.\"\"\"\n    assert top_students({'a': [1]}, 0) == []\n    assert top_students({}, 3) == []\n\n\ndef test_random():\n    \"\"\"Many students, checked by sorting all pairs of averages.\"\"\"\n    rng = random.Random(3)\n    scores = {f's{i:05}': [rng.randint(0, 10) for _ in range(rng.randint(1, 5))] for i in range(10000)}\n    result = top_students(scores, 1000)\n    assert len(result) == 1000\n    exact = [sum(scores[name]) / len(scores[name]) for name, _ in result]\n    for (name_a, _), (name_b, _), a, b in zip(result, result[1:], exact, exact[1:]):\n        assert a > b or (a == b and name_a < name_b)\n    best = max(sum(marks) / len(marks) for marks in scores.values())\n    assert exact[0] == best",
+      "visible_tests": [
+        "test_example_1"
+      ],
+      "hints": [
+        "A dict comprehension can compute every average at once: {name: sum(m) / len(m) for name, m in scores.items()}.",
+        "sorted takes a key function; a tuple key sorts by its first item, then its second. Negate the average to put the highest first while names still go A to Z.",
+        "Slice the sorted names to k, then build the pairs with a list comprehension, rounding with round(average, 2) only at the end."
+      ],
+      "summary": "Rank by a computed key with sorted and comprehensions",
+      "source": "built-in"
+    },
+    {
+      "id": "read-scores",
+      "concepts": [
+        "exceptions"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Read scores with clear errors",
+          "statement": "Write `read_scores(lines)`. Each line of the list `lines` is `name: score`. Return a dict\nthat maps each name to its score as an integer. Spaces around the name and the score\ndon't count, and blank lines are skipped. A line is split at its first colon.\n\nRaise `ScoreError` when a line can't be read: it has no colon, its name is empty, its\nscore is not an integer, or its name was already read. The message starts with the\nline number, counted from 1, then a colon: `line 3: ...`. When the score is not an\ninteger, raise `ScoreError` from the `ValueError` that `int` raised, so it is the\nerror's `__cause__`.\n\n`ScoreError` is a subclass of `ValueError`; the starter code defines it.",
+          "examples": [
+            {
+              "input": "read_scores(['ann: 90', '', ' bob :7 '])",
+              "output": "{'ann': 90, 'bob': 7}"
+            },
+            {
+              "input": "read_scores(['ann: 90', 'bob: ninety'])",
+              "output": "ScoreError: line 2: ...",
+              "explanation": "The error's __cause__ is the ValueError from int('ninety')."
+            }
+          ],
+          "constraints": [
+            "0 <= len(lines) <= 10,000"
+          ]
+        }
+      ],
+      "starter_code": "class ScoreError(ValueError):\n    \"\"\"A line of scores that can't be read.\"\"\"\n\n\ndef read_scores(lines):\n    \"\"\"Return a dict of names to integer scores, raising ScoreError for a bad line.\"\"\"\n    pass",
+      "reference_solution": "class ScoreError(ValueError):\n    \"\"\"A line of scores that can't be read.\"\"\"\n\n\ndef read_scores(lines):\n    \"\"\"Return a dict of names to integer scores, raising ScoreError for a bad line.\"\"\"\n    scores = {}\n    for number, line in enumerate(lines, start=1):\n        if not line.strip():\n            continue\n        name, colon, score = line.partition(':')\n        name = name.strip()\n        if not colon:\n            raise ScoreError(f'line {number}: no colon')\n        if not name:\n            raise ScoreError(f'line {number}: no name')\n        if name in scores:\n            raise ScoreError(f'line {number}: {name} appears again')\n        try:\n            scores[name] = int(score)\n        except ValueError as error:\n            raise ScoreError(f'line {number}: {score.strip()!r} is not an integer') from error\n    return scores",
+      "tests": "from solution import *\n\n\ndef _error(lines):\n    try:\n        read_scores(lines)\n    except ScoreError as error:\n        return error\n    raise AssertionError('no ScoreError was raised')\n\n\ndef test_example_1():\n    \"\"\"Spaces are ignored and blank lines skipped.\"\"\"\n    assert read_scores(['ann: 90', '', ' bob :7 ']) == {'ann': 90, 'bob': 7}\n\n\ndef test_example_2():\n    \"\"\"A score that is not a number names its line.\"\"\"\n    assert str(_error(['ann: 90', 'bob: ninety'])).startswith('line 2:')\n\n\ndef test_cause():\n    \"\"\"The error is raised from the ValueError of int.\"\"\"\n    error = _error(['bob: 9.5'])\n    assert isinstance(error.__cause__, ValueError)\n    assert not isinstance(error.__cause__, ScoreError)\n\n\ndef test_is_value_error():\n    \"\"\"ScoreError is still a ValueError.\"\"\"\n    assert isinstance(_error(['x']), ValueError)\n\n\ndef test_no_colon():\n    \"\"\"A line without a colon.\"\"\"\n    assert str(_error(['ann: 1', '   ', 'bob 2'])).startswith('line 3:')\n\n\ndef test_empty_name():\n    \"\"\"A line with nothing before the colon.\"\"\"\n    assert str(_error([' : 5'])).startswith('line 1:')\n\n\ndef test_repeated_name():\n    \"\"\"A name read twice.\"\"\"\n    assert str(_error(['ann: 1', 'bob: 2', ' ann : 3'])).startswith('line 3:')\n\n\ndef test_first_colon():\n    \"\"\"Only the first colon splits; the rest belongs to the score.\"\"\"\n    assert str(_error(['a: 1: 2'])).startswith('line 1:')\n\n\ndef test_signs_and_empty():\n    \"\"\"Negative scores are integers; no lines give an empty dict.\"\"\"\n    assert read_scores(['low: -3', 'high: +4']) == {'low': -3, 'high': 4}\n    assert read_scores([]) == {}\n\n\ndef test_many():\n    \"\"\"Ten thousand lines.\"\"\"\n    lines = [f'p{i}: {i}' for i in range(10000)]\n    assert read_scores(lines) == {f'p{i}': i for i in range(10000)}",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "enumerate(lines, start=1) gives each line with its number counted from 1.",
+        "line.partition(':') splits at the first colon and returns an empty separator when there is none. int() already ignores spaces around the digits.",
+        "Wrap int(score) in try/except ValueError as error, and inside the except write raise ScoreError(...) from error to set the cause."
+      ],
+      "summary": "Raise a custom exception with a cause and a line number",
+      "source": "built-in"
+    },
+    {
+      "id": "bank-account",
+      "concepts": [
+        "class-basics"
+      ],
+      "difficulty": "Easy",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "A bank account class",
+          "statement": "Write the class `Account`:\n\n- `Account(owner, balance=0)` opens an account\n- `owner` is an attribute; `balance` is a read-only property: setting it raises\n  `AttributeError`\n- `deposit(amount)` and `withdraw(amount)` change the balance; an amount that isn't\n  positive, or a withdrawal larger than the balance, raises `ValueError` and leaves\n  the balance as it was\n- `Account.from_string('ann:100')` opens an account for `ann` with balance 100; called\n  on a subclass of `Account`, it returns an instance of that subclass\n- the class attribute `Account.opened` counts every account opened so far, of any\n  subclass too",
+          "examples": [
+            {
+              "input": "a = Account('ann', 10); a.deposit(5); a.withdraw(3); a.balance",
+              "output": "12"
+            },
+            {
+              "input": "Account.from_string('bob:7').owner",
+              "output": "'bob'"
+            }
+          ],
+          "constraints": [
+            "Amounts and balances are integers"
+          ]
+        }
+      ],
+      "starter_code": "class Account:\n    \"\"\"A bank account with a balance that can't go below zero.\"\"\"\n\n    def __init__(self, owner, balance=0):\n        pass\n\n    def deposit(self, amount):\n        pass\n\n    def withdraw(self, amount):\n        pass\n\n    @classmethod\n    def from_string(cls, text):\n        pass",
+      "reference_solution": "class Account:\n    \"\"\"A bank account with a balance that can't go below zero.\"\"\"\n\n    opened = 0\n\n    def __init__(self, owner, balance=0):\n        self.owner = owner\n        self._balance = balance\n        Account.opened += 1\n\n    @property\n    def balance(self):\n        return self._balance\n\n    def deposit(self, amount):\n        if amount <= 0:\n            raise ValueError('the amount must be positive')\n        self._balance += amount\n\n    def withdraw(self, amount):\n        if amount <= 0:\n            raise ValueError('the amount must be positive')\n        if amount > self._balance:\n            raise ValueError('not enough money')\n        self._balance -= amount\n\n    @classmethod\n    def from_string(cls, text):\n        owner, balance = text.split(':')\n        return cls(owner, int(balance))",
+      "tests": "from solution import *\n\n\ndef _raises(error, action):\n    try:\n        action()\n    except error:\n        return\n    raise AssertionError(f'{error.__name__} was not raised')\n\n\ndef test_example_1():\n    \"\"\"Deposit and withdraw.\"\"\"\n    a = Account('ann', 10)\n    a.deposit(5)\n    a.withdraw(3)\n    assert a.balance == 12\n\n\ndef test_example_2():\n    \"\"\"An account read from text.\"\"\"\n    a = Account.from_string('bob:7')\n    assert (a.owner, a.balance) == ('bob', 7)\n\n\ndef test_default_balance():\n    \"\"\"A new account starts at zero.\"\"\"\n    assert Account('cy').balance == 0\n\n\ndef test_read_only_balance():\n    \"\"\"The balance can't be set directly.\"\"\"\n    a = Account('ann', 5)\n\n    def assign():\n        a.balance = 100\n\n    _raises(AttributeError, assign)\n    assert a.balance == 5\n\n\ndef test_bad_amounts():\n    \"\"\"Amounts that aren't positive, and overdrawing, change nothing.\"\"\"\n    a = Account('ann', 5)\n    _raises(ValueError, lambda: a.deposit(0))\n    _raises(ValueError, lambda: a.deposit(-1))\n    _raises(ValueError, lambda: a.withdraw(-1))\n    _raises(ValueError, lambda: a.withdraw(6))\n    assert a.balance == 5\n    a.withdraw(5)\n    assert a.balance == 0\n\n\ndef test_separate_balances():\n    \"\"\"Each account has its own balance.\"\"\"\n    a, b = Account('a'), Account('b')\n    a.deposit(3)\n    assert (a.balance, b.balance) == (3, 0)\n\n\ndef test_subclass_from_string():\n    \"\"\"from_string on a subclass returns the subclass.\"\"\"\n    class Savings(Account):\n        pass\n\n    s = Savings.from_string('dee:40')\n    assert type(s) is Savings\n    assert s.balance == 40\n\n\ndef test_opened_count():\n    \"\"\"Every account counts, including those of subclasses.\"\"\"\n    class Savings(Account):\n        pass\n\n    before = Account.opened\n    Account('a')\n    Account.from_string('b:1')\n    Savings('c')\n    assert Account.opened == before + 3",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Store the balance under another name, such as self._balance, and add a method decorated with @property named balance that returns it. Without a setter, assigning to it raises AttributeError.",
+        "Check the amount before changing anything, and raise ValueError when it is wrong.",
+        "A @classmethod gets the class it was called on as cls: return cls(owner, int(balance)). Count in __init__ with Account.opened += 1; self.opened += 1 would create an attribute on the instance instead."
+      ],
+      "summary": "Properties, class methods and class attributes",
+      "source": "built-in"
+    }
+  ],
+  "questions": [
+    {
+      "id": "q-hashable-keys",
+      "type": "multiple",
+      "difficulty": "Easy",
+      "concepts": [
+        "types-and-mutability"
+      ],
+      "wordings": [
+        {
+          "text": "Which of these can be keys of a dict?",
+          "options": [
+            "`(1, 2)`",
+            "`'name'`",
+            "`frozenset({1, 2})`",
+            "`[1, 2]`",
+            "`{'a': 1}`"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "A key must be hashable, and the built-in immutable types are: tuples (of hashable items),\nstrings and frozensets. Lists, dicts and sets can change, so they have no hash and raise\nTypeError as keys.",
+      "summary": "Which built-in types are hashable",
+      "source": "built-in"
+    },
+    {
+      "id": "q-list-in-tuple",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "types-and-mutability",
+        "references-and-copies"
+      ],
+      "wordings": [
+        {
+          "text": "What happens here?\n\n```python\nt = ([1], 2)\nt[0].append(3)\nprint(t)\n```",
+          "options": [
+            "It prints `([1, 3], 2)`",
+            "TypeError: a tuple can't be changed",
+            "It prints `([1], 2)`",
+            "It prints `([1], 2, 3)`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A tuple can't change which objects it holds, but an object it holds can change itself.\nt[0] is a list, and appending to it is allowed. Assigning t[0] = [1, 3] would raise\nTypeError.",
+      "summary": "A mutable list inside an immutable tuple",
+      "source": "built-in"
+    },
+    {
+      "id": "q-repeated-rows",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "references-and-copies"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\ngrid = [[0] * 3] * 3\ngrid[0][0] = 1\nprint(grid)\n```",
+          "options": [
+            "`[[1, 0, 0], [1, 0, 0], [1, 0, 0]]`",
+            "`[[1, 0, 0], [0, 0, 0], [0, 0, 0]]`",
+            "`[[1, 1, 1], [0, 0, 0], [0, 0, 0]]`",
+            "TypeError"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Multiplying a list repeats references: the three rows are the same list object, so a\nchange through one row shows in all of them. [[0] * 3 for _ in range(3)] makes three\nseparate rows.",
+      "summary": "Repeating a nested list repeats one object",
+      "source": "built-in"
+    },
+    {
+      "id": "q-shallow-copy",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "references-and-copies"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\na = [1, [2, 3]]\nb = a.copy()\nb[1].append(4)\nb.append(5)\nprint(a)\n```",
+          "options": [
+            "`[1, [2, 3, 4]]`",
+            "`[1, [2, 3]]`",
+            "`[1, [2, 3, 4], 5]`",
+            "`[1, [2, 3], 5]`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "list.copy() is shallow: b is a new list, so appending 5 to it doesn't touch a, but its\nitems are the same objects. The inner list is shared, so appending 4 shows in a.\ncopy.deepcopy(a) would copy the inner list too.",
+      "summary": "A shallow copy shares the inner objects",
+      "source": "built-in"
+    },
+    {
+      "id": "q-format-spec",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "strings-and-formatting"
+      ],
+      "wordings": [
+        {
+          "text": "What is `f'{3.14159:>8.2f}|'`?",
+          "options": [
+            "`'    3.14|'`",
+            "`'3.14    |'`",
+            "`'3.14159 |'`",
+            "`'00003.14|'`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "After the colon comes the format spec: > right-aligns, 8 is the total width and .2f\nmeans two decimals. 3.14 takes 4 characters, so 4 spaces go before it. < would pad on\nthe right, and 08.2f would pad with zeros.",
+      "summary": "Width, alignment and precision in f-strings",
+      "source": "built-in"
+    },
+    {
+      "id": "q-join-strings",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "strings-and-formatting"
+      ],
+      "wordings": [
+        {
+          "text": "Why is `''.join(parts)` preferred to adding strings with `+=` in a loop?",
+          "options": [
+            "Strings are immutable, so each `+=` may copy everything built so far: quadratic time in the worst case",
+            "`+=` on strings raises an error inside loops",
+            "`join` sorts the parts first",
+            "`+=` changes the original string in place, which other variables also see"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A string can't change, so s += part builds a new string and copies the old one into it.\nOver n parts that can add up to O(n²) copying. join measures the parts once and copies\neach one once. CPython sometimes extends a string in place as an optimization, but code\nshouldn't count on it.",
+      "summary": "Building strings with join instead of +=",
+      "source": "built-in"
+    },
+    {
+      "id": "q-mutable-default",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "arguments-and-defaults"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\ndef add(item, items=[]):\n    items.append(item)\n    return items\n\nadd(1)\nprint(add(2))\n```",
+          "options": [
+            "`[1, 2]`",
+            "`[2]`",
+            "`[1]`",
+            "TypeError"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A default value is computed once, when def runs, and every call that leaves out items\ngets that same list. The usual fix is items=None and creating a new list inside the\nfunction when items is None.",
+      "summary": "A mutable default argument is shared between calls",
+      "source": "built-in"
+    },
+    {
+      "id": "q-positional-keyword",
+      "type": "multiple",
+      "difficulty": "Medium",
+      "concepts": [
+        "arguments-and-defaults"
+      ],
+      "wordings": [
+        {
+          "text": "For `def f(a, /, b, *, c): ...`, which calls are valid?",
+          "options": [
+            "`f(1, 2, c=3)`",
+            "`f(1, b=2, c=3)`",
+            "`f(a=1, b=2, c=3)`",
+            "`f(1, 2, 3)`"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1
+      ],
+      "explanation": "Parameters before / are positional-only, so a can't be passed by name. Parameters after\n* are keyword-only, so c must be passed as c=3. b, between them, can be passed either\nway.",
+      "summary": "Positional-only and keyword-only parameters",
+      "source": "built-in"
+    },
+    {
+      "id": "q-late-binding",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "lambdas-and-closures"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\nfunctions = [lambda: i for i in range(3)]\nprint([f() for f in functions])\n```",
+          "options": [
+            "`[2, 2, 2]`",
+            "`[0, 1, 2]`",
+            "`[0, 0, 0]`",
+            "NameError"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A closure keeps the variable, not its value at the time the lambda was made. All three\nlambdas read i when called, after the loop has ended with i = 2. Writing lambda i=i: i\nstores the current value as a default instead.",
+      "summary": "Closures read variables late",
+      "source": "built-in"
+    },
+    {
+      "id": "q-nonlocal",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "lambdas-and-closures"
+      ],
+      "wordings": [
+        {
+          "text": "What happens when `counter()` is called?\n\n```python\ndef make_counter():\n    count = 0\n    def counter():\n        count += 1\n        return count\n    return counter\n\ncounter = make_counter()\n```",
+          "options": [
+            "UnboundLocalError",
+            "It returns 1",
+            "It returns 0",
+            "SyntaxError when the code is read"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Assigning to count anywhere inside counter makes count local to counter, so\ncount += 1 reads a local that has no value yet. Declaring nonlocal count in counter\nmakes it use the variable of make_counter.",
+      "summary": "Assigning to an outer variable needs nonlocal",
+      "source": "built-in"
+    },
+    {
+      "id": "q-zip-shortest",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "built-in-functions"
+      ],
+      "wordings": [
+        {
+          "text": "What is `list(zip([1, 2, 3], 'ab'))`?",
+          "options": [
+            "`[(1, 'a'), (2, 'b')]`",
+            "`[(1, 'a'), (2, 'b'), (3, None)]`",
+            "ValueError",
+            "`[1, 'a', 2, 'b', 3]`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "zip stops at the shortest input, so 3 is dropped. itertools.zip_longest fills in a\nvalue instead, and zip(..., strict=True) raises ValueError when the lengths differ.",
+      "summary": "zip stops at the shortest input",
+      "source": "built-in"
+    },
+    {
+      "id": "q-any-all-empty",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "built-in-functions"
+      ],
+      "wordings": [
+        {
+          "text": "What are `any([])` and `all([])`?",
+          "options": [
+            "`False` and `True`",
+            "`True` and `False`",
+            "Both `False`",
+            "Both raise ValueError"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "any asks whether at least one item is true, and an empty list has none. all asks\nwhether no item is false, and an empty list has none either. These match the logic of\n\"there exists\" and \"for all\".",
+      "summary": "any and all on an empty input",
+      "source": "built-in"
+    },
+    {
+      "id": "q-generator-expression",
+      "type": "multiple",
+      "difficulty": "Medium",
+      "concepts": [
+        "comprehensions"
+      ],
+      "wordings": [
+        {
+          "text": "How does `(x * x for x in data)` differ from `[x * x for x in data]`?",
+          "options": [
+            "It computes each square only when asked for it",
+            "It can be iterated only once",
+            "It uses about the same memory however long `data` is",
+            "It can be indexed, like `squares[2]`"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "Parentheses make a generator: it produces values one at a time as they are asked for,\nkeeping no list. Once consumed, it is empty. Generators don't support indexing or len();\nuse the list when you need those or need to iterate twice.",
+      "summary": "Generator expressions are lazy and single-use",
+      "source": "built-in"
+    },
+    {
+      "id": "q-nested-comprehension",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "comprehensions"
+      ],
+      "wordings": [
+        {
+          "text": "What is `[(i, j) for i in range(3) for j in range(i)]`?",
+          "options": [
+            "`[(1, 0), (2, 0), (2, 1)]`",
+            "`[(0, 0), (1, 0), (1, 1), (2, 0), (2, 1), (2, 2)]`",
+            "`[(0, 1), (0, 2), (1, 2)]`",
+            "NameError: `i` is not defined"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The for clauses nest in the order written, as loops would: for i first, then for j\ninside it. For i = 0, range(0) is empty; i = 1 gives j = 0; i = 2 gives j = 0 and 1.",
+      "summary": "The order of for clauses in a comprehension",
+      "source": "built-in"
+    },
+    {
+      "id": "q-finally-return",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "exceptions"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\ndef f():\n    try:\n        return 'try'\n    finally:\n        print('finally')\n\nprint(f())\n```",
+          "options": [
+            "`finally`, then `try`",
+            "`try`, then `finally`",
+            "Only `try`",
+            "Only `finally`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "finally runs whenever the try block is left, including by return. The return value is\nset aside, the finally block prints, then f returns 'try' and the outer print shows it.",
+      "summary": "finally runs before the function returns",
+      "source": "built-in"
+    },
+    {
+      "id": "q-bare-except",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "exceptions"
+      ],
+      "wordings": [
+        {
+          "text": "Why is `except Exception:` usually better than a bare `except:`?",
+          "options": [
+            "A bare `except:` also catches KeyboardInterrupt and SystemExit, so Ctrl+C or sys.exit() can be swallowed",
+            "A bare `except:` catches nothing",
+            "`except Exception:` catches errors from other threads too",
+            "A bare `except:` is a SyntaxError"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A bare except catches BaseException, which includes KeyboardInterrupt and SystemExit;\nthey don't derive from Exception. Catching the narrowest exception that you can handle\nis better still.",
+      "summary": "What a bare except catches",
+      "source": "built-in"
+    },
+    {
+      "id": "q-class-attribute-list",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "class-basics",
+        "references-and-copies"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\nclass Dog:\n    tricks = []\n\n    def learn(self, trick):\n        self.tricks.append(trick)\n\na, b = Dog(), Dog()\na.learn('sit')\nprint(b.tricks)\n```",
+          "options": [
+            "`['sit']`",
+            "`[]`",
+            "AttributeError",
+            "`None`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "tricks is a class attribute: one list shared by every Dog. self.tricks finds it on the\nclass, and append changes that one list. Set self.tricks = [] in __init__ to give each\ndog its own.",
+      "summary": "A class attribute is shared by all instances",
+      "source": "built-in"
+    },
+    {
+      "id": "q-classmethod",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "class-basics"
+      ],
+      "wordings": [
+        {
+          "text": "What is true of `@classmethod` and `@staticmethod`?",
+          "options": [
+            "A class method gets the class it was called on as its first argument; a static method gets no class or instance",
+            "A static method gets the class as its first argument; a class method gets nothing",
+            "Both can be called only on the class, never on an instance",
+            "A class method can't be inherited"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A class method receives cls, which is the subclass when called on one, so alternative\nconstructors like from_string(cls, ...) return the right type. A static method is a\nplain function kept in the class's namespace. Both can be called on the class or an\ninstance.",
+      "summary": "Class methods and static methods",
+      "source": "built-in"
+    }
+  ]
+}

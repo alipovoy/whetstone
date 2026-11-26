@@ -1,0 +1,721 @@
+{
+  "topic": {
+    "id": "python-advanced",
+    "name": "Python advanced",
+    "concepts": [
+      {
+        "id": "decorators",
+        "name": "Decorators",
+        "group": "Functions"
+      },
+      {
+        "id": "generators",
+        "name": "Iterators and generators",
+        "group": "Functions"
+      },
+      {
+        "id": "data-model",
+        "name": "Data model",
+        "group": "Objects"
+      },
+      {
+        "id": "dataclasses",
+        "name": "Dataclasses",
+        "group": "Objects"
+      },
+      {
+        "id": "descriptors-and-metaclasses",
+        "name": "Descriptors and metaclasses",
+        "group": "Objects"
+      },
+      {
+        "id": "context-managers",
+        "name": "Context managers",
+        "group": "Resources"
+      },
+      {
+        "id": "type-hints",
+        "name": "Type hints, protocols and abstract base classes",
+        "group": "Types"
+      },
+      {
+        "id": "gil-and-performance",
+        "name": "GIL, memory and performance",
+        "group": "Runtime"
+      },
+      {
+        "id": "asyncio",
+        "name": "asyncio",
+        "group": "Runtime"
+      }
+    ]
+  },
+  "problems": [
+    {
+      "id": "retry-decorator",
+      "concepts": [
+        "decorators"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "A retry decorator",
+          "statement": "Write `retry(times, exceptions=(Exception,))`, a decorator with arguments:\n\n```python\n@retry(3, (ConnectionError,))\ndef fetch(url):\n    ...\n```\n\nCalling the decorated function calls the original with the same arguments. When it\nraises one of `exceptions`, it is called again, up to `times` calls in all; if the last\ncall raises too, that exception goes on. Any other exception goes on at once. The first\nresult that comes back is returned.\n\nThe decorated function keeps the name and docstring of the original.",
+          "examples": [
+            {
+              "input": "A function that fails twice with ConnectionError, then returns \"ok\", decorated with @retry(3, (ConnectionError,))",
+              "output": "\"ok\", after 3 calls"
+            },
+            {
+              "input": "The same function decorated with @retry(2, (ConnectionError,))",
+              "output": "ConnectionError, after 2 calls"
+            }
+          ],
+          "constraints": [
+            "1 <= times <= 100",
+            "`exceptions` is a tuple of exception classes"
+          ]
+        }
+      ],
+      "starter_code": "def retry(times, exceptions=(Exception,)):\n    \"\"\"Return a decorator that calls a function up to times times while it raises exceptions.\"\"\"\n    pass",
+      "reference_solution": "import functools\n\n\ndef retry(times, exceptions=(Exception,)):\n    \"\"\"Return a decorator that calls a function up to times times while it raises exceptions.\"\"\"\n    def decorator(function):\n        @functools.wraps(function)\n        def wrapper(*args, **kwargs):\n            for attempt in range(1, times + 1):\n                try:\n                    return function(*args, **kwargs)\n                except exceptions:\n                    if attempt == times:\n                        raise\n\n        return wrapper\n\n    return decorator",
+      "tests": "from solution import *\n\n\ndef _flaky(failures, error=ConnectionError):\n    calls = []\n\n    def fetch(*args, **kwargs):\n        \"\"\"Fetch something.\"\"\"\n        calls.append((args, kwargs))\n        if len(calls) <= failures:\n            raise error(f'failure {len(calls)}')\n        return 'ok'\n\n    return fetch, calls\n\n\ndef _raised(action):\n    try:\n        action()\n    except BaseException as error:\n        return error\n    raise AssertionError('nothing was raised')\n\n\ndef test_example_1():\n    \"\"\"Two failures, then a result, within three calls.\"\"\"\n    fetch, calls = _flaky(2)\n    assert retry(3, (ConnectionError,))(fetch)() == 'ok'\n    assert len(calls) == 3\n\n\ndef test_example_2():\n    \"\"\"The last failure goes on.\"\"\"\n    fetch, calls = _flaky(2)\n    error = _raised(retry(2, (ConnectionError,))(fetch))\n    assert isinstance(error, ConnectionError) and str(error) == 'failure 2'\n    assert len(calls) == 2\n\n\ndef test_first_call_succeeds():\n    \"\"\"No failure: one call.\"\"\"\n    fetch, calls = _flaky(0)\n    assert retry(5)(fetch)() == 'ok'\n    assert len(calls) == 1\n\n\ndef test_once():\n    \"\"\"times of 1 means no second call.\"\"\"\n    fetch, calls = _flaky(1)\n    assert isinstance(_raised(retry(1)(fetch)), ConnectionError)\n    assert len(calls) == 1\n\n\ndef test_other_exception():\n    \"\"\"An exception that isn't listed goes on at the first call.\"\"\"\n    fetch, calls = _flaky(1, KeyError)\n    assert isinstance(_raised(retry(3, (ConnectionError,))(fetch)), KeyError)\n    assert len(calls) == 1\n\n\ndef test_default_exceptions():\n    \"\"\"By default every Exception is retried.\"\"\"\n    fetch, calls = _flaky(2, ValueError)\n    assert retry(3)(fetch)() == 'ok'\n\n\ndef test_arguments_passed():\n    \"\"\"Positional and keyword arguments reach every call.\"\"\"\n    fetch, calls = _flaky(1)\n    retry(2)(fetch)('url', timeout=5)\n    assert calls == [(('url',), {'timeout': 5})] * 2\n\n\ndef test_keeps_name_and_doc():\n    \"\"\"The decorated function looks like the original.\"\"\"\n    fetch, _ = _flaky(0)\n    decorated = retry(2)(fetch)\n    assert decorated.__name__ == 'fetch'\n    assert decorated.__doc__ == 'Fetch something.'\n\n\ndef test_decorator_syntax():\n    \"\"\"Used with @, each call starts its own count.\"\"\"\n    state = {'calls': 0}\n\n    @retry(2)\n    def sometimes():\n        state['calls'] += 1\n        if state['calls'] % 2:\n            raise RuntimeError\n        return state['calls']\n\n    assert [sometimes(), sometimes()] == [2, 4]",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "A decorator with arguments is three functions deep: retry(times, exceptions) returns a decorator, which takes the function and returns a wrapper.",
+        "The wrapper takes *args and **kwargs and loops up to times times; except exceptions accepts a tuple of classes.",
+        "In the except block, raise with no argument re-raises the current exception: do that on the last attempt. @functools.wraps(function) on the wrapper copies the name and docstring."
+      ],
+      "summary": "Decorators with arguments and functools.wraps",
+      "source": "built-in"
+    },
+    {
+      "id": "mock-database",
+      "concepts": [
+        "context-managers"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Transactions for a mock database",
+          "statement": "Write the class `Database`, an in-memory key-value store:\n\n- `get(key, default=None)` returns the value of `key`, or `default` when it has none\n- `set(key, value)` stores a value; `delete(key)` removes a key and raises `KeyError`\n  when there is none\n- `transaction()` returns a context manager; `with db.transaction() as tx:` gives the\n  database itself as `tx`\n\nWhen a `with` block of a transaction ends with an exception, every change made inside\nit is undone, and the exception goes on. Otherwise the changes stay. Transactions nest:\nwhen an inner block fails, only its own changes are undone.",
+          "examples": [
+            {
+              "input": "db = Database(); db.set('a', 1)\nwith db.transaction():\n    db.set('a', 2)\ndb.get('a')",
+              "output": "2"
+            },
+            {
+              "input": "db = Database(); db.set('a', 1)\nwith db.transaction():\n    db.set('a', 2)\n    raise ValueError\ndb.get('a')",
+              "output": "1, after the ValueError is caught"
+            }
+          ],
+          "constraints": [
+            "At most 10,000 keys",
+            "Values are replaced with set, never changed in place"
+          ]
+        }
+      ],
+      "starter_code": "class Database:\n    \"\"\"An in-memory key-value store with transactions.\"\"\"\n\n    def get(self, key, default=None):\n        pass\n\n    def set(self, key, value):\n        pass\n\n    def delete(self, key):\n        pass\n\n    def transaction(self):\n        pass",
+      "reference_solution": "from contextlib import contextmanager\n\n\nclass Database:\n    \"\"\"An in-memory key-value store with transactions.\"\"\"\n\n    def __init__(self):\n        self._data = {}\n\n    def get(self, key, default=None):\n        return self._data.get(key, default)\n\n    def set(self, key, value):\n        self._data[key] = value\n\n    def delete(self, key):\n        del self._data[key]\n\n    @contextmanager\n    def transaction(self):\n        saved = dict(self._data)\n        try:\n            yield self\n        except BaseException:\n            self._data = saved\n            raise",
+      "tests": "from solution import *\n\n\nclass _Failure(Exception):\n    pass\n\n\ndef _fail_inside(db, change):\n    try:\n        with db.transaction():\n            change()\n            raise _Failure\n    except _Failure:\n        return\n    raise AssertionError('the exception did not go on')\n\n\ndef test_example_1():\n    \"\"\"A transaction that ends normally keeps its changes.\"\"\"\n    db = Database()\n    db.set('a', 1)\n    with db.transaction():\n        db.set('a', 2)\n    assert db.get('a') == 2\n\n\ndef test_example_2():\n    \"\"\"A failed transaction undoes its changes, and the exception goes on.\"\"\"\n    db = Database()\n    db.set('a', 1)\n    _fail_inside(db, lambda: db.set('a', 2))\n    assert db.get('a') == 1\n\n\ndef test_get_default():\n    \"\"\"Missing keys give the default.\"\"\"\n    db = Database()\n    assert db.get('x') is None\n    assert db.get('x', 0) == 0\n\n\ndef test_delete():\n    \"\"\"delete removes a key; a missing key raises KeyError.\"\"\"\n    db = Database()\n    db.set('a', 1)\n    db.delete('a')\n    assert db.get('a') is None\n    try:\n        db.delete('a')\n    except KeyError:\n        return\n    raise AssertionError('KeyError was not raised')\n\n\ndef test_undo_all_kinds():\n    \"\"\"New keys, changed keys and deleted keys are all restored.\"\"\"\n    db = Database()\n    db.set('keep', 1)\n    db.set('gone', 2)\n\n    def change():\n        db.set('new', 3)\n        db.set('keep', 4)\n        db.delete('gone')\n\n    _fail_inside(db, change)\n    assert (db.get('keep'), db.get('gone'), db.get('new')) == (1, 2, None)\n\n\ndef test_as_value():\n    \"\"\"with ... as gives the database.\"\"\"\n    db = Database()\n    with db.transaction() as tx:\n        assert tx is db\n\n\ndef test_inner_failure():\n    \"\"\"A failed inner transaction undoes only its own changes.\"\"\"\n    db = Database()\n    with db.transaction():\n        db.set('outer', 1)\n        _fail_inside(db, lambda: db.set('inner', 2))\n        assert db.get('inner') is None\n        db.set('after', 3)\n    assert (db.get('outer'), db.get('inner'), db.get('after')) == (1, None, 3)\n\n\ndef test_outer_failure():\n    \"\"\"A failed outer transaction undoes a finished inner one.\"\"\"\n    db = Database()\n\n    def change():\n        with db.transaction():\n            db.set('inner', 1)\n        db.set('outer', 2)\n\n    _fail_inside(db, change)\n    assert (db.get('inner'), db.get('outer')) == (None, None)\n\n\ndef test_separate_databases():\n    \"\"\"Each database has its own data.\"\"\"\n    a, b = Database(), Database()\n    a.set('k', 1)\n    assert b.get('k') is None\n\n\ndef test_many_transactions():\n    \"\"\"A thousand transactions, every other one failing.\"\"\"\n    db = Database()\n    for i in range(1000):\n        if i % 2:\n            _fail_inside(db, lambda: db.set(i, i))\n        else:\n            with db.transaction():\n                db.set(i, i)\n    assert [db.get(i) for i in range(6)] == [0, None, 2, None, 4, None]",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "A context manager is an object with __enter__ and __exit__, or a generator function decorated with @contextlib.contextmanager: code before yield runs on entry, the yielded value is what as gets.",
+        "Save a copy of the data on entry. A failed block throws its exception into the generator at the yield, or passes it to __exit__.",
+        "On an exception, restore the copy and let the exception go on: raise again in the generator, or return False from __exit__. Each nested transaction saves its own copy, so nesting works by itself."
+      ],
+      "summary": "Write a context manager that rolls back on errors",
+      "source": "built-in"
+    },
+    {
+      "id": "sliding-windows",
+      "concepts": [
+        "generators"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Sliding windows",
+          "statement": "Write the generator function `windows(iterable, n)`. It yields every run of `n`\nconsecutive items of `iterable` as a tuple, in order. With fewer than `n` items it\nyields nothing.\n\nIt is lazy: it reads `iterable` only once, and no further than it needs, so it works on\nan endless iterator too. The first window is ready after `n` items are read, and each\nnext window after one more.",
+          "examples": [
+            {
+              "input": "list(windows([1, 2, 3, 4], 2))",
+              "output": "[(1, 2), (2, 3), (3, 4)]"
+            },
+            {
+              "input": "list(windows(\"ab\", 3))",
+              "output": "[]"
+            }
+          ],
+          "constraints": [
+            "1 <= n <= 1,000",
+            "`iterable` may be endless"
+          ]
+        }
+      ],
+      "starter_code": "def windows(iterable, n):\n    \"\"\"Yield each run of n consecutive items of iterable as a tuple.\"\"\"\n    pass",
+      "reference_solution": "from collections import deque\nfrom itertools import islice\n\n\ndef windows(iterable, n):\n    \"\"\"Yield each run of n consecutive items of iterable as a tuple.\"\"\"\n    iterator = iter(iterable)\n    window = deque(islice(iterator, n), maxlen=n)\n    if len(window) < n:\n        return\n    yield tuple(window)\n    for item in iterator:\n        window.append(item)\n        yield tuple(window)",
+      "tests": "import itertools\n\nfrom solution import *\n\n\ndef _counted(items):\n    reads = []\n\n    def generate():\n        for item in items:\n            reads.append(item)\n            yield item\n\n    return generate(), reads\n\n\ndef test_example_1():\n    \"\"\"Windows of two.\"\"\"\n    assert list(windows([1, 2, 3, 4], 2)) == [(1, 2), (2, 3), (3, 4)]\n\n\ndef test_example_2():\n    \"\"\"Too few items: no windows.\"\"\"\n    assert list(windows('ab', 3)) == []\n\n\ndef test_whole_input():\n    \"\"\"n equal to the length gives one window.\"\"\"\n    assert list(windows('abc', 3)) == [('a', 'b', 'c')]\n\n\ndef test_one():\n    \"\"\"Windows of one item.\"\"\"\n    assert list(windows(range(3), 1)) == [(0,), (1,), (2,)]\n\n\ndef test_empty():\n    \"\"\"No items.\"\"\"\n    assert list(windows([], 1)) == []\n\n\ndef test_endless():\n    \"\"\"An endless iterator.\"\"\"\n    assert list(itertools.islice(windows(itertools.count(), 3), 3)) == [(0, 1, 2), (1, 2, 3), (2, 3, 4)]\n\n\ndef test_reads_only_what_it_needs():\n    \"\"\"Nothing is read before the first next; then n items, then one per window.\"\"\"\n    source, reads = _counted(range(100))\n    result = windows(source, 4)\n    assert reads == []\n    assert next(result) == (0, 1, 2, 3)\n    assert len(reads) == 4\n    assert next(result) == (1, 2, 3, 4)\n    assert len(reads) == 5\n\n\ndef test_one_pass():\n    \"\"\"A generator, which can be read only once, gives every window.\"\"\"\n    source, _ = _counted(range(6))\n    assert [w[0] for w in windows(source, 3)] == [0, 1, 2, 3]\n\n\ndef test_long():\n    \"\"\"A hundred thousand items.\"\"\"\n    assert sum(1 for _ in windows(range(100000), 50)) == 99951",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "A function with yield in it is a generator function: its body runs only as items are asked for. Call iter(iterable) once and read everything through that iterator.",
+        "itertools.islice(iterator, n) reads up to n items, and a deque with maxlen=n drops its oldest item when a new one is appended.",
+        "Fill the deque with the first n items; if it holds fewer, return. Otherwise yield tuple(window), then for each further item append it and yield again."
+      ],
+      "summary": "Lazy generators over any iterable",
+      "source": "built-in"
+    },
+    {
+      "id": "validated-dataclass",
+      "concepts": [
+        "dataclasses",
+        "decorators"
+      ],
+      "difficulty": "Hard",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "A validating dataclass",
+          "statement": "Write the class decorator `validated`. `@validated` on a class makes it a dataclass, as\n`@dataclass` does, whose fields are type-checked: storing a value in a field, in the\nconstructor or later, raises `TypeError` with the field's name in its message when the\nvalue is not an instance of the field's annotation.\n\n```python\n@validated\nclass Point:\n    x: int\n    y: int = 0\n```\n\n`Point(1)` works, while `Point('1')` raises `TypeError`, and so does `p.y = 1.5` for a\npoint `p`. Attributes that aren't fields are not checked. Field defaults,\n`field(default_factory=...)` and a `__post_init__` of the class still work.",
+          "examples": [
+            {
+              "input": "Point(1, 2)",
+              "output": "Point(x=1, y=2)"
+            },
+            {
+              "input": "Point('1')",
+              "output": "TypeError: the message names 'x'"
+            }
+          ],
+          "constraints": [
+            "Annotations are plain classes, like int, str, list or a class of your own"
+          ]
+        }
+      ],
+      "starter_code": "def validated(cls):\n    \"\"\"Return cls as a dataclass whose fields are checked against their annotations.\"\"\"\n    pass",
+      "reference_solution": "import dataclasses\n\n\ndef validated(cls):\n    \"\"\"Return cls as a dataclass whose fields are checked against their annotations.\"\"\"\n    cls = dataclasses.dataclass(cls)\n    types = {field.name: field.type for field in dataclasses.fields(cls)}\n    store = cls.__setattr__\n\n    # The generated __init__ assigns each field, so checking assignment covers it too.\n    def __setattr__(self, name, value):\n        expected = types.get(name)\n        if expected is not None and not isinstance(value, expected):\n            raise TypeError(f'{name} must be {expected.__name__}, not {type(value).__name__}')\n        store(self, name, value)\n\n    cls.__setattr__ = __setattr__\n    return cls",
+      "tests": "import dataclasses\n\nfrom solution import *\n\n\nclass Animal:\n    pass\n\n\nclass Dog(Animal):\n    pass\n\n\ndef _type_error(action):\n    try:\n        action()\n    except TypeError as error:\n        return str(error)\n    raise AssertionError('TypeError was not raised')\n\n\ndef _point():\n    @validated\n    class Point:\n        x: int\n        y: int = 0\n\n    return Point\n\n\ndef test_example_1():\n    \"\"\"A valid point is a dataclass.\"\"\"\n    Point = _point()\n    assert repr(Point(1, 2)).endswith('Point(x=1, y=2)')\n    assert Point(1, 2) == Point(1, 2)\n    assert dataclasses.is_dataclass(Point)\n\n\ndef test_example_2():\n    \"\"\"A wrong type names the field.\"\"\"\n    Point = _point()\n    assert 'x' in _type_error(lambda: Point('1'))\n    assert 'y' in _type_error(lambda: Point(1, 2.5))\n\n\ndef test_defaults():\n    \"\"\"A default fills a missing field.\"\"\"\n    assert _point()(5).y == 0\n\n\ndef test_later_assignment():\n    \"\"\"Changing a field later is checked too.\"\"\"\n    p = _point()(1)\n\n    def assign():\n        p.y = 1.5\n\n    assert 'y' in _type_error(assign)\n    p.y = 3\n    assert p.y == 3\n\n\ndef test_other_attributes():\n    \"\"\"An attribute that isn't a field is not checked.\"\"\"\n    p = _point()(1)\n    p.note = 'anything'\n    assert p.note == 'anything'\n\n\ndef test_subclass_instances():\n    \"\"\"An instance of a subclass of the annotation is accepted.\"\"\"\n    @validated\n    class Owner:\n        pet: Animal\n\n    assert isinstance(Owner(Dog()).pet, Dog)\n    assert 'pet' in _type_error(lambda: Owner('cat'))\n\n\ndef test_default_factory():\n    \"\"\"field(default_factory=list) still works and is checked.\"\"\"\n    @validated\n    class Bag:\n        items: list = dataclasses.field(default_factory=list)\n\n    a, b = Bag(), Bag()\n    a.items.append(1)\n    assert b.items == []\n    assert 'items' in _type_error(lambda: Bag(items=(1, 2)))\n\n\ndef test_post_init():\n    \"\"\"__post_init__ runs, and what it stores in fields is checked.\"\"\"\n    @validated\n    class Span:\n        start: int\n        end: int\n        length: int = 0\n\n        def __post_init__(self):\n            self.length = self.end - self.start\n\n    @validated\n    class Ratio:\n        top: int\n        bottom: int\n        value: int = 0\n\n        def __post_init__(self):\n            self.value = self.top / self.bottom\n\n    assert Span(2, 5).length == 3\n    assert 'value' in _type_error(lambda: Ratio(4, 2))",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "A class decorator takes a class and returns one: start with cls = dataclasses.dataclass(cls). dataclasses.fields(cls) lists each field with its name and type.",
+        "Checking only in __init__ misses later assignments. The generated __init__ stores fields with ordinary attribute assignment, so one __setattr__ check covers both.",
+        "Give the class a __setattr__ that checks isinstance(value, expected) for field names and then calls the class's original __setattr__ to store the value."
+      ],
+      "summary": "A class decorator that builds on dataclass",
+      "source": "built-in"
+    },
+    {
+      "id": "vector-class",
+      "concepts": [
+        "data-model"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "A vector class",
+          "statement": "Write the class `Vector` of numbers, built as `Vector(*components)`:\n\n- `repr(Vector(1, 2.5))` is `'Vector(1, 2.5)'`; `len`, indexing and iteration work on\n  the components\n- vectors are equal when their components are; a vector is never equal to anything\n  that isn't a vector, such as a tuple\n- vectors are hashable, and equal vectors have equal hashes; components can't be\n  changed, so `v[0] = 1` raises `TypeError`\n- `+` and `-` work on two vectors of the same length; different lengths raise\n  `ValueError`\n- `*` multiplies by a number on either side, `v * 2` and `2 * v`; multiplying by\n  anything that isn't a number raises `TypeError`\n- `abs(v)` is the Euclidean length, and `v` is false only when every component is 0",
+          "examples": [
+            {
+              "input": "Vector(1, 2) + Vector(3, 4)",
+              "output": "Vector(4, 6)"
+            },
+            {
+              "input": "abs(2 * Vector(3, 4))",
+              "output": "10.0"
+            }
+          ],
+          "constraints": [
+            "0 <= number of components <= 1,000",
+            "Components are ints or floats"
+          ]
+        }
+      ],
+      "starter_code": "class Vector:\n    \"\"\"An immutable vector of numbers.\"\"\"\n\n    def __init__(self, *components):\n        pass",
+      "reference_solution": "import math\nfrom numbers import Real\n\n\nclass Vector:\n    \"\"\"An immutable vector of numbers.\"\"\"\n\n    def __init__(self, *components):\n        self._components = components\n\n    def __repr__(self):\n        return f'Vector({\", \".join(map(repr, self._components))})'\n\n    def __len__(self):\n        return len(self._components)\n\n    def __getitem__(self, index):\n        return self._components[index]\n\n    def __iter__(self):\n        return iter(self._components)\n\n    def __eq__(self, other):\n        if not isinstance(other, Vector):\n            return NotImplemented\n        return self._components == other._components\n\n    def __hash__(self):\n        return hash(self._components)\n\n    def __add__(self, other):\n        if not isinstance(other, Vector):\n            return NotImplemented\n        return Vector(*(a + b for a, b in self._pairs(other)))\n\n    def __sub__(self, other):\n        if not isinstance(other, Vector):\n            return NotImplemented\n        return Vector(*(a - b for a, b in self._pairs(other)))\n\n    def __mul__(self, factor):\n        if not isinstance(factor, Real):\n            return NotImplemented\n        return Vector(*(a * factor for a in self._components))\n\n    __rmul__ = __mul__\n\n    def __abs__(self):\n        return math.hypot(*self._components)\n\n    def __bool__(self):\n        return any(self._components)\n\n    def _pairs(self, other):\n        if len(self) != len(other):\n            raise ValueError('vectors of different lengths')\n        return zip(self._components, other._components)",
+      "tests": "from solution import *\n\n\ndef _raises(error, action):\n    try:\n        action()\n    except error:\n        return\n    raise AssertionError(f'{error.__name__} was not raised')\n\n\ndef test_example_1():\n    \"\"\"Adding two vectors.\"\"\"\n    assert Vector(1, 2) + Vector(3, 4) == Vector(4, 6)\n\n\ndef test_example_2():\n    \"\"\"A number on the left, then the length.\"\"\"\n    assert abs(2 * Vector(3, 4)) == 10.0\n\n\ndef test_repr():\n    \"\"\"repr looks like the constructor call.\"\"\"\n    assert repr(Vector(1, 2.5)) == 'Vector(1, 2.5)'\n    assert repr(Vector()) == 'Vector()'\n\n\ndef test_sequence():\n    \"\"\"len, indexing and iteration.\"\"\"\n    v = Vector(7, 8, 9)\n    assert len(v) == 3\n    assert (v[0], v[-1]) == (7, 9)\n    assert list(v) == [7, 8, 9]\n\n\ndef test_equality():\n    \"\"\"Equal components, other types and !=.\"\"\"\n    assert Vector(1, 2) == Vector(1.0, 2.0)\n    assert Vector(1, 2) != Vector(2, 1)\n    assert Vector(1, 2) != (1, 2)\n    assert not (Vector(1, 2) == [1, 2])\n    assert not (Vector(1, 2) != Vector(1, 2))\n\n\ndef test_hash():\n    \"\"\"Equal vectors are one item in a set.\"\"\"\n    assert len({Vector(1, 2), Vector(1.0, 2.0), Vector(2, 1)}) == 2\n    assert {Vector(0): 'origin'}[Vector(0)] == 'origin'\n\n\ndef test_immutable():\n    \"\"\"Components can't be assigned.\"\"\"\n    v = Vector(1, 2)\n\n    def assign():\n        v[0] = 5\n\n    _raises(TypeError, assign)\n    assert v == Vector(1, 2)\n\n\ndef test_subtract_and_scale():\n    \"\"\"Subtraction and multiplication on the right.\"\"\"\n    assert Vector(5, 5) - Vector(1, 2) == Vector(4, 3)\n    assert Vector(1, -2) * 0.5 == Vector(0.5, -1.0)\n\n\ndef test_wrong_operands():\n    \"\"\"Different lengths and non-numbers.\"\"\"\n    _raises(ValueError, lambda: Vector(1, 2) + Vector(1))\n    _raises(ValueError, lambda: Vector(1) - Vector(1, 2))\n    _raises(TypeError, lambda: Vector(1, 2) * Vector(1, 2))\n    _raises(TypeError, lambda: Vector(1, 2) * 'a')\n    _raises(TypeError, lambda: 'a' * Vector(1, 2))\n    _raises(TypeError, lambda: Vector(1) + 1)\n\n\ndef test_truth():\n    \"\"\"Only an all-zero vector is false.\"\"\"\n    assert not Vector(0, 0)\n    assert not Vector()\n    assert Vector(0, 0.1)\n\n\ndef test_new_vectors():\n    \"\"\"Operations return new vectors and leave their operands alone.\"\"\"\n    a, b = Vector(1, 2), Vector(3, 4)\n    c = a + b\n    assert type(c) is Vector and c is not a and a == Vector(1, 2)",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Store the components as a tuple: it can't change, and it already compares and hashes component by component. __getitem__ without __setitem__ makes item assignment raise TypeError.",
+        "Return NotImplemented from __eq__, __add__ or __mul__ for an operand you don't support: Python then tries the other operand and, failing that, uses identity for == or raises TypeError.",
+        "2 * v calls int.__mul__ first, which returns NotImplemented, then v.__rmul__(2). numbers.Real tells numbers from other values, and math.hypot gives the length."
+      ],
+      "summary": "Special methods for equality, hashing and arithmetic",
+      "source": "built-in"
+    }
+  ],
+  "questions": [
+    {
+      "id": "q-wraps-name",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "decorators"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\ndef logged(function):\n    def wrapper(*args, **kwargs):\n        return function(*args, **kwargs)\n    return wrapper\n\n@logged\ndef area(width, height):\n    \"\"\"Return the area.\"\"\"\n    return width * height\n\nprint(area.__name__, area.__doc__)\n```",
+          "options": [
+            "`wrapper None`",
+            "`area Return the area.`",
+            "`area None`",
+            "`logged None`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "@logged replaces area with the wrapper function, so its name and docstring are the\nwrapper's. Decorating wrapper with @functools.wraps(function) copies the name,\ndocstring and other attributes from the original.",
+      "summary": "Decorators hide the original name without functools.wraps",
+      "source": "built-in"
+    },
+    {
+      "id": "q-stacked-decorators",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "decorators"
+      ],
+      "wordings": [
+        {
+          "text": "What does `hello()` return?\n\n```python\ndef bold(function):\n    return lambda: '<b>' + function() + '</b>'\n\ndef italic(function):\n    return lambda: '<i>' + function() + '</i>'\n\n@bold\n@italic\ndef hello():\n    return 'hi'\n```",
+          "options": [
+            "`'<b><i>hi</i></b>'`",
+            "`'<i><b>hi</b></i>'`",
+            "`'<b>hi</b>'`",
+            "`'<i>hi</i>'`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Stacked decorators apply from the bottom up: hello = bold(italic(hello)). The outer\nfunction, bold's, runs first when called and wraps whatever italic's function\nreturns.",
+      "summary": "The order of stacked decorators",
+      "source": "built-in"
+    },
+    {
+      "id": "q-generator-start",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "generators"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\ndef numbers():\n    print('start')\n    yield 1\n    print('end')\n\ng = numbers()\nprint('made')\nprint(next(g))\n```",
+          "options": [
+            "`made`, `start`, `1`",
+            "`start`, `made`, `1`",
+            "`made`, `start`, `1`, `end`",
+            "`start`, `1`, `made`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Calling a generator function runs none of its body: it returns a generator. next runs\nthe body up to the first yield and pauses there, so end is printed only when next is\ncalled again, which then raises StopIteration.",
+      "summary": "A generator runs only when asked for an item",
+      "source": "built-in"
+    },
+    {
+      "id": "q-iterable-iterator",
+      "type": "multiple",
+      "difficulty": "Medium",
+      "concepts": [
+        "generators"
+      ],
+      "wordings": [
+        {
+          "text": "Which of these are true?",
+          "options": [
+            "An iterator's `__iter__` returns the iterator itself",
+            "A list is iterable but not an iterator: `next([1, 2])` raises TypeError",
+            "A generator object is an iterator",
+            "Looping over a list twice needs a copy of the list"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "An iterable's __iter__ returns a new iterator each time, so a list can be looped over\nany number of times. An iterator has __next__ and returns itself from __iter__, so it\nis used up after one pass. Generators are iterators.",
+      "summary": "Iterables and iterators",
+      "source": "built-in"
+    },
+    {
+      "id": "q-eq-without-hash",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "data-model"
+      ],
+      "wordings": [
+        {
+          "text": "What happens on the last line?\n\n```python\nclass Point:\n    def __init__(self, x):\n        self.x = x\n\n    def __eq__(self, other):\n        return isinstance(other, Point) and self.x == other.x\n\npoints = {Point(1)}\n```",
+          "options": [
+            "TypeError: Point is unhashable",
+            "It makes a set of one point, hashed by identity",
+            "It makes a set of one point, hashed by x",
+            "It makes an empty set"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A class that defines __eq__ without __hash__ gets __hash__ = None, since identity\nhashes would break the rule that equal objects hash equally. Define __hash__ from the\nsame values __eq__ compares, such as hash(self.x).",
+      "summary": "Defining __eq__ removes the default hash",
+      "source": "built-in"
+    },
+    {
+      "id": "q-radd-sum",
+      "type": "single",
+      "difficulty": "Hard",
+      "concepts": [
+        "data-model"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\nclass Money:\n    def __init__(self, cents):\n        self.cents = cents\n\n    def __add__(self, other):\n        if isinstance(other, Money):\n            return Money(self.cents + other.cents)\n        return NotImplemented\n\n    def __radd__(self, other):\n        return self if other == 0 else NotImplemented\n\nprint(sum([Money(5), Money(7)]).cents)\n```",
+          "options": [
+            "12",
+            "TypeError: int and Money can't be added",
+            "5",
+            "7"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "sum starts from 0, so the first step is 0 + Money(5). int.__add__ returns NotImplemented\nfor a Money, so Python calls Money(5).__radd__(0), which returns Money(5). Then\nMoney(5) + Money(7) uses __add__. Without __radd__, sum would raise TypeError.",
+      "summary": "NotImplemented and reflected operators",
+      "source": "built-in"
+    },
+    {
+      "id": "q-dataclass-mutable-default",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "dataclasses"
+      ],
+      "wordings": [
+        {
+          "text": "What happens when this class is defined?\n\n```python\nfrom dataclasses import dataclass\n\n@dataclass\nclass Cart:\n    items: list = []\n```",
+          "options": [
+            "ValueError: a mutable default isn't allowed; use `field(default_factory=list)`",
+            "It works, and all carts share one list",
+            "It works, and each cart gets its own empty list",
+            "TypeError when a Cart is created without items"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A default is one object shared by every instance, which for a list is nearly always a\nbug, so dataclass refuses list, dict and set defaults. field(default_factory=list)\ncalls list() for each new instance.",
+      "summary": "Mutable defaults in dataclasses",
+      "source": "built-in"
+    },
+    {
+      "id": "q-dataclass-hash",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "dataclasses",
+        "data-model"
+      ],
+      "wordings": [
+        {
+          "text": "What does the last line do?\n\n```python\nfrom dataclasses import dataclass\n\n@dataclass\nclass Point:\n    x: int\n    y: int\n\nseen = {Point(1, 2)}\n```",
+          "options": [
+            "Raises TypeError: Point is unhashable",
+            "Makes a set of one point, hashed by its fields",
+            "Makes a set of one point, hashed by identity",
+            "Raises TypeError because Point has no `__eq__`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "@dataclass generates __eq__ by default, and a class that defines __eq__ without\n__hash__ is unhashable. @dataclass(frozen=True) makes instances read-only and\ngenerates a __hash__ from the fields, so they can go in sets and be dict keys.",
+      "summary": "A plain dataclass is unhashable",
+      "source": "built-in"
+    },
+    {
+      "id": "q-data-descriptor",
+      "type": "single",
+      "difficulty": "Hard",
+      "concepts": [
+        "descriptors-and-metaclasses"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print? And what if `Constant` also defined\n`def __set__(self, obj, value): pass`?\n\n```python\nclass Constant:\n    def __get__(self, obj, objtype=None):\n        return 42\n\nclass A:\n    x = Constant()\n\na = A()\na.x = 7\nprint(a.x)\n```",
+          "options": [
+            "7, then 42",
+            "42, then 42",
+            "7, then 7",
+            "42, then 7"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "With only __get__, Constant is a non-data descriptor: a.x = 7 stores 7 in the instance\ndict, which wins on lookup. With __set__ too, it is a data descriptor, which wins over\nthe instance dict: the assignment goes to __set__, and reads go to __get__. property\nis a data descriptor; plain functions are non-data descriptors.",
+      "summary": "Data descriptors win over the instance dict",
+      "source": "built-in"
+    },
+    {
+      "id": "q-init-subclass",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "descriptors-and-metaclasses"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\nclass Plugin:\n    registry = []\n\n    def __init_subclass__(cls, **kwargs):\n        super().__init_subclass__(**kwargs)\n        Plugin.registry.append(cls.__name__)\n\nclass A(Plugin):\n    pass\n\nclass B(A):\n    pass\n\nprint(Plugin.registry)\n```",
+          "options": [
+            "`['A', 'B']`",
+            "`['A']`",
+            "`[]`",
+            "`['Plugin', 'A', 'B']`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "__init_subclass__ runs on the parent each time a subclass is defined, at any depth,\nbut not for the class that defines it. It covers most uses that once needed a\nmetaclass, such as registering subclasses.",
+      "summary": "Registering subclasses with __init_subclass__",
+      "source": "built-in"
+    },
+    {
+      "id": "q-exit-suppresses",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "context-managers"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\nclass Quiet:\n    def __enter__(self):\n        return self\n\n    def __exit__(self, exc_type, exc, traceback):\n        print('exit', exc_type.__name__)\n        return True\n\nwith Quiet():\n    raise KeyError('k')\nprint('after')\n```",
+          "options": [
+            "`exit KeyError`, then `after`",
+            "`exit KeyError`, then a KeyError traceback",
+            "A KeyError traceback only",
+            "`after` only"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "__exit__ gets the exception's type, value and traceback. Returning a true value tells\nPython the exception was handled, so it is suppressed and the code after the with\nblock runs. Returning None or False lets it go on.",
+      "summary": "A true return from __exit__ suppresses the exception",
+      "source": "built-in"
+    },
+    {
+      "id": "q-contextmanager-finally",
+      "type": "single",
+      "difficulty": "Hard",
+      "concepts": [
+        "context-managers"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\nfrom contextlib import contextmanager\n\n@contextmanager\ndef opened(name):\n    print('open', name)\n    yield name\n    print('close', name)\n\ntry:\n    with opened('db'):\n        raise ValueError\nexcept ValueError:\n    print('caught')\n```",
+          "options": [
+            "`open db`, `caught`",
+            "`open db`, `close db`, `caught`",
+            "`open db`, `caught`, `close db`",
+            "`caught` only"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The exception from the block is raised inside the generator at the yield, so the code\nafter yield is skipped and the exception goes on. To clean up whatever happens, put\nthe yield in try and the cleanup in finally.",
+      "summary": "Cleanup after yield needs try/finally",
+      "source": "built-in"
+    },
+    {
+      "id": "q-hints-not-enforced",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "type-hints"
+      ],
+      "wordings": [
+        {
+          "text": "What does `double('ab')` return?\n\n```python\ndef double(x: int) -> int:\n    return x * 2\n```",
+          "options": [
+            "`'abab'`",
+            "TypeError: x must be int",
+            "`0`",
+            "A warning, then `'abab'`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Python doesn't check type hints when a function runs; they are read by tools such as\nmypy and by libraries that choose to inspect them. 'ab' * 2 is 'abab'.",
+      "summary": "Type hints are not checked at run time",
+      "source": "built-in"
+    },
+    {
+      "id": "q-protocols-and-abcs",
+      "type": "multiple",
+      "difficulty": "Hard",
+      "concepts": [
+        "type-hints"
+      ],
+      "wordings": [
+        {
+          "text": "Which of these are true?",
+          "options": [
+            "A class matches a `Protocol` without inheriting from it",
+            "A subclass of an ABC that leaves an `@abstractmethod` unimplemented can't be instantiated",
+            "`isinstance` works with any `Protocol`",
+            "Python checks arguments against their hints when a function is called"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1
+      ],
+      "explanation": "A Protocol is structural: any class with the right methods matches it for a type\nchecker. isinstance works only with a Protocol marked @runtime_checkable, and then it\nchecks only that the methods exist. An ABC is nominal, and instantiating a class that\nstill has abstract methods raises TypeError.",
+      "summary": "Protocols and abstract base classes",
+      "source": "built-in"
+    },
+    {
+      "id": "q-gil-cpu-bound",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "gil-and-performance"
+      ],
+      "wordings": [
+        {
+          "text": "In standard CPython, which speeds up a CPU-bound pure-Python loop by running it on several cores?",
+          "options": [
+            "Splitting the work across processes with `ProcessPoolExecutor`",
+            "Splitting the work across threads with `ThreadPoolExecutor`",
+            "Running it as several `asyncio` tasks",
+            "Adding type hints"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The global interpreter lock lets one thread run Python bytecode at a time, so threads\nhelp with waiting on I/O but not with pure-Python computation. Processes each have\ntheir own interpreter. The free-threaded build, optional since Python 3.13, removes the\nlock.",
+      "summary": "The GIL and CPU-bound work",
+      "source": "built-in"
+    },
+    {
+      "id": "q-slots",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "gil-and-performance"
+      ],
+      "wordings": [
+        {
+          "text": "What does the last line do, and why use `__slots__`?\n\n```python\nclass Point:\n    __slots__ = ('x', 'y')\n\n    def __init__(self, x, y):\n        self.x, self.y = x, y\n\np = Point(1, 2)\np.z = 3\n```",
+          "options": [
+            "Raises AttributeError; slots save memory per instance by leaving out `__dict__`",
+            "Adds z; slots only document the main attributes",
+            "Raises AttributeError; slots make attribute values read-only",
+            "Adds z; slots make attribute access thread-safe"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "With __slots__, instances store their attributes in fixed places instead of a dict, so\nthey take less memory and can't gain other attributes. x and y can still be changed.\nThis helps when millions of small objects are alive.",
+      "summary": "What __slots__ does",
+      "source": "built-in"
+    },
+    {
+      "id": "q-coroutine-not-awaited",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "asyncio"
+      ],
+      "wordings": [
+        {
+          "text": "What happens when this runs?\n\n```python\nasync def greet():\n    print('hello')\n\ngreet()\n```",
+          "options": [
+            "Nothing is printed: the call makes a coroutine that never runs, and Python warns that it was never awaited",
+            "It prints `hello`",
+            "It prints `hello` once an event loop starts",
+            "SyntaxError: `async def` needs `await` inside"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Calling an async function returns a coroutine object without running it. It runs when\nawaited inside another coroutine, wrapped in a task, or passed to asyncio.run.",
+      "summary": "Calling an async function does not run it",
+      "source": "built-in"
+    },
+    {
+      "id": "q-blocking-sleep",
+      "type": "single",
+      "difficulty": "Hard",
+      "concepts": [
+        "asyncio"
+      ],
+      "wordings": [
+        {
+          "text": "About how long does this take?\n\n```python\nimport asyncio\nimport time\n\nasync def slow():\n    time.sleep(1)\n\nasync def main():\n    await asyncio.gather(slow(), slow(), slow())\n\nasyncio.run(main())\n```",
+          "options": [
+            "About 3 seconds",
+            "About 1 second",
+            "About 0 seconds",
+            "It never ends"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "asyncio runs tasks on one thread and switches only at await. time.sleep blocks that\nthread, so the three calls run one after another. With await asyncio.sleep(1) they\nwait together and the whole takes about 1 second.",
+      "summary": "Blocking calls stall the event loop",
+      "source": "built-in"
+    }
+  ]
+}
