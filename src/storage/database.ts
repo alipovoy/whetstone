@@ -6,7 +6,7 @@ import { QuizSchema, type Quiz } from '@/core/quiz'
 import { topicFromFile, TopicRecordSchema, type TopicRecord } from '@/core/topics'
 
 export const DATABASE_NAME = 'whetstone'
-const DATABASE_VERSION = 7
+const DATABASE_VERSION = 8
 const PLACEHOLDER_ID = 'algorithms'
 
 interface Schema extends DBSchema {
@@ -51,6 +51,10 @@ export async function openDatabase(name = DATABASE_NAME): Promise<Database> {
       // Built-in topics are added once, by the version that brings them: one the user deleted
       // stays deleted.
       if (oldVersion < 7) changes = changes.then(() => replacePlaceholder(topics()))
+      if (oldVersion < 8) {
+        const python = ['python-basics', 'python-standard-library', 'python-advanced']
+        changes = changes.then(() => addBuiltIns(topics(), python))
+      }
       changes.catch(() => transaction.abort())
     },
     // A newer version of the app opened in another tab: let its upgrade through.
@@ -67,13 +71,29 @@ export async function openDatabase(name = DATABASE_NAME): Promise<Database> {
   }
 }
 
-// The first built-in topic was a placeholder: it is replaced, with its items, by the built-in set.
+// The first built-in topic was a placeholder: the first built-in set replaces it and its items.
 async function replacePlaceholder(
   topics: IDBPObjectStore<Schema, StoreName[], 'topics', 'versionchange'>,
 ) {
   await topics.delete(PLACEHOLDER_ID)
+  await addBuiltIns(topics, [
+    'data-structures',
+    'algorithms',
+    'complexity-analysis',
+    'bits-and-math',
+  ])
+}
+
+async function addBuiltIns(
+  topics: IDBPObjectStore<Schema, StoreName[], 'topics', 'versionchange'>,
+  ids: string[],
+) {
   const now = Date.now()
-  for (const file of builtInTopics) await topics.put(topicFromFile(file, now))
+  for (const id of ids) {
+    const file = builtInTopics.find((f) => f.topic.id === id)
+    if (!file) throw new Error(`No built-in topic ${id}`)
+    await topics.put(topicFromFile(file, now))
+  }
 }
 
 // Questions became graded by difficulty: stored ones start as Easy.

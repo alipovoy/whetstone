@@ -1,0 +1,917 @@
+{
+  "topic": {
+    "id": "python-standard-library",
+    "name": "Python standard library",
+    "concepts": [
+      {
+        "id": "collections",
+        "name": "collections",
+        "group": "Containers"
+      },
+      {
+        "id": "heapq",
+        "name": "heapq",
+        "group": "Containers"
+      },
+      {
+        "id": "bisect",
+        "name": "bisect",
+        "group": "Containers"
+      },
+      {
+        "id": "itertools",
+        "name": "itertools",
+        "group": "Iteration"
+      },
+      {
+        "id": "functools-and-operator",
+        "name": "functools and operator",
+        "group": "Iteration"
+      },
+      {
+        "id": "re",
+        "name": "re",
+        "group": "Text and data"
+      },
+      {
+        "id": "json-and-csv",
+        "name": "json and csv",
+        "group": "Text and data"
+      },
+      {
+        "id": "math-and-random",
+        "name": "math and random",
+        "group": "Numbers and time"
+      },
+      {
+        "id": "datetime",
+        "name": "datetime",
+        "group": "Numbers and time"
+      },
+      {
+        "id": "copy",
+        "name": "copy",
+        "group": "Objects"
+      },
+      {
+        "id": "enum",
+        "name": "enum",
+        "group": "Objects"
+      },
+      {
+        "id": "pathlib-and-io",
+        "name": "pathlib and io",
+        "group": "Files"
+      }
+    ]
+  },
+  "problems": [
+    {
+      "id": "top-words",
+      "concepts": [
+        "collections",
+        "re"
+      ],
+      "difficulty": "Easy",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Most common words",
+          "statement": "Write `top_words(text, k)`. A word is a run of the letters `a` to `z`, ignoring case,\nthat may have apostrophes inside it, like `don't`. Every other character separates\nwords. Return the `k` most common words, in lowercase, as `(word, count)` pairs, most\ncommon first. Words with equal counts come in the order they first appear in the text.\nWhen there are fewer than `k` different words, return them all.",
+          "examples": [
+            {
+              "input": "top_words(\"The cat and the hat. THE END, don't stop\", 2)",
+              "output": "[('the', 3), ('cat', 1)]",
+              "explanation": "cat, and, hat, end, don't and stop each appear once; cat comes first."
+            }
+          ],
+          "constraints": [
+            "0 <= length of text <= 1,000,000",
+            "0 <= k <= 100,000"
+          ]
+        }
+      ],
+      "starter_code": "def top_words(text, k):\n    \"\"\"Return the k most common (word, count) pairs, ties in order of first appearance.\"\"\"\n    pass",
+      "reference_solution": "import re\nfrom collections import Counter\n\nWORD = re.compile(r\"[a-z]+(?:'[a-z]+)*\")\n\n\ndef top_words(text, k):\n    \"\"\"Return the k most common (word, count) pairs, ties in order of first appearance.\"\"\"\n    return Counter(WORD.findall(text.lower())).most_common(k)",
+      "tests": "import random\n\nfrom solution import *\n\n\ndef test_example_1():\n    \"\"\"Case is ignored; equal counts keep the order of first appearance.\"\"\"\n    assert top_words(\"The cat and the hat. THE END, don't stop\", 2) == [('the', 3), ('cat', 1)]\n\n\ndef test_apostrophes():\n    \"\"\"Apostrophes count only inside a word.\"\"\"\n    assert top_words(\"'tis the dogs' don't don't\", 3) == [(\"don't\", 2), ('tis', 1), ('the', 1)]\n\n\ndef test_separators():\n    \"\"\"Digits, hyphens and underscores separate words.\"\"\"\n    assert top_words('a1b-c_d a', 10) == [('a', 2), ('b', 1), ('c', 1), ('d', 1)]\n\n\ndef test_empty():\n    \"\"\"No words, and k of 0.\"\"\"\n    assert top_words('', 3) == []\n    assert top_words('... 123 !!!', 3) == []\n    assert top_words('some words', 0) == []\n\n\ndef test_fewer_than_k():\n    \"\"\"All words when there are fewer than k.\"\"\"\n    assert top_words('b a b', 10) == [('b', 2), ('a', 1)]\n\n\ndef test_large():\n    \"\"\"A long text with known counts.\"\"\"\n    rng = random.Random(1)\n    words = [chr(97 + i % 26) + chr(97 + i // 26) for i in range(500)]\n    counts = {word: rng.randint(1, 200) for word in words}\n    tokens = [word for word, count in counts.items() for _ in range(count)]\n    rng.shuffle(tokens)\n    first = {word: index for index, word in reversed(list(enumerate(tokens)))}\n    text = ' '.join(token.upper() for token in tokens)\n    expected = sorted(counts.items(), key=lambda pair: (-pair[1], first[pair[0]]))\n    assert top_words(text, 50) == expected[:50]",
+      "visible_tests": [
+        "test_example_1"
+      ],
+      "hints": [
+        "Lowercase the text first, then a regular expression finds the words: re.findall returns every match. Letters with apostrophes between them: [a-z]+(?:'[a-z]+)*.",
+        "collections.Counter counts the items of any iterable.",
+        "Counter.most_common(k) returns the k most common (item, count) pairs, and equal counts keep the order in which items were first counted."
+      ],
+      "summary": "Count words with re and Counter",
+      "source": "built-in"
+    },
+    {
+      "id": "merge-logs",
+      "concepts": [
+        "heapq",
+        "datetime"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Merge sorted logs",
+          "statement": "Write `merge_logs(*logs)`. Each log is a list of lines `\"<time> <message>\"`, sorted by\ntime. The time is in ISO 8601 with an offset from UTC, such as\n`2024-05-01T10:00:00+02:00`; UTC may also be written `Z`. Logs may use different\noffsets.\n\nReturn all lines in one list, sorted by the moment they happened. Lines of the same\nmoment come in the order of their logs in the arguments, and in their order within a\nlog.",
+          "examples": [
+            {
+              "input": "merge_logs(['2024-05-01T10:00:00+02:00 web started', '2024-05-01T10:30:00+02:00 web ready'], ['2024-05-01T09:00:00Z db started'])",
+              "output": "['2024-05-01T10:00:00+02:00 web started', '2024-05-01T10:30:00+02:00 web ready', '2024-05-01T09:00:00Z db started']",
+              "explanation": "In UTC the web lines are at 08:00 and 08:30, both before 09:00."
+            }
+          ],
+          "constraints": [
+            "0 <= number of logs <= 100",
+            "At most 100,000 lines in all"
+          ]
+        }
+      ],
+      "starter_code": "def merge_logs(*logs):\n    \"\"\"Return the lines of all sorted logs, sorted by the moment of each line.\"\"\"\n    pass",
+      "reference_solution": "import heapq\nfrom datetime import datetime\n\n\ndef merge_logs(*logs):\n    \"\"\"Return the lines of all sorted logs, sorted by the moment of each line.\"\"\"\n    return list(heapq.merge(*logs, key=_moment))\n\n\ndef _moment(line):\n    return datetime.fromisoformat(line.split(' ', 1)[0])",
+      "tests": "import random\nfrom datetime import datetime, timedelta, timezone\n\nfrom solution import *\n\n\ndef test_example_1():\n    \"\"\"Offsets decide the order, not the text of the times.\"\"\"\n    assert merge_logs(\n        ['2024-05-01T10:00:00+02:00 web started', '2024-05-01T10:30:00+02:00 web ready'],\n        ['2024-05-01T09:00:00Z db started'],\n    ) == [\n        '2024-05-01T10:00:00+02:00 web started',\n        '2024-05-01T10:30:00+02:00 web ready',\n        '2024-05-01T09:00:00Z db started',\n    ]\n\n\ndef test_no_logs():\n    \"\"\"No logs, and empty logs.\"\"\"\n    assert merge_logs() == []\n    assert merge_logs([], []) == []\n\n\ndef test_one_log():\n    \"\"\"A single log comes back as it is.\"\"\"\n    log = ['2024-01-01T00:00:00Z a', '2024-01-01T00:00:01Z b']\n    assert merge_logs(log) == log\n\n\ndef test_same_moment():\n    \"\"\"Equal moments keep the order of the logs, then the order within each log.\"\"\"\n    first = ['2024-01-01T12:00:00+01:00 first-1', '2024-01-01T12:00:00+01:00 first-2']\n    second = ['2024-01-01T11:00:00Z second']\n    assert merge_logs(second, first) == ['2024-01-01T11:00:00Z second', *first]\n    assert merge_logs(first, second) == [*first, '2024-01-01T11:00:00Z second']\n\n\ndef test_across_midnight():\n    \"\"\"A negative offset moves a line to the next day in UTC.\"\"\"\n    assert merge_logs(\n        ['2024-03-01T23:30:00-05:00 late'], ['2024-03-02T01:00:00Z early']\n    ) == ['2024-03-02T01:00:00Z early', '2024-03-01T23:30:00-05:00 late']\n\n\ndef test_messages_with_spaces():\n    \"\"\"Messages may contain spaces.\"\"\"\n    line = '2024-01-01T00:00:00Z disk is 90% full'\n    assert merge_logs([line]) == [line]\n\n\ndef test_many():\n    \"\"\"Ten logs of 2,000 lines, each with its own offset.\"\"\"\n    rng = random.Random(9)\n    start = datetime(2024, 1, 1, tzinfo=timezone.utc)\n    logs, moments = [], {}\n    for number in range(10):\n        zone = timezone(timedelta(hours=rng.randint(-12, 14)))\n        seconds = sorted(rng.randint(0, 50000) for _ in range(2000))\n        log = []\n        for index, second in enumerate(seconds):\n            moment = start + timedelta(seconds=second)\n            line = f'{moment.astimezone(zone).isoformat()} log {number} line {index}'\n            log.append(line)\n            moments[line] = (moment, number, index)\n        logs.append(log)\n    assert merge_logs(*logs) == sorted(moments, key=moments.get)",
+      "visible_tests": [
+        "test_example_1"
+      ],
+      "hints": [
+        "datetime.fromisoformat reads these times, offsets and Z included, and datetimes with offsets compare by the moment they stand for.",
+        "heapq.merge merges sorted iterables lazily and takes a key function, like sorted.",
+        "For equal keys, heapq.merge takes items from earlier iterables first, so the order of the logs is kept. The time is the text before the first space."
+      ],
+      "summary": "Merge sorted streams by aware datetimes",
+      "source": "built-in"
+    },
+    {
+      "id": "event-timeline",
+      "concepts": [
+        "bisect"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Count events in a time range",
+          "statement": "Write the class `Timeline`:\n\n- `add(time)` records an event at `time`, an integer; events come in any order, and\n  several may share a time\n- `count(start, end)` returns how many events happened at a time from `start` to\n  `end`, both included\n\n`count` makes O(log n) comparisons for n events: it doesn't look at every event.",
+          "examples": [
+            {
+              "input": "t = Timeline(); t.add(5); t.add(1); t.add(5); t.count(2, 5)",
+              "output": "2"
+            },
+            {
+              "input": "t.count(6, 9)",
+              "output": "0"
+            }
+          ],
+          "constraints": [
+            "At most 100,000 events and 100,000 counts",
+            "start <= end"
+          ]
+        }
+      ],
+      "starter_code": "class Timeline:\n    \"\"\"Events at integer times, counted by range.\"\"\"\n\n    def add(self, time):\n        pass\n\n    def count(self, start, end):\n        pass",
+      "reference_solution": "import bisect\n\n\nclass Timeline:\n    \"\"\"Events at integer times, counted by range.\"\"\"\n\n    def __init__(self):\n        self._times = []\n\n    def add(self, time):\n        bisect.insort(self._times, time)\n\n    def count(self, start, end):\n        return bisect.bisect_right(self._times, end) - bisect.bisect_left(self._times, start)",
+      "tests": "import random\n\nfrom solution import *\n\n_comparisons = 0\n\n\ndef _compare(operator):\n    def compare(self, other):\n        global _comparisons\n        _comparisons += 1\n        return getattr(int(self), operator)(int(other))\n\n    return compare\n\n\nclass _Counted(int):\n    \"\"\"An integer that counts the comparisons it takes part in.\"\"\"\n\n    __lt__, __le__, __gt__, __ge__, __eq__, __ne__ = (\n        _compare(name) for name in ('__lt__', '__le__', '__gt__', '__ge__', '__eq__', '__ne__')\n    )\n    __hash__ = int.__hash__\n\n\ndef test_example_1():\n    \"\"\"Two events share a time inside the range.\"\"\"\n    t = Timeline()\n    for time in (5, 1, 5):\n        t.add(time)\n    assert t.count(2, 5) == 2\n\n\ndef test_example_2():\n    \"\"\"A range after every event.\"\"\"\n    t = Timeline()\n    for time in (5, 1, 5):\n        t.add(time)\n    assert t.count(6, 9) == 0\n\n\ndef test_empty():\n    \"\"\"No events at all.\"\"\"\n    assert Timeline().count(-10, 10) == 0\n\n\ndef test_ends_included():\n    \"\"\"Events exactly at start and end count.\"\"\"\n    t = Timeline()\n    for time in (1, 2, 3, 4):\n        t.add(time)\n    assert t.count(2, 3) == 2\n    assert t.count(4, 4) == 1\n    assert t.count(1, 4) == 4\n\n\ndef test_separate_timelines():\n    \"\"\"Each timeline has its own events.\"\"\"\n    a, b = Timeline(), Timeline()\n    a.add(1)\n    assert (a.count(0, 2), b.count(0, 2)) == (1, 0)\n\n\ndef test_random():\n    \"\"\"Random events and ranges, compared with counting by hand.\"\"\"\n    rng = random.Random(4)\n    t, times = Timeline(), []\n    for _ in range(2000):\n        time = rng.randint(-500, 500)\n        t.add(time)\n        times.append(time)\n        start = rng.randint(-600, 600)\n        end = start + rng.randint(0, 300)\n        assert t.count(start, end) == sum(start <= x <= end for x in times)\n\n\ndef test_logarithmic_count():\n    \"\"\"With 20,000 events, a count makes a few dozen comparisons.\"\"\"\n    global _comparisons\n    t = Timeline()\n    for time in range(20000):\n        t.add(_Counted(time * 7 % 20000))\n    _comparisons = 0\n    assert t.count(_Counted(250), _Counted(749)) == 500\n    assert _comparisons <= 80",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Keep the times in a sorted list. bisect.insort inserts a value at its sorted position.",
+        "In a sorted list, bisect_left(a, x) is the index of the first item >= x, and bisect_right(a, x) the index after the last item <= x.",
+        "The count is bisect_right(times, end) - bisect_left(times, start): two binary searches."
+      ],
+      "summary": "Binary search a sorted list with bisect",
+      "source": "built-in"
+    },
+    {
+      "id": "csv-to-json",
+      "concepts": [
+        "json-and-csv",
+        "pathlib-and-io"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "CSV to JSON",
+          "statement": "Write `csv_to_json(text)`. `text` is CSV: a header row, then one row per record, with\nfields quoted as the `csv` module reads them, so a quoted field may contain commas,\nquotes and line breaks.\n\nReturn a JSON string: a list with an object per record, its keys the header names in\nheader order. A value made of the digits 0 to 9, with an optional minus sign before\nthem, like `-12`, becomes a number; an empty value becomes `null`; every other value\nstays a string, unchanged.",
+          "examples": [
+            {
+              "input": "csv_to_json('name,age,city\\nAnn,31,\"Paris, France\"\\nBob,,Rome\\n')",
+              "output": "'[{\"name\": \"Ann\", \"age\": 31, \"city\": \"Paris, France\"}, {\"name\": \"Bob\", \"age\": null, \"city\": \"Rome\"}]'"
+            }
+          ],
+          "constraints": [
+            "Every record has as many fields as the header",
+            "Header names are different",
+            "At most 10,000 records"
+          ]
+        }
+      ],
+      "starter_code": "def csv_to_json(text):\n    \"\"\"Return the CSV records of text as a JSON list of objects.\"\"\"\n    pass",
+      "reference_solution": "import csv\nimport io\nimport json\nimport re\n\n\ndef csv_to_json(text):\n    \"\"\"Return the CSV records of text as a JSON list of objects.\"\"\"\n    records = csv.DictReader(io.StringIO(text))\n    return json.dumps([{key: _value(field) for key, field in record.items()} for record in records])\n\n\ndef _value(field):\n    if field == '':\n        return None\n    if re.fullmatch(r'-?[0-9]+', field):\n        return int(field)\n    return field",
+      "tests": "import json\n\nfrom solution import *\n\n\ndef _records(text):\n    result = csv_to_json(text)\n    assert isinstance(result, str), 'return a JSON string'\n    return json.loads(result)\n\n\ndef test_example_1():\n    \"\"\"A quoted comma, a number and an empty value.\"\"\"\n    assert _records('name,age,city\\nAnn,31,\"Paris, France\"\\nBob,,Rome\\n') == [\n        {'name': 'Ann', 'age': 31, 'city': 'Paris, France'},\n        {'name': 'Bob', 'age': None, 'city': 'Rome'},\n    ]\n\n\ndef test_header_only():\n    \"\"\"No records: an empty list.\"\"\"\n    assert _records('a,b\\n') == []\n\n\ndef test_key_order():\n    \"\"\"Keys follow the header.\"\"\"\n    assert list(_records('z,a,m\\n1,2,3')[0]) == ['z', 'a', 'm']\n\n\ndef test_numbers_and_strings():\n    \"\"\"Only whole numbers become numbers.\"\"\"\n    assert _records('v\\n-12\\n3.5\\n1e3\\n 7\\n+4\\n-\\nabc') == [\n        {'v': -12}, {'v': '3.5'}, {'v': '1e3'}, {'v': ' 7'}, {'v': '+4'}, {'v': '-'}, {'v': 'abc'},\n    ]\n\n\ndef test_quotes_and_line_breaks():\n    \"\"\"Doubled quotes and a line break inside a quoted field.\"\"\"\n    text = 'note,n\\n\"She said \"\"hi\"\"\",1\\n\"two\\nlines\",2\\n'\n    assert _records(text) == [\n        {'note': 'She said \"hi\"', 'n': 1},\n        {'note': 'two\\nlines', 'n': 2},\n    ]\n\n\ndef test_unicode():\n    \"\"\"Text outside ASCII survives.\"\"\"\n    assert _records('name\\nZoë\\n東京') == [{'name': 'Zoë'}, {'name': '東京'}]\n\n\ndef test_many():\n    \"\"\"Ten thousand records.\"\"\"\n    text = 'id,square\\n' + ''.join(f'{i},{i * i}\\n' for i in range(10000))\n    assert _records(text) == [{'id': i, 'square': i * i} for i in range(10000)]",
+      "visible_tests": [
+        "test_example_1"
+      ],
+      "hints": [
+        "csv.DictReader reads rows as dicts keyed by the header, in header order. It needs lines to read: io.StringIO(text) turns the string into a file-like object.",
+        "Splitting the text on line breaks yourself would cut quoted fields that contain one.",
+        "Convert each value with a small function: None for '', int for a match of re.fullmatch(r'-?[0-9]+', value), else the string. json.dumps writes the list."
+      ],
+      "summary": "Read CSV with csv and io, write JSON with json",
+      "source": "built-in"
+    },
+    {
+      "id": "run-length",
+      "concepts": [
+        "itertools"
+      ],
+      "difficulty": "Easy",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Run-length encoding",
+          "statement": "Write two functions:\n\n- `encode(text)` returns the runs of equal characters in `text` as a list of\n  `(character, length)` pairs\n- `decode(runs)` turns such a list back into the text\n\n`decode(encode(text))` gives back `text`.",
+          "examples": [
+            {
+              "input": "encode('aaabccdddd')",
+              "output": "[('a', 3), ('b', 1), ('c', 2), ('d', 4)]"
+            },
+            {
+              "input": "decode([('x', 2), ('y', 1)])",
+              "output": "'xxy'"
+            }
+          ],
+          "constraints": [
+            "0 <= length of text <= 1,000,000"
+          ]
+        }
+      ],
+      "starter_code": "def encode(text):\n    \"\"\"Return the runs of equal characters as (character, length) pairs.\"\"\"\n    pass\n\n\ndef decode(runs):\n    \"\"\"Return the text that the (character, length) pairs describe.\"\"\"\n    pass",
+      "reference_solution": "from itertools import groupby\n\n\ndef encode(text):\n    \"\"\"Return the runs of equal characters as (character, length) pairs.\"\"\"\n    return [(character, sum(1 for _ in run)) for character, run in groupby(text)]\n\n\ndef decode(runs):\n    \"\"\"Return the text that the (character, length) pairs describe.\"\"\"\n    return ''.join(character * length for character, length in runs)",
+      "tests": "import random\n\nfrom solution import *\n\n\ndef test_example_1():\n    \"\"\"Runs of several lengths.\"\"\"\n    assert encode('aaabccdddd') == [('a', 3), ('b', 1), ('c', 2), ('d', 4)]\n\n\ndef test_example_2():\n    \"\"\"Pairs back to text.\"\"\"\n    assert decode([('x', 2), ('y', 1)]) == 'xxy'\n\n\ndef test_empty():\n    \"\"\"Empty text, empty list.\"\"\"\n    assert encode('') == []\n    assert decode([]) == ''\n\n\ndef test_runs_apart():\n    \"\"\"The same character in separate runs.\"\"\"\n    assert encode('aabaa') == [('a', 2), ('b', 1), ('a', 2)]\n\n\ndef test_no_runs():\n    \"\"\"Every character differs from the next.\"\"\"\n    assert encode('abc') == [('a', 1), ('b', 1), ('c', 1)]\n\n\ndef test_long_run():\n    \"\"\"A million equal characters.\"\"\"\n    assert encode('z' * 1000000) == [('z', 1000000)]\n    assert decode([('z', 1000000)]) == 'z' * 1000000\n\n\ndef test_round_trip():\n    \"\"\"Random text survives encoding and decoding.\"\"\"\n    rng = random.Random(2)\n    for _ in range(200):\n        text = ''.join(rng.choice('ab ✓') * rng.randint(1, 4) for _ in range(rng.randint(0, 50)))\n        runs = encode(text)\n        assert decode(runs) == text\n        assert all(a[0] != b[0] for a, b in zip(runs, runs[1:]))",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "itertools.groupby groups consecutive equal items: for each run it gives the item and an iterator over the run.",
+        "The run is an iterator, not a list: count it with sum(1 for _ in run) or len(list(run)).",
+        "For decode, character * length repeats a character, and ''.join joins the pieces."
+      ],
+      "summary": "Group runs with itertools.groupby",
+      "source": "built-in"
+    },
+    {
+      "id": "sort-records",
+      "concepts": [
+        "functools-and-operator"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Sort by several fields",
+          "statement": "Write `sort_records(records, keys)`. `records` is a list of dicts, and `keys` a list of\nfield names. Return a new list of the records sorted by the first key, records equal in\nit by the second, and so on. A name that starts with `-` sorts its field in descending\norder. Records equal in every key keep their order. `records` itself doesn't change.\n\nA field has values of one type in all records, numbers or strings.",
+          "examples": [
+            {
+              "input": "sort_records([{'name': 'b', 'age': 30}, {'name': 'a', 'age': 30}, {'name': 'c', 'age': 25}], ['-age', 'name'])",
+              "output": "[{'name': 'a', 'age': 30}, {'name': 'b', 'age': 30}, {'name': 'c', 'age': 25}]"
+            }
+          ],
+          "constraints": [
+            "0 <= len(records) <= 100,000",
+            "0 <= len(keys) <= 10",
+            "Field names don't start with -, and every record has every field in keys"
+          ]
+        }
+      ],
+      "starter_code": "def sort_records(records, keys):\n    \"\"\"Return records sorted by keys in order; a key starting with - sorts descending.\"\"\"\n    pass",
+      "reference_solution": "from operator import itemgetter\n\n\ndef sort_records(records, keys):\n    \"\"\"Return records sorted by keys in order; a key starting with - sorts descending.\"\"\"\n    result = list(records)\n    # Sorting is stable, so sorting by the last key first leaves the first key in charge.\n    for key in reversed(keys):\n        descending = key.startswith('-')\n        result.sort(key=itemgetter(key[1:] if descending else key), reverse=descending)\n    return result",
+      "tests": "import random\n\nfrom solution import *\n\nPEOPLE = [\n    {'name': 'b', 'age': 30, 'city': 'Rome'},\n    {'name': 'a', 'age': 30, 'city': 'Oslo'},\n    {'name': 'c', 'age': 25, 'city': 'Rome'},\n    {'name': 'd', 'age': 25, 'city': 'Oslo'},\n]\n\n\ndef _names(records):\n    return [record['name'] for record in records]\n\n\ndef test_example_1():\n    \"\"\"Age descending, then name ascending.\"\"\"\n    records = [{'name': 'b', 'age': 30}, {'name': 'a', 'age': 30}, {'name': 'c', 'age': 25}]\n    assert sort_records(records, ['-age', 'name']) == [\n        {'name': 'a', 'age': 30},\n        {'name': 'b', 'age': 30},\n        {'name': 'c', 'age': 25},\n    ]\n\n\ndef test_descending_strings():\n    \"\"\"A string field in descending order.\"\"\"\n    assert _names(sort_records(PEOPLE, ['-city', 'age'])) == ['c', 'b', 'd', 'a']\n\n\ndef test_stable():\n    \"\"\"Records equal in every key keep their order.\"\"\"\n    assert _names(sort_records(PEOPLE, ['age'])) == ['c', 'd', 'b', 'a']\n    assert _names(sort_records(PEOPLE, ['-age'])) == ['b', 'a', 'c', 'd']\n\n\ndef test_no_keys():\n    \"\"\"No keys: the same order, in a new list.\"\"\"\n    result = sort_records(PEOPLE, [])\n    assert result == PEOPLE and result is not PEOPLE\n\n\ndef test_input_unchanged():\n    \"\"\"The given list keeps its order.\"\"\"\n    records = list(PEOPLE)\n    sort_records(records, ['name'])\n    assert records == PEOPLE\n\n\ndef test_random():\n    \"\"\"Random records, compared pair by pair.\"\"\"\n    rng = random.Random(6)\n    records = [\n        {'id': i, 'team': rng.choice('xyz'), 'score': rng.randint(0, 5), 'tag': rng.choice(['p', 'q'])}\n        for i in range(20000)\n    ]\n    result = sort_records(records, ['team', '-score', '-tag'])\n    assert sorted(r['id'] for r in result) == list(range(20000))\n    for a, b in zip(result, result[1:]):\n        key_a = (a['team'], -a['score'], a['tag'] == 'p')\n        key_b = (b['team'], -b['score'], b['tag'] == 'p')\n        assert key_a < key_b or (key_a == key_b and a['id'] < b['id'])",
+      "visible_tests": [
+        "test_example_1"
+      ],
+      "hints": [
+        "Negating a value sorts numbers in reverse, but not strings. sort and sorted take reverse=True instead.",
+        "Python's sort is stable, and stays stable with reverse=True. Sorting by the last key first, then the one before it, and so on, gives the order of all keys.",
+        "operator.itemgetter('age') is a key function that reads record['age']. functools.cmp_to_key is another way: one comparison function over all keys."
+      ],
+      "summary": "Multi-key sorts with itemgetter and stable sorting",
+      "source": "built-in"
+    }
+  ],
+  "questions": [
+    {
+      "id": "q-deque-constant-time",
+      "type": "multiple",
+      "difficulty": "Medium",
+      "concepts": [
+        "collections"
+      ],
+      "wordings": [
+        {
+          "text": "Which operations take O(1) time on a `collections.deque` `d` of n items?",
+          "options": [
+            "`d.appendleft(x)`",
+            "`d.popleft()`",
+            "`d.pop()`",
+            "`d[len(d) // 2]`"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "A deque adds and removes at both ends in O(1). Reading an item by index is O(1) near the\nends but O(n) in the middle. A list is the other way round: O(1) indexing, but O(n)\ninsert(0, x) and pop(0).",
+      "summary": "Which deque operations are constant time",
+      "source": "built-in"
+    },
+    {
+      "id": "q-defaultdict-lookup",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "collections"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\nfrom collections import defaultdict\n\ncounts = defaultdict(int)\nif counts['x'] == 0:\n    pass\nprint(len(counts), 'y' in counts)\n```",
+          "options": [
+            "`1 False`",
+            "`0 False`",
+            "`1 True`",
+            "KeyError"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Reading a missing key of a defaultdict creates it with the default, so counts['x']\nadds x with 0. The in test doesn't create keys. Use counts.get('x', 0) to read without\nadding.",
+      "summary": "Reading a missing key adds it to a defaultdict",
+      "source": "built-in"
+    },
+    {
+      "id": "q-heapify",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "heapq"
+      ],
+      "wordings": [
+        {
+          "text": "After `h = [5, 1, 4, 2, 3]` and `heapq.heapify(h)`, what is guaranteed?",
+          "options": [
+            "`h[0]` is 1, and the rest is in heap order, not necessarily sorted",
+            "`h` is `[1, 2, 3, 4, 5]`",
+            "`h[-1]` is 5",
+            "`h[0]` is 5"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "heapq keeps a min-heap in a list: each item is at most its children, at 2i + 1 and\n2i + 2. Only h[0] is fixed, as the smallest; the rest can be in several orders. For a\nmax-heap, push negated values.",
+      "summary": "What heapify guarantees",
+      "source": "built-in"
+    },
+    {
+      "id": "q-heap-ties",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "heapq"
+      ],
+      "wordings": [
+        {
+          "text": "What happens here?\n\n```python\nimport heapq\n\nh = []\nheapq.heappush(h, (1, {'job': 'a'}))\nheapq.heappush(h, (1, {'job': 'b'}))\n```",
+          "options": [
+            "TypeError: the priorities are equal, so the dicts are compared",
+            "The second push replaces the first",
+            "Both are pushed, ordered by the time they arrived",
+            "Both are pushed, ordered by job name"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Tuples compare item by item. With equal priorities, the next items, two dicts, are\ncompared, and dicts don't support <. Put a counter between them, (priority, count,\nitem), so ties never reach the item and come out in arrival order.",
+      "summary": "Equal priorities in a heap compare the next item",
+      "source": "built-in"
+    },
+    {
+      "id": "q-bisect-sides",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "bisect"
+      ],
+      "wordings": [
+        {
+          "text": "For `a = [1, 2, 2, 3]`, what are `bisect_left(a, 2)` and `bisect_right(a, 2)`?",
+          "options": [
+            "1 and 3",
+            "1 and 2",
+            "2 and 3",
+            "0 and 2"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "bisect_left returns the first index where 2 could be inserted keeping the order, before\nthe existing 2s; bisect_right the last, after them. Their difference, 2, is how many 2s\nthere are.",
+      "summary": "bisect_left and bisect_right around equal values",
+      "source": "built-in"
+    },
+    {
+      "id": "q-insort-cost",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "bisect"
+      ],
+      "wordings": [
+        {
+          "text": "What does `bisect.insort(a, x)` cost on a sorted list of n items?",
+          "options": [
+            "O(log n) comparisons, but O(n) time in all, since later items shift",
+            "O(log n) time in all",
+            "O(n log n), since it sorts the list again",
+            "O(1), since it appends"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "insort finds the position by binary search, then inserts there, which moves every later\nitem one place. The shift is a fast memory move, so insort works well for moderate\nsizes, but it is still linear.",
+      "summary": "The cost of insort",
+      "source": "built-in"
+    },
+    {
+      "id": "q-groupby-runs",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "itertools"
+      ],
+      "wordings": [
+        {
+          "text": "What is `[key for key, _ in itertools.groupby('aabaa')]`?",
+          "options": [
+            "`['a', 'b', 'a']`",
+            "`['a', 'b']`",
+            "`['b', 'a']`",
+            "`['a', 'a', 'b', 'a', 'a']`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "groupby groups consecutive equal items, so the two runs of a stay apart. To group all\nequal items, sort them first.",
+      "summary": "groupby groups only consecutive items",
+      "source": "built-in"
+    },
+    {
+      "id": "q-combinations-count",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "itertools"
+      ],
+      "wordings": [
+        {
+          "text": "How many tuples do `itertools.combinations(range(5), 2)` and `itertools.permutations(range(5), 2)` give?",
+          "options": [
+            "10 and 20",
+            "20 and 10",
+            "10 and 25",
+            "25 and 20"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "combinations ignores order: 5 choose 2 is 10. permutations counts each order: 5 × 4 is\n20. 25 is product(range(5), repeat=2), which also pairs an item with itself.",
+      "summary": "Counting combinations and permutations",
+      "source": "built-in"
+    },
+    {
+      "id": "q-reduce-digits",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "functools-and-operator"
+      ],
+      "wordings": [
+        {
+          "text": "What is `functools.reduce(lambda acc, digit: acc * 10 + digit, [1, 2, 3])`?",
+          "options": [
+            "123",
+            "6",
+            "321",
+            "60"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "reduce starts with the first item as acc and folds in the rest: 1 * 10 + 2 is 12, and\n12 * 10 + 3 is 123. With an empty list and no initial value, reduce raises TypeError.",
+      "summary": "Folding a list with reduce and a lambda",
+      "source": "built-in"
+    },
+    {
+      "id": "q-lru-cache-arguments",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "functools-and-operator"
+      ],
+      "wordings": [
+        {
+          "text": "What happens on the call `total([1, 2])`?\n\n```python\nfrom functools import lru_cache\n\n@lru_cache(maxsize=None)\ndef total(numbers):\n    return sum(numbers)\n```",
+          "options": [
+            "TypeError: a list can't be hashed, and the cache keys on the arguments",
+            "It returns 3 and caches it",
+            "It returns 3 without caching",
+            "It returns 3, and later calls with a changed list return the old result"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "lru_cache stores results in a dict keyed by the arguments, so they must be hashable.\nPass a tuple instead. Caching on a mutable argument would be unsafe anyway: the list\ncould change after its result was stored.",
+      "summary": "lru_cache needs hashable arguments",
+      "source": "built-in"
+    },
+    {
+      "id": "q-match-search",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "re"
+      ],
+      "wordings": [
+        {
+          "text": "What do `re.match(r'\\d+', 'ab12')` and `re.search(r'\\d+', 'ab12')` give?",
+          "options": [
+            "`match` gives None; `search` finds `'12'`",
+            "Both find `'12'`",
+            "Both give None",
+            "`match` finds `'12'`; `search` gives None"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "re.match only matches at the start of the string, which is a letter here. re.search\nlooks for the first match anywhere. re.fullmatch needs the whole string to match.",
+      "summary": "re.match anchors at the start, re.search does not",
+      "source": "built-in"
+    },
+    {
+      "id": "q-greedy-match",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "re"
+      ],
+      "wordings": [
+        {
+          "text": "What is `re.findall(r'<.+>', '<a><b>')`?",
+          "options": [
+            "`['<a><b>']`",
+            "`['<a>', '<b>']`",
+            "`['a', 'b']`",
+            "`[]`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": ".+ is greedy: it takes as much as it can and gives back only what the closing > needs,\nso the match runs to the last >. The lazy .+? stops at the first >, giving ['<a>',\n'<b>'].",
+      "summary": "Greedy and lazy quantifiers",
+      "source": "built-in"
+    },
+    {
+      "id": "q-json-dumps-types",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "json-and-csv"
+      ],
+      "wordings": [
+        {
+          "text": "What is `json.dumps({1: (2, 3), 'ok': None})`?",
+          "options": [
+            "`'{\"1\": [2, 3], \"ok\": null}'`",
+            "`'{1: [2, 3], \"ok\": null}'`",
+            "`'{\"1\": (2, 3), \"ok\": None}'`",
+            "TypeError: a tuple isn't JSON"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "JSON object keys are strings, so 1 becomes \"1\"; tuples become arrays, and None becomes\nnull. json.loads won't give back the same dict: the key stays \"1\" and the tuple is a\nlist.",
+      "summary": "How Python values map to JSON",
+      "source": "built-in"
+    },
+    {
+      "id": "q-csv-over-split",
+      "type": "multiple",
+      "difficulty": "Easy",
+      "concepts": [
+        "json-and-csv"
+      ],
+      "wordings": [
+        {
+          "text": "Why read CSV with the `csv` module instead of `line.split(',')`?",
+          "options": [
+            "A quoted field can contain commas",
+            "A quoted field can contain line breaks",
+            "`csv.reader` turns numeric fields into numbers",
+            "`split(',')` drops empty fields"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1
+      ],
+      "explanation": "CSV quotes fields that contain commas, quotes or line breaks, and doubles quotes inside\nthem; split knows none of this. csv.reader still returns every field as a string, and\n'a,,b'.split(',') keeps the empty field.",
+      "summary": "What the csv module handles that split does not",
+      "source": "built-in"
+    },
+    {
+      "id": "q-float-equality",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "math-and-random"
+      ],
+      "wordings": [
+        {
+          "text": "`0.1 + 0.2 == 0.3` is False. Why, and what is the usual fix?",
+          "options": [
+            "0.1 and 0.2 have no exact binary form, so the sum is slightly off; compare with `math.isclose`",
+            "Python rounds floats to 15 digits when adding; compare with `round`",
+            "`==` compares identity for floats; compare with `is`",
+            "The sum is a Decimal; convert it with `float`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Floats are binary fractions, and 0.1 can't be written exactly in binary, so 0.1 + 0.2\nis 0.30000000000000004. math.isclose allows a small relative difference. For exact\ndecimal money, use decimal.Decimal.",
+      "summary": "Comparing floats with math.isclose",
+      "source": "built-in"
+    },
+    {
+      "id": "q-random-sample",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "math-and-random"
+      ],
+      "wordings": [
+        {
+          "text": "Which call gives 3 different items of the list `cards`, picked at random?",
+          "options": [
+            "`random.sample(cards, 3)`",
+            "`random.choices(cards, k=3)`",
+            "`random.shuffle(cards)`",
+            "`random.choice(cards)`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "sample picks without replacement. choices picks with replacement, so items can repeat.\nshuffle reorders the list in place and returns None, and choice returns one item.\nrandom.seed(n) makes the picks repeatable.",
+      "summary": "Picking without replacement with random.sample",
+      "source": "built-in"
+    },
+    {
+      "id": "q-naive-aware",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "datetime"
+      ],
+      "wordings": [
+        {
+          "text": "What happens here?\n\n```python\nfrom datetime import datetime, timezone\n\naware = datetime(2024, 1, 1, tzinfo=timezone.utc)\nnaive = datetime(2024, 1, 1)\naware - naive\n```",
+          "options": [
+            "TypeError: naive and aware datetimes can't be subtracted",
+            "It gives `timedelta(0)`",
+            "It gives the local time zone's offset",
+            "It gives `timedelta(0)` and a warning"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A naive datetime has no time zone, so Python can't tell which moment it is and refuses\nto mix it with an aware one; comparing them for order raises too. Keep times aware,\nusually in UTC, and convert for display.",
+      "summary": "Naive and aware datetimes don't mix",
+      "source": "built-in"
+    },
+    {
+      "id": "q-timedelta-fields",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "datetime"
+      ],
+      "wordings": [
+        {
+          "text": "For `d = timedelta(hours=25)`, what are `d.days` and `d.seconds`?",
+          "options": [
+            "1 and 3600",
+            "0 and 90000",
+            "1 and 90000",
+            "25 and 0"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A timedelta is stored as days, seconds below a day and microseconds. 25 hours is 1 day\nand 3,600 seconds. d.seconds is not the total: d.total_seconds() gives 90000.0.",
+      "summary": "timedelta keeps days and seconds apart",
+      "source": "built-in"
+    },
+    {
+      "id": "q-shallow-copies",
+      "type": "multiple",
+      "difficulty": "Easy",
+      "concepts": [
+        "copy"
+      ],
+      "wordings": [
+        {
+          "text": "Which of these make a new list with the same items as the list `a`?",
+          "options": [
+            "`a[:]`",
+            "`list(a)`",
+            "`copy.copy(a)`",
+            "`b = a`"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "Slicing, list() and copy.copy all make a shallow copy: a new list holding the same item\nobjects. b = a makes no list at all; it gives the same list a second name.",
+      "summary": "Ways to make a shallow copy",
+      "source": "built-in"
+    },
+    {
+      "id": "q-deepcopy-shared",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "copy"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\nimport copy\n\ninner = [1]\npair = [inner, inner]\nclone = copy.deepcopy(pair)\nclone[0].append(2)\nprint(clone[1], inner)\n```",
+          "options": [
+            "`[1, 2] [1]`",
+            "`[1] [1]`",
+            "`[1, 2] [1, 2]`",
+            "`[1] [1, 2]`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "deepcopy remembers what it has already copied, so an object shared inside the original\nis copied once and shared in the copy too: clone[0] and clone[1] are one new list. The\noriginal inner list is untouched.",
+      "summary": "deepcopy keeps shared objects shared",
+      "source": "built-in"
+    },
+    {
+      "id": "q-enum-lookup",
+      "type": "multiple",
+      "difficulty": "Medium",
+      "concepts": [
+        "enum"
+      ],
+      "wordings": [
+        {
+          "text": "For `class Color(Enum): RED = 1`, which of these are True?",
+          "options": [
+            "`Color(1) is Color.RED`",
+            "`Color['RED'] is Color.RED`",
+            "`Color.RED.value == 1`",
+            "`Color.RED == 1`"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "Calling the class looks a member up by value, and indexing it looks one up by name;\neach member exists once, so is works. A plain Enum member isn't equal to its value;\nIntEnum members are, since they are ints.",
+      "summary": "Looking up enum members by value and name",
+      "source": "built-in"
+    },
+    {
+      "id": "q-enum-alias",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "enum"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\nfrom enum import Enum\n\nclass Status(Enum):\n    ACTIVE = 1\n    RUNNING = 1\n    DONE = 2\n\nprint(len(Status), Status.RUNNING)\n```",
+          "options": [
+            "`2 Status.ACTIVE`",
+            "`3 Status.RUNNING`",
+            "`2 Status.RUNNING`",
+            "ValueError: a value repeats"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A second name with the same value becomes an alias of the first member, not a member of\nits own: iteration and len skip it, and it refers to ACTIVE. The @unique decorator turns\naliases into a ValueError.",
+      "summary": "Repeated values make enum aliases",
+      "source": "built-in"
+    },
+    {
+      "id": "q-path-parts",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "pathlib-and-io"
+      ],
+      "wordings": [
+        {
+          "text": "For `p = Path('/data/logs/app.tar.gz')`, what are `p.name`, `p.suffix` and `p.stem`?",
+          "options": [
+            "`'app.tar.gz'`, `'.gz'`, `'app.tar'`",
+            "`'app'`, `'.tar.gz'`, `'app'`",
+            "`'app.tar.gz'`, `'.tar.gz'`, `'app'`",
+            "`'app.tar'`, `'.gz'`, `'app'`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "name is the last part of the path. suffix is only the last extension, and stem is the\nname without it. p.suffixes gives ['.tar', '.gz'], and p.parent is /data/logs.",
+      "summary": "Parts of a path in pathlib",
+      "source": "built-in"
+    },
+    {
+      "id": "q-stringio-position",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "pathlib-and-io"
+      ],
+      "wordings": [
+        {
+          "text": "What does this print?\n\n```python\nimport io\n\nbuffer = io.StringIO()\nbuffer.write('hello')\nprint(repr(buffer.read()), repr(buffer.getvalue()))\n```",
+          "options": [
+            "`'' 'hello'`",
+            "`'hello' 'hello'`",
+            "`'hello' ''`",
+            "`'' ''`"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A StringIO works like an open file with one position: after writing, the position is at\nthe end, so read() returns nothing. buffer.seek(0) moves back to the start. getvalue()\nreturns the whole contents wherever the position is.",
+      "summary": "Reading a StringIO after writing to it",
+      "source": "built-in"
+    }
+  ]
+}
