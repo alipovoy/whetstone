@@ -1,0 +1,288 @@
+{
+  "topic": {
+    "id": "testing",
+    "name": "Testing",
+    "concepts": [
+      {
+        "id": "test-levels",
+        "name": "Unit, integration and end-to-end tests",
+        "group": "Practice"
+      },
+      {
+        "id": "choosing-test-cases",
+        "name": "Choosing test cases",
+        "group": "Practice"
+      },
+      {
+        "id": "test-doubles",
+        "name": "Test doubles",
+        "group": "Practice"
+      },
+      {
+        "id": "debugging",
+        "name": "Debugging approach",
+        "group": "Practice"
+      }
+    ]
+  },
+  "problems": [],
+  "questions": [
+    {
+      "id": "q-test-pyramid",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "test-levels"
+      ],
+      "wordings": [
+        {
+          "text": "Why do most test suites have many unit tests and few end-to-end tests?",
+          "options": [
+            "Unit tests are fast and point to the part that broke; end-to-end tests are slow and harder to keep stable",
+            "End-to-end tests find fewer bugs",
+            "Unit tests check the whole system at once",
+            "End-to-end tests cannot run automatically"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Unit tests run in milliseconds and a failure names one function. End-to-end tests check\nthat the parts work together as a user sees them, but they are slow and depend on many\nmoving parts, so a few cover the main paths.",
+      "summary": "Balancing unit, integration and end-to-end tests",
+      "source": "built-in"
+    },
+    {
+      "id": "q-lowest-level",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "test-levels"
+      ],
+      "wordings": [
+        {
+          "text": "Dates are saved with a time zone, but the database column drops it, so times come back shifted. Which is the smallest test that would have caught it?",
+          "options": [
+            "An integration test that saves a date to a real database and reads it back",
+            "A unit test of the date code with the database replaced by a fake",
+            "An end-to-end test of the whole sign-up flow",
+            "A load test"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The bug is in how two parts meet: the code and the database. A fake database stores\nwhatever it is given, so the unit test passes. An end-to-end test may catch it, but it\nis slower and does not point to the cause.",
+      "summary": "Which test level catches a bug between two parts",
+      "source": "built-in"
+    },
+    {
+      "id": "q-flaky-test",
+      "type": "multiple",
+      "difficulty": "Medium",
+      "concepts": [
+        "test-levels"
+      ],
+      "wordings": [
+        {
+          "text": "An end-to-end test fails about one run in ten, though nothing has changed. Which are likely causes? Choose all that apply.",
+          "options": [
+            "It waits a fixed time for a page instead of waiting until an element appears",
+            "It relies on data that another test leaves behind",
+            "It calls a real service that is sometimes slow to answer",
+            "The code it tests has a syntax error"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "Flaky tests usually depend on timing, shared state or something outside the test. A\nfixed wait is too short when the machine is slow, shared data depends on what ran before,\nand a real service answers at its own pace. A syntax error fails every run.",
+      "summary": "Common causes of flaky tests",
+      "source": "built-in"
+    },
+    {
+      "id": "q-boundary-values",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "choosing-test-cases"
+      ],
+      "wordings": [
+        {
+          "text": "A function accepts ages from 18 to 65, both included. Which inputs test its boundaries?",
+          "options": [
+            "17, 18, 65 and 66",
+            "18 and 65",
+            "30 and 50",
+            "0 and 100"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Off-by-one bugs live at the edges: test the last value on each side of each boundary.\n18 and 65 alone would miss a check that also accepts 17 or 66.",
+      "summary": "Testing boundary values",
+      "source": "built-in"
+    },
+    {
+      "id": "q-sort-cases",
+      "type": "multiple",
+      "difficulty": "Medium",
+      "concepts": [
+        "choosing-test-cases"
+      ],
+      "wordings": [
+        {
+          "text": "A function sorts a list of integers, and one test checks `[3, 1, 2]`. Which further cases add the most? Choose all that apply.",
+          "options": [
+            "An empty list",
+            "A list with repeated values",
+            "A list with negative numbers",
+            "`[9, 7, 8]`, another short list in random order"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "Each useful case covers a kind of input the others do not: no elements, equal elements,\nvalues below zero. Another short shuffled list exercises the same paths as the first, so\nit is unlikely to find a new bug.",
+      "summary": "Choosing test cases that cover different kinds of input",
+      "source": "built-in"
+    },
+    {
+      "id": "q-brittle-tests",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "choosing-test-cases",
+        "test-doubles"
+      ],
+      "wordings": [
+        {
+          "text": "A refactoring keeps the behaviour of a module the same but breaks 30 of its tests. What does that suggest?",
+          "options": [
+            "The tests check how the code works, such as which internal calls it makes, rather than what it does",
+            "The refactoring must have changed the behaviour",
+            "The module needs more tests",
+            "The tests should be deleted"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Tests that check results through the public interface survive a refactoring; that is\ntheir purpose. Tests that check private methods or the order of calls on mocks break\nwhenever the inside changes, even when nothing is wrong.",
+      "summary": "Tests tied to implementation details",
+      "source": "built-in"
+    },
+    {
+      "id": "q-mock-or-stub",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "test-doubles"
+      ],
+      "wordings": [
+        {
+          "text": "A test replaces the email service with an object that records its calls, then checks that `send` was called once, with the user's address. What is this test double called?",
+          "options": [
+            "A mock",
+            "A stub",
+            "A fake",
+            "A dummy"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A mock checks how it was called. A stub only returns fixed answers, a fake is a simple\nworking version such as an in-memory database, and a dummy is passed in but never used.",
+      "summary": "Kinds of test doubles",
+      "source": "built-in"
+    },
+    {
+      "id": "q-what-to-replace",
+      "type": "multiple",
+      "difficulty": "Easy",
+      "concepts": [
+        "test-doubles"
+      ],
+      "wordings": [
+        {
+          "text": "Which of these should a unit test usually replace with a test double? Choose all that apply.",
+          "options": [
+            "A payment provider reached over the network",
+            "The current time",
+            "A random number generator",
+            "A function that adds tax to a price"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "Replace what is slow, has side effects, or gives a different answer each run, so the test\nis fast and repeatable. A function that only computes a result is fast and predictable;\nuse the real one.",
+      "summary": "What to replace in a unit test",
+      "source": "built-in"
+    },
+    {
+      "id": "q-debug-first-step",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "debugging"
+      ],
+      "wordings": [
+        {
+          "text": "A user reports a bug. What should come first?",
+          "options": [
+            "Reproduce it reliably, ideally as a failing test",
+            "Change the code that looks most suspicious and see if the bug goes away",
+            "Catch the error so the user no longer sees it",
+            "Rewrite the module the bug is in"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A reliable reproduction shows what is wrong and proves when it is fixed; as a test, it\nalso keeps the bug from coming back. Changes made without one are guesses, and hiding the\nerror leaves the cause in place.",
+      "summary": "Starting to debug by reproducing the bug",
+      "source": "built-in"
+    },
+    {
+      "id": "q-bisect",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "debugging"
+      ],
+      "wordings": [
+        {
+          "text": "A bug appeared somewhere in the last 200 commits, and a test shows it. What is the fastest reliable way to find the commit that caused it?",
+          "options": [
+            "Binary search over the commits: about 8 test runs",
+            "Test every commit from the newest back: up to 200 runs",
+            "Read every change since the last release",
+            "Revert all 200 commits"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Test the commit in the middle: the result shows which half holds the cause. Halving 200\nreaches one commit in about log₂ 200 ≈ 8 steps; version control tools can drive this\nsearch, for example `git bisect`.",
+      "summary": "Finding the commit that caused a bug by binary search",
+      "source": "built-in"
+    }
+  ]
+}

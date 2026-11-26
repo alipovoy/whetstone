@@ -6,7 +6,7 @@ import { QuizSchema, type Quiz } from '@/core/quiz'
 import { topicFromFile, TopicRecordSchema, type TopicRecord } from '@/core/topics'
 
 export const DATABASE_NAME = 'whetstone'
-const DATABASE_VERSION = 8
+const DATABASE_VERSION = 9
 const PLACEHOLDER_ID = 'algorithms'
 
 interface Schema extends DBSchema {
@@ -54,6 +54,10 @@ export async function openDatabase(name = DATABASE_NAME): Promise<Database> {
       if (oldVersion < 8) {
         const python = ['python-basics', 'python-standard-library', 'python-advanced']
         changes = changes.then(() => addBuiltIns(topics(), python))
+      }
+      if (oldVersion < 9) {
+        const design = ['object-oriented-design', 'testing', 'system-design']
+        changes = changes.then(() => addBuiltIns(topics(), design))
       }
       changes.catch(() => transaction.abort())
     },

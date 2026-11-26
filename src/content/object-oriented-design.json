@@ -1,0 +1,545 @@
+{
+  "topic": {
+    "id": "object-oriented-design",
+    "name": "Object-oriented design",
+    "concepts": [
+      {
+        "id": "encapsulation-and-interfaces",
+        "name": "Encapsulation and interfaces",
+        "group": "Principles"
+      },
+      {
+        "id": "composition-vs-inheritance",
+        "name": "Composition and inheritance",
+        "group": "Principles"
+      },
+      {
+        "id": "solid",
+        "name": "SOLID",
+        "group": "Principles"
+      },
+      {
+        "id": "creational-patterns",
+        "name": "Creational patterns",
+        "group": "Patterns"
+      },
+      {
+        "id": "structural-patterns",
+        "name": "Structural patterns",
+        "group": "Patterns"
+      },
+      {
+        "id": "behavioural-patterns",
+        "name": "Behavioural patterns",
+        "group": "Patterns"
+      },
+      {
+        "id": "domain-classes",
+        "name": "Classes for a domain",
+        "group": "Modelling"
+      },
+      {
+        "id": "state-machines",
+        "name": "State machines",
+        "group": "Modelling"
+      }
+    ]
+  },
+  "problems": [
+    {
+      "id": "parking-lot",
+      "concepts": [
+        "domain-classes",
+        "encapsulation-and-interfaces"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "A parking lot",
+          "statement": "Write a class `ParkingLot(small, medium, large)`: a lot with that many spots of each\nsize. Sizes are `\"small\"`, `\"medium\"` and `\"large\"`.\n\n- `park(plate, size)` parks the vehicle with number plate `plate`. A vehicle fits a spot\n  of its own size or larger, and takes the smallest free spot it fits. It returns the\n  size of that spot, or `null` when no spot fits or the vehicle is already parked.\n- `leave(plate)` frees the vehicle's spot and returns `true`, or returns `false` when\n  the vehicle is not parked.\n- `free(size)` returns the number of free spots of that size.\n\nEvery method must take constant time.",
+          "examples": [
+            {
+              "input": "ParkingLot(1, 1, 0), then park(\"A\", \"small\"), park(\"B\", \"small\"), park(\"C\", \"small\")",
+              "output": "\"small\", \"medium\", null",
+              "explanation": "B takes the medium spot when the small one is taken. No spot is left for C."
+            },
+            {
+              "input": "ParkingLot(1, 1, 0), then park(\"A\", \"small\"), park(\"B\", \"small\"), leave(\"B\"), free(\"medium\")",
+              "output": "\"small\", \"medium\", true, 1"
+            }
+          ],
+          "constraints": [
+            "0 <= spots of each size <= 1,000",
+            "Up to 100,000 calls"
+          ]
+        }
+      ],
+      "starter_code": "class ParkingLot:\n    def __init__(self, small, medium, large):\n        pass\n\n    def park(self, plate, size):\n        pass\n\n    def leave(self, plate):\n        pass\n\n    def free(self, size):\n        pass",
+      "reference_solution": "SIZES = ('small', 'medium', 'large')\n\n\nclass ParkingLot:\n    def __init__(self, small, medium, large):\n        self._free = {'small': small, 'medium': medium, 'large': large}\n        self._spots = {}\n\n    def park(self, plate, size):\n        if plate in self._spots:\n            return None\n        for spot in SIZES[SIZES.index(size):]:\n            if self._free[spot] > 0:\n                self._free[spot] -= 1\n                self._spots[plate] = spot\n                return spot\n        return None\n\n    def leave(self, plate):\n        spot = self._spots.pop(plate, None)\n        if spot is None:\n            return False\n        self._free[spot] += 1\n        return True\n\n    def free(self, size):\n        return self._free[size]",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"A small car takes a medium spot when no small one is free.\"\"\"\n    lot = ParkingLot(1, 1, 0)\n    assert lot.park('A', 'small') == 'small'\n    assert lot.park('B', 'small') == 'medium'\n    assert lot.park('C', 'small') is None\n\n\ndef test_example_2():\n    \"\"\"Leaving frees the spot the car took.\"\"\"\n    lot = ParkingLot(1, 1, 0)\n    lot.park('A', 'small')\n    lot.park('B', 'small')\n    assert lot.leave('B') is True\n    assert lot.free('medium') == 1\n\n\ndef test_large_needs_large():\n    \"\"\"A large vehicle fits no smaller spot.\"\"\"\n    lot = ParkingLot(5, 5, 0)\n    assert lot.park('T', 'large') is None\n    assert lot.free('small') == 5\n    assert lot.free('medium') == 5\n\n\ndef test_smallest_fitting_spot():\n    \"\"\"A medium car skips small spots and takes medium before large.\"\"\"\n    lot = ParkingLot(2, 1, 1)\n    assert lot.park('M1', 'medium') == 'medium'\n    assert lot.park('M2', 'medium') == 'large'\n    assert lot.park('M3', 'medium') is None\n    assert lot.free('small') == 2\n\n\ndef test_leave_frees_the_spot_taken():\n    \"\"\"A small car parked in a large spot gives back the large spot.\"\"\"\n    lot = ParkingLot(1, 0, 1)\n    lot.park('A', 'small')\n    lot.park('B', 'small')\n    lot.leave('A')\n    assert lot.free('small') == 1\n    assert lot.free('large') == 0\n    lot.leave('B')\n    assert lot.free('large') == 1\n    assert lot.park('T', 'large') == 'large'\n\n\ndef test_already_parked():\n    \"\"\"Parking a car twice fails and keeps its first spot.\"\"\"\n    lot = ParkingLot(2, 0, 0)\n    assert lot.park('A', 'small') == 'small'\n    assert lot.park('A', 'small') is None\n    assert lot.free('small') == 1\n\n\ndef test_leave_unknown_or_twice():\n    \"\"\"Only a parked car can leave, and only once.\"\"\"\n    lot = ParkingLot(1, 0, 0)\n    assert lot.leave('X') is False\n    lot.park('A', 'small')\n    assert lot.leave('A') is True\n    assert lot.leave('A') is False\n    assert lot.free('small') == 1\n\n\ndef test_park_again_after_leaving():\n    \"\"\"A car that left can park again.\"\"\"\n    lot = ParkingLot(1, 0, 0)\n    lot.park('A', 'small')\n    lot.leave('A')\n    assert lot.park('A', 'small') == 'small'\n\n\ndef test_lots_are_separate():\n    \"\"\"Two lots do not share spots or cars.\"\"\"\n    first = ParkingLot(1, 0, 0)\n    second = ParkingLot(1, 0, 0)\n    first.park('A', 'small')\n    assert second.free('small') == 1\n    assert second.park('A', 'small') == 'small'\n\n\ndef test_many_calls():\n    \"\"\"100,000 calls on a full lot.\"\"\"\n    lot = ParkingLot(1000, 1000, 1000)\n    for i in range(3000):\n        assert lot.park(i, 'small') is not None\n    for _ in range(16):\n        for i in range(3000):\n            lot.leave(i)\n        for i in range(3000):\n            lot.park(i, 'small')\n    assert lot.park('extra', 'small') is None\n    assert [lot.free(size) for size in ('small', 'medium', 'large')] == [0, 0, 0]",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Which facts must the lot remember? The number of free spots of each size, and for each parked car, the size of the spot it took.",
+        "Keep a count of free spots per size and a map from plate to the spot size. Without the map, leave() cannot tell which count to give back.",
+        "park() tries the sizes in order from the car's own size up and takes the first with a free spot. leave() removes the plate from the map and adds one to the count of its spot size."
+      ],
+      "summary": "Model a parking lot with spot counts and a map of parked cars",
+      "source": "built-in"
+    },
+    {
+      "id": "order-states",
+      "concepts": [
+        "state-machines"
+      ],
+      "difficulty": "Easy",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Order states",
+          "statement": "Write a class `Order`. A new order is in the state `\"created\"`. These actions move it\nfrom one state to another:\n\n- `\"pay\"`: from `\"created\"` to `\"paid\"`\n- `\"ship\"`: from `\"paid\"` to `\"shipped\"`\n- `\"deliver\"`: from `\"shipped\"` to `\"delivered\"`\n- `\"cancel\"`: from `\"created\"` or `\"paid\"` to `\"cancelled\"`\n\nMethods:\n\n- `state()` returns the current state.\n- `can(action)` returns `true` when the action is allowed in the current state.\n- `apply(action)` makes the move and returns `true`. When the action is not allowed, it\n  returns `false` and the state stays.\n- `history()` returns the list of states the order has been in, oldest first, starting\n  with `\"created\"`. Changing the returned list does not change the order.\n\nAny other action name is never allowed.",
+          "examples": [
+            {
+              "input": "Order(), then apply(\"pay\"), apply(\"deliver\"), apply(\"ship\"), state()",
+              "output": "true, false, true, \"shipped\"",
+              "explanation": "A paid order cannot be delivered before it is shipped."
+            },
+            {
+              "input": "Order(), then apply(\"cancel\"), apply(\"pay\"), history()",
+              "output": "true, false, [\"created\", \"cancelled\"]"
+            }
+          ],
+          "constraints": [
+            "Up to 1,000 calls per order"
+          ]
+        }
+      ],
+      "starter_code": "class Order:\n    def state(self):\n        pass\n\n    def can(self, action):\n        pass\n\n    def apply(self, action):\n        pass\n\n    def history(self):\n        pass",
+      "reference_solution": "MOVES = {\n    ('created', 'pay'): 'paid',\n    ('paid', 'ship'): 'shipped',\n    ('shipped', 'deliver'): 'delivered',\n    ('created', 'cancel'): 'cancelled',\n    ('paid', 'cancel'): 'cancelled',\n}\n\n\nclass Order:\n    def __init__(self):\n        self._states = ['created']\n\n    def state(self):\n        return self._states[-1]\n\n    def can(self, action):\n        return (self.state(), action) in MOVES\n\n    def apply(self, action):\n        if not self.can(action):\n            return False\n        self._states.append(MOVES[self.state(), action])\n        return True\n\n    def history(self):\n        return list(self._states)",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"A paid order is shipped before it is delivered.\"\"\"\n    order = Order()\n    assert order.apply('pay') is True\n    assert order.apply('deliver') is False\n    assert order.apply('ship') is True\n    assert order.state() == 'shipped'\n\n\ndef test_example_2():\n    \"\"\"A cancelled order cannot be paid.\"\"\"\n    order = Order()\n    assert order.apply('cancel') is True\n    assert order.apply('pay') is False\n    assert order.history() == ['created', 'cancelled']\n\n\ndef test_new_order():\n    \"\"\"A new order is created and has only that state.\"\"\"\n    order = Order()\n    assert order.state() == 'created'\n    assert order.history() == ['created']\n\n\ndef test_full_path():\n    \"\"\"Pay, ship and deliver in order.\"\"\"\n    order = Order()\n    for action in ['pay', 'ship', 'deliver']:\n        assert order.apply(action) is True\n    assert order.state() == 'delivered'\n    assert order.history() == ['created', 'paid', 'shipped', 'delivered']\n\n\ndef test_can_does_not_move():\n    \"\"\"can() answers without changing the state.\"\"\"\n    order = Order()\n    assert order.can('pay') is True\n    assert order.can('ship') is False\n    assert order.state() == 'created'\n    assert order.history() == ['created']\n\n\ndef test_cancel_after_payment():\n    \"\"\"A paid order can still be cancelled.\"\"\"\n    order = Order()\n    order.apply('pay')\n    assert order.apply('cancel') is True\n    assert order.history() == ['created', 'paid', 'cancelled']\n\n\ndef test_no_cancel_after_shipping():\n    \"\"\"A shipped or delivered order cannot be cancelled.\"\"\"\n    order = Order()\n    order.apply('pay')\n    order.apply('ship')\n    assert order.can('cancel') is False\n    assert order.apply('cancel') is False\n    order.apply('deliver')\n    assert order.apply('cancel') is False\n    assert order.state() == 'delivered'\n\n\ndef test_final_states():\n    \"\"\"No action is allowed after delivery or cancellation.\"\"\"\n    delivered = Order()\n    for action in ['pay', 'ship', 'deliver']:\n        delivered.apply(action)\n    cancelled = Order()\n    cancelled.apply('cancel')\n    for order in [delivered, cancelled]:\n        for action in ['pay', 'ship', 'deliver', 'cancel']:\n            assert order.can(action) is False\n            assert order.apply(action) is False\n\n\ndef test_repeated_action():\n    \"\"\"Paying twice fails the second time.\"\"\"\n    order = Order()\n    assert order.apply('pay') is True\n    assert order.apply('pay') is False\n    assert order.history() == ['created', 'paid']\n\n\ndef test_unknown_action():\n    \"\"\"An unknown action is never allowed.\"\"\"\n    order = Order()\n    assert order.can('refund') is False\n    assert order.apply('refund') is False\n    assert order.state() == 'created'\n\n\ndef test_history_is_a_copy():\n    \"\"\"Changing the returned history leaves the order as it was.\"\"\"\n    order = Order()\n    order.history().append('paid')\n    assert order.history() == ['created']\n    assert order.state() == 'created'\n\n\ndef test_orders_are_separate():\n    \"\"\"Two orders keep their own states.\"\"\"\n    first = Order()\n    second = Order()\n    first.apply('pay')\n    assert second.state() == 'created'\n    assert second.history() == ['created']",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Write the allowed moves down as data: which action, from which state, leads to which state.",
+        "A map from (state, action) to the next state answers can() with one lookup, and apply() reads the next state from it.",
+        "Keep the list of states the order has been in; its last entry is the current state. history() returns a copy of that list."
+      ],
+      "summary": "Model an order as a table of allowed state transitions",
+      "source": "built-in"
+    }
+  ],
+  "questions": [
+    {
+      "id": "q-encapsulation-rules",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "encapsulation-and-interfaces"
+      ],
+      "wordings": [
+        {
+          "text": "An `Account` class has a public `balance` field, and code all over the app changes it directly. The field is made private and the class gets `deposit` and `withdraw` methods. What does that give?",
+          "options": [
+            "The rules for the balance, such as never going below zero, live in one place",
+            "The program runs faster",
+            "Each account uses less memory",
+            "Other classes can no longer find out the balance"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Encapsulation keeps the data and the rules for changing it together. Every change goes\nthrough the class, so it can check them, and the field can change form without touching\nthe callers. A getter can still expose the balance.",
+      "summary": "Why a class hides its data behind methods",
+      "source": "built-in"
+    },
+    {
+      "id": "q-depend-on-interface",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "encapsulation-and-interfaces",
+        "solid"
+      ],
+      "wordings": [
+        {
+          "text": "A report generator is given a `PdfWriter` and calls its `write(page)` method. HTML output is needed too. Which change is the best design?",
+          "options": [
+            "The generator depends on an interface `Writer` with `write(page)`; `PdfWriter` and `HtmlWriter` implement it",
+            "The generator takes a `format` flag and checks it before each write",
+            "`HtmlWriter` extends `PdfWriter` and overrides its methods",
+            "A copy of the generator is made for HTML"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The generator needs only \"something that writes a page\". Depending on that interface lets\nany writer be passed in, including a fake in tests, without changing the generator: the\ndependency inversion and open–closed principles. A flag grows with each format, and an\nHTML writer is not a kind of PDF writer.",
+      "summary": "Depending on an interface instead of a concrete class",
+      "source": "built-in"
+    },
+    {
+      "id": "q-why-composition",
+      "type": "multiple",
+      "difficulty": "Medium",
+      "concepts": [
+        "composition-vs-inheritance"
+      ],
+      "wordings": [
+        {
+          "text": "Why is composition (an object holding the parts it uses) often preferred to inheritance? Choose all that apply.",
+          "options": [
+            "A part can be swapped for another, at run time or in a test",
+            "A change in a base class can break subclasses that rely on its internals",
+            "A class can combine several parts without inheriting from several classes",
+            "Calls to a held object run faster than inherited methods"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1,
+        2
+      ],
+      "explanation": "A subclass is tied to its base class for good and often depends on how it works inside:\nthe fragile base class problem. A held part is used only through its interface and can be\nreplaced. Speed is not the reason; the difference is negligible either way.",
+      "summary": "Advantages of composition over inheritance",
+      "source": "built-in"
+    },
+    {
+      "id": "q-is-a-relation",
+      "type": "multiple",
+      "difficulty": "Easy",
+      "concepts": [
+        "composition-vs-inheritance"
+      ],
+      "wordings": [
+        {
+          "text": "Which of these suit inheritance, where the subclass can be used anywhere the base class is? Choose all that apply.",
+          "options": [
+            "`Circle` extends `Shape`, and every shape has an `area()`",
+            "`SavingsAccount` extends `Account`, and every account operation works the same way",
+            "`Car` extends `Engine` to reuse its `start()` method",
+            "`Stack` extends `List` to reuse its storage, which also lets callers insert in the middle"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1
+      ],
+      "explanation": "Inheritance fits an \"is a\" relation. A car has an engine, so it should hold one. A stack\nthat inherits a list's methods lets callers break the stack's last-in first-out rule;\nit should hold a list and expose only push and pop.",
+      "summary": "When inheritance fits: an \"is a\" relation",
+      "source": "built-in"
+    },
+    {
+      "id": "q-single-responsibility",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "solid"
+      ],
+      "wordings": [
+        {
+          "text": "An `Invoice` class computes the total, renders the invoice as a PDF and emails it to the customer. Which SOLID principle does it break most clearly?",
+          "options": [
+            "Single responsibility",
+            "Liskov substitution",
+            "Interface segregation",
+            "Dependency inversion"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The class has three reasons to change: pricing rules, layout and delivery. Splitting it\ninto a calculator, a renderer and a sender lets each change, and be tested, on its own.",
+      "summary": "Recognising a class with several responsibilities",
+      "source": "built-in"
+    },
+    {
+      "id": "q-square-rectangle",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "solid",
+        "composition-vs-inheritance"
+      ],
+      "wordings": [
+        {
+          "text": "`Square` extends `Rectangle`, and its `set_width` also sets the height. Code that sets a rectangle's width to 2 and height to 3 expects an area of 6, but gets 9 for a square. Which principle is broken?",
+          "options": [
+            "Liskov substitution",
+            "Single responsibility",
+            "Open–closed",
+            "Interface segregation"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A subclass must keep the promises of its base class, so that code written for the base\nworks with it. A rectangle promises that width and height change separately; a square\ncannot keep that. Squares and rectangles that cannot be changed have no such conflict.",
+      "summary": "The square and rectangle problem",
+      "source": "built-in"
+    },
+    {
+      "id": "q-factory",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "creational-patterns"
+      ],
+      "wordings": [
+        {
+          "text": "Code in several places reads a shape name from a file and creates the matching object: `\"circle\"` gives a `Circle`, `\"square\"` a `Square`, and so on. Which pattern gathers this choice in one place?",
+          "options": [
+            "Factory",
+            "Singleton",
+            "Observer",
+            "Adapter"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A factory takes the name and returns the right object, so callers depend only on the\nshared `Shape` interface. A new shape changes the factory, not every caller.",
+      "summary": "Creating objects from a name with a factory",
+      "source": "built-in"
+    },
+    {
+      "id": "q-singleton-cost",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "creational-patterns"
+      ],
+      "wordings": [
+        {
+          "text": "The app's settings are a singleton that any class can reach. What is the main cost?",
+          "options": [
+            "It is global state: dependencies are hidden and tests can affect each other",
+            "It uses more memory than one object per class",
+            "It cannot have methods",
+            "It is slower to read than a local variable"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A class that reaches for the singleton does not show that it needs it, and a test that\nchanges it leaks into the next one. Passing the settings in where they are needed keeps\none instance without the global access.",
+      "summary": "The cost of a singleton",
+      "source": "built-in"
+    },
+    {
+      "id": "q-adapter",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "structural-patterns"
+      ],
+      "wordings": [
+        {
+          "text": "A payment library offers `charge(cents)`. The app expects an object with `pay(amount_in_dollars)`. A small class with `pay` converts the amount and calls `charge`. Which pattern is it?",
+          "options": [
+            "Adapter",
+            "Decorator",
+            "Facade",
+            "Proxy"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "An adapter makes an existing interface fit the one a client expects. A decorator keeps\nthe same interface and adds behaviour; a facade gives a simple interface to several\nparts; a proxy stands in for an object with the same interface.",
+      "summary": "Fitting one interface to another with an adapter",
+      "source": "built-in"
+    },
+    {
+      "id": "q-decorator-pattern",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "structural-patterns"
+      ],
+      "wordings": [
+        {
+          "text": "A `DataSource` has a `read()` method. Logging, caching and retries must be added in any combination, without a subclass for each combination. Which pattern fits?",
+          "options": [
+            "Decorator",
+            "Adapter",
+            "Template method",
+            "Factory"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Each decorator is a `DataSource` that holds another one, adds its behaviour around\n`read()` and calls through. Wrapping them in any order gives any combination; subclasses\nwould need one class for each of the 7 combinations.",
+      "summary": "Combining behaviours by wrapping with decorators",
+      "source": "built-in"
+    },
+    {
+      "id": "q-observer",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "behavioural-patterns"
+      ],
+      "wordings": [
+        {
+          "text": "When a stock price changes, a chart, a table and an alert must update. The price object should not know about any of them. Which pattern fits?",
+          "options": [
+            "Observer",
+            "Strategy",
+            "Command",
+            "Builder"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The price keeps a list of subscribers and notifies each one through a shared interface.\nNew views subscribe without changing the price object.",
+      "summary": "Notifying listeners with the observer pattern",
+      "source": "built-in"
+    },
+    {
+      "id": "q-strategy",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "behavioural-patterns"
+      ],
+      "wordings": [
+        {
+          "text": "A checkout computes discounts differently for regular customers, students and holiday sales, and new rules come often. Each rule becomes an object with the same `discount(order)` method, and the checkout is given one. Which pattern is it?",
+          "options": [
+            "Strategy",
+            "Observer",
+            "State",
+            "Visitor"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Strategy puts interchangeable algorithms behind one interface. The checkout no longer\ngrows an if/else branch per rule, and a new rule is a new class. The state pattern looks\nalike, but there the object switches its own behaviour as its state changes.",
+      "summary": "Interchangeable rules with the strategy pattern",
+      "source": "built-in"
+    },
+    {
+      "id": "q-library-model",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "domain-classes"
+      ],
+      "wordings": [
+        {
+          "text": "A library lends books. A book can have several copies; a member borrows a copy and must return it by a due date. Which class should hold the due date?",
+          "options": [
+            "Loan, which links a member to a copy",
+            "Book",
+            "Member",
+            "Copy"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A due date describes one borrowing, not the book, the copy or the member: a copy has a\nnew due date with every loan, and a member can hold several loans at once. The loan also\nkeeps the history of who borrowed what.",
+      "summary": "Finding the class a fact belongs to",
+      "source": "built-in"
+    },
+    {
+      "id": "q-tell-dont-ask",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "domain-classes",
+        "encapsulation-and-interfaces"
+      ],
+      "wordings": [
+        {
+          "text": "In three places, code reads a cart's items, adds up their prices, applies the discount and stores the result in `cart.total`. Which change is the best design?",
+          "options": [
+            "The cart computes its own total in a `total()` method",
+            "A shared helper function computes the total and stores it in the cart",
+            "The total is kept in a global variable",
+            "Each place keeps its own copy, written more carefully"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Put behaviour with the data it uses: tell the cart what you need instead of asking for\nits insides. A helper removes the copies, but the cart still holds a total that anyone\ncan set out of step with its items.",
+      "summary": "Moving logic into the class that owns the data",
+      "source": "built-in"
+    },
+    {
+      "id": "q-turnstile",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "state-machines"
+      ],
+      "wordings": [
+        {
+          "text": "A turnstile starts locked.\n\n- A coin unlocks it; a coin while it is unlocked changes nothing.\n- A push while it is unlocked lets one person through and locks it; a push while it is\n  locked changes nothing.\n\nEvents: coin, push, push, coin, coin. Where does it end?",
+          "options": [
+            "Unlocked, after 1 person passed",
+            "Locked, after 1 person passed",
+            "Unlocked, after 2 people passed",
+            "Locked, after 2 people passed"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "coin → unlocked; push → one person passes, locked; push → still locked; coin → unlocked;\ncoin → still unlocked. Every event has a defined result in every state, which is what\nmakes a state machine easy to check.",
+      "summary": "Following events through a state machine",
+      "source": "built-in"
+    },
+    {
+      "id": "q-state-instead-of-flags",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "state-machines",
+        "domain-classes"
+      ],
+      "wordings": [
+        {
+          "text": "An order has the flags `is_paid`, `is_shipped` and `is_cancelled`, and bugs have produced orders that are shipped and cancelled at once. Which design rules that out?",
+          "options": [
+            "One state field, with a table of the moves allowed from each state",
+            "A check of all three flags before each change",
+            "A fourth flag, `is_valid`",
+            "A nightly job that finds and fixes bad orders"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Three flags allow 8 combinations, and only some of them make sense. One state field can\nonly hold a valid state, and a table of allowed moves keeps every change in one place\nwhere it is easy to check.",
+      "summary": "Replacing flags with one state and allowed transitions",
+      "source": "built-in"
+    }
+  ]
+}

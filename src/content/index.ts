@@ -2,9 +2,12 @@ import algorithms from './algorithms.json'
 import bitsAndMath from './bits-and-math.json'
 import complexityAnalysis from './complexity-analysis.json'
 import dataStructures from './data-structures.json'
+import objectOrientedDesign from './object-oriented-design.json'
 import pythonAdvanced from './python-advanced.json'
 import pythonBasics from './python-basics.json'
 import pythonStandardLibrary from './python-standard-library.json'
+import systemDesign from './system-design.json'
+import testing from './testing.json'
 import { validateTopicFile, type TopicFile } from './schema'
 
 function load(input: unknown): TopicFile {
@@ -21,4 +24,7 @@ export const builtInTopics: TopicFile[] = [
   pythonBasics,
   pythonStandardLibrary,
   pythonAdvanced,
+  objectOrientedDesign,
+  testing,
+  systemDesign,
 ].map(load)
