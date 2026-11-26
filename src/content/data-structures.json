@@ -1,0 +1,858 @@
+{
+  "topic": {
+    "id": "data-structures",
+    "name": "Data structures",
+    "concepts": [
+      {
+        "id": "arrays",
+        "name": "Arrays and dynamic arrays",
+        "group": "Linear"
+      },
+      {
+        "id": "strings",
+        "name": "Strings",
+        "group": "Linear"
+      },
+      {
+        "id": "linked-lists",
+        "name": "Linked lists",
+        "group": "Linear"
+      },
+      {
+        "id": "hash-maps",
+        "name": "Hash maps and sets",
+        "group": "Hashing"
+      },
+      {
+        "id": "stacks",
+        "name": "Stacks",
+        "group": "Stacks and queues"
+      },
+      {
+        "id": "queues",
+        "name": "Queues and deques",
+        "group": "Stacks and queues"
+      },
+      {
+        "id": "binary-trees",
+        "name": "Binary trees and traversals",
+        "group": "Trees"
+      },
+      {
+        "id": "binary-search-trees",
+        "name": "Binary search trees",
+        "group": "Trees"
+      },
+      {
+        "id": "heaps",
+        "name": "Heaps",
+        "group": "Trees"
+      },
+      {
+        "id": "graph-representations",
+        "name": "Graph representations",
+        "group": "Graphs"
+      }
+    ]
+  },
+  "problems": [
+    {
+      "id": "compress-runs",
+      "concepts": [
+        "strings"
+      ],
+      "difficulty": "Easy",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Compress repeated letters",
+          "statement": "Write `compress(text)`.\n\nReplace every run of the same letter with the letter followed by the length of the run:\n`\"aabcccccaaa\"` becomes `\"a2b1c5a3\"`. If the result is not shorter than `text`, return\n`text` unchanged.\n\nUpper and lower case letters are different letters. Aim for linear time.",
+          "examples": [
+            {
+              "input": "text = \"aabcccccaaa\"",
+              "output": "\"a2b1c5a3\""
+            },
+            {
+              "input": "text = \"abc\"",
+              "output": "\"abc\"",
+              "explanation": "\"a1b1c1\" is longer, so the text stays as it is."
+            }
+          ],
+          "constraints": [
+            "0 <= length of text <= 200,000",
+            "text holds only letters a-z and A-Z"
+          ]
+        }
+      ],
+      "starter_code": "def compress(text):\n    \"\"\"Return text with runs of a letter replaced by the letter and the run length.\"\"\"\n    pass",
+      "reference_solution": "def compress(text):\n    \"\"\"Return text with runs of a letter replaced by the letter and the run length.\"\"\"\n    parts = []\n    start = 0\n    for i in range(1, len(text) + 1):\n        if i == len(text) or text[i] != text[start]:\n            parts.append(text[start] + str(i - start))\n            start = i\n    compressed = ''.join(parts)\n    return compressed if len(compressed) < len(text) else text",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"Runs of two, one, five and three letters.\"\"\"\n    assert compress('aabcccccaaa') == 'a2b1c5a3'\n\n\ndef test_example_2():\n    \"\"\"No letter repeats, so the text stays.\"\"\"\n    assert compress('abc') == 'abc'\n\n\ndef test_empty_text():\n    \"\"\"An empty text stays empty.\"\"\"\n    assert compress('') == ''\n\n\ndef test_equal_length_stays():\n    \"\"\"A result of the same length is not shorter.\"\"\"\n    assert compress('aa') == 'aa'\n    assert compress('aabb') == 'aabb'\n\n\ndef test_one_long_run():\n    \"\"\"A run longer than nine letters needs a count of several digits.\"\"\"\n    assert compress('a' * 12) == 'a12'\n    assert compress('z' * 100000) == 'z100000'\n\n\ndef test_case_matters():\n    \"\"\"Upper and lower case letters form separate runs.\"\"\"\n    assert compress('aaAAA') == 'a2A3'\n    assert compress('aAaA') == 'aAaA'\n\n\ndef test_long_text():\n    \"\"\"200,000 letters in runs of four.\"\"\"\n    text = ''.join(letter * 4 for letter in 'abcd' * 12500)\n    assert compress(text) == 'a4b4c4d4' * 12500",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "How do you know where a run ends while you walk through the text once?",
+        "Remember where the current run started. When the next letter differs, or the text ends, the run is complete: write its letter and length.",
+        "Collect the pieces in a list and join them once at the end: adding to a string piece by piece can copy it every time. Compare the lengths before returning."
+      ],
+      "summary": "Run-length encode a string, keeping the original when encoding does not shorten it",
+      "source": "built-in"
+    },
+    {
+      "id": "reverse-linked-list",
+      "concepts": [
+        "linked-lists"
+      ],
+      "difficulty": "Easy",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Reverse a linked list",
+          "statement": "A node of a singly linked list has a `value` and a `next` node; the last node's `next`\nis `null`.\n\nWrite `reverse(head)`. It reverses the list in place, by changing the `next` links of\nthe existing nodes, and returns the new head. An empty list is given as `null`.\n\nUse constant extra memory.",
+          "examples": [
+            {
+              "input": "head = 1 → 2 → 3",
+              "output": "3 → 2 → 1"
+            },
+            {
+              "input": "head = null",
+              "output": "null"
+            }
+          ],
+          "constraints": [
+            "0 <= number of nodes <= 1,000"
+          ]
+        }
+      ],
+      "starter_code": "class Node:\n    def __init__(self, value, next=None):\n        self.value = value\n        self.next = next\n\n\ndef reverse(head):\n    \"\"\"Reverse the list starting at head in place and return the new head.\"\"\"\n    pass",
+      "reference_solution": "class Node:\n    def __init__(self, value, next=None):\n        self.value = value\n        self.next = next\n\n\ndef reverse(head):\n    \"\"\"Reverse the list starting at head in place and return the new head.\"\"\"\n    previous = None\n    while head is not None:\n        head.next, previous, head = previous, head, head.next\n    return previous",
+      "tests": "from solution import *\n\n\ndef _build(values):\n    head = None\n    for value in reversed(values):\n        head = Node(value, head)\n    return head\n\n\ndef _nodes(head):\n    nodes = []\n    while head is not None:\n        nodes.append(head)\n        head = head.next\n    return nodes\n\n\ndef _values(head):\n    return [node.value for node in _nodes(head)]\n\n\ndef test_example_1():\n    \"\"\"Three nodes come back in the opposite order.\"\"\"\n    assert _values(reverse(_build([1, 2, 3]))) == [3, 2, 1]\n\n\ndef test_example_2():\n    \"\"\"An empty list stays empty.\"\"\"\n    assert reverse(None) is None\n\n\ndef test_one_node():\n    \"\"\"A single node is its own reverse.\"\"\"\n    node = Node(7)\n    assert reverse(node) is node\n    assert node.next is None\n\n\ndef test_same_nodes():\n    \"\"\"The list is reversed in place: the nodes are reused, not copied.\"\"\"\n    head = _build([1, 2, 3, 4])\n    before = _nodes(head)\n    assert _nodes(reverse(head)) == before[::-1]\n\n\ndef test_old_head_ends_the_list():\n    \"\"\"The old head becomes the last node.\"\"\"\n    head = _build([5, 6])\n    reverse(head)\n    assert head.next is None\n\n\ndef test_long_list():\n    \"\"\"1,000 nodes.\"\"\"\n    values = list(range(1000))\n    assert _values(reverse(_build(values))) == values[::-1]",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "While you walk the list, what do you need to remember so that no node is lost when you change its `next`?",
+        "Keep the previous node. For each node, save its `next`, point it at the previous node, then move on.",
+        "Start with previous = null. Repeat: next_node = node.next; node.next = previous; previous = node; node = next_node. When node is null, previous is the new head. A recursive version uses memory for every node."
+      ],
+      "summary": "Reverse a singly linked list in place by turning each next link around",
+      "source": "built-in"
+    },
+    {
+      "id": "first-unique-letter",
+      "concepts": [
+        "hash-maps"
+      ],
+      "difficulty": "Easy",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "First letter that appears once",
+          "statement": "Write `first_unique(text)` that returns the index of the first character in `text` that\nappears exactly once, or `-1` when every character repeats.\n\nAim for linear time.",
+          "examples": [
+            {
+              "input": "text = \"swiss\"",
+              "output": "1",
+              "explanation": "\"w\" at index 1 appears once; \"s\" repeats."
+            },
+            {
+              "input": "text = \"aabb\"",
+              "output": "-1"
+            }
+          ],
+          "constraints": [
+            "0 <= length of text <= 200,000",
+            "text holds lowercase letters a-z"
+          ]
+        }
+      ],
+      "starter_code": "def first_unique(text):\n    \"\"\"Return the index of the first character that appears once in text, or -1.\"\"\"\n    pass",
+      "reference_solution": "def first_unique(text):\n    \"\"\"Return the index of the first character that appears once in text, or -1.\"\"\"\n    counts = {}\n    for char in text:\n        counts[char] = counts.get(char, 0) + 1\n    for i, char in enumerate(text):\n        if counts[char] == 1:\n            return i\n    return -1",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"\"w\" is the first character that does not repeat.\"\"\"\n    assert first_unique('swiss') == 1\n\n\ndef test_example_2():\n    \"\"\"Every character repeats.\"\"\"\n    assert first_unique('aabb') == -1\n\n\ndef test_empty_text():\n    \"\"\"There is no character at all.\"\"\"\n    assert first_unique('') == -1\n\n\ndef test_single_character():\n    \"\"\"One character appears once.\"\"\"\n    assert first_unique('z') == 0\n\n\ndef test_unique_at_the_end():\n    \"\"\"The only unique character is the last one.\"\"\"\n    assert first_unique('aabbccd') == 6\n\n\ndef test_repeat_far_away():\n    \"\"\"A character that repeats much later is not unique.\"\"\"\n    assert first_unique('abcdefa') == 1\n\n\ndef test_long_text():\n    \"\"\"200,000 characters, the unique one near the end.\"\"\"\n    text = 'abcdefghijklmnopqrstuvwxy' * 7999 + 'z' + 'abcdefghijklmnopqrstuvwxy'\n    assert first_unique(text) == 25 * 7999",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "To know that a character appears once, you need its count over the whole text. Can you get every count in one pass?",
+        "Count the characters in a hash map in a first pass. A second pass finds the first character whose count is 1.",
+        "Two passes of n steps each are still linear. Checking every character against the rest of the text instead is quadratic."
+      ],
+      "summary": "Find the first non-repeating character with a count per character",
+      "source": "built-in"
+    },
+    {
+      "id": "min-stack",
+      "concepts": [
+        "stacks"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Stack with a minimum",
+          "statement": "Write a class `MinStack` with these methods:\n\n- `push(value)` puts `value` on top\n- `pop()` removes the top value and returns it\n- `top()` returns the top value without removing it\n- `get_min()` returns the smallest value on the stack\n\nEvery method must take constant time. `pop`, `top` and `get_min` are only called on a\nstack that is not empty.",
+          "examples": [
+            {
+              "input": "push(3), push(1), push(2), get_min(), pop(), pop(), get_min()",
+              "output": "1, 2, 1, 3",
+              "explanation": "After 2 and 1 are popped, only 3 is left."
+            }
+          ],
+          "constraints": [
+            "Up to 200,000 calls",
+            "Values are integers and may repeat"
+          ]
+        }
+      ],
+      "starter_code": "class MinStack:\n    def push(self, value):\n        pass\n\n    def pop(self):\n        pass\n\n    def top(self):\n        pass\n\n    def get_min(self):\n        pass",
+      "reference_solution": "class MinStack:\n    def __init__(self):\n        # Each entry keeps the minimum of itself and everything below it.\n        self.entries = []\n\n    def push(self, value):\n        low = min(value, self.entries[-1][1]) if self.entries else value\n        self.entries.append((value, low))\n\n    def pop(self):\n        return self.entries.pop()[0]\n\n    def top(self):\n        return self.entries[-1][0]\n\n    def get_min(self):\n        return self.entries[-1][1]",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"The minimum returns to 3 once 1 is popped.\"\"\"\n    stack = MinStack()\n    stack.push(3)\n    stack.push(1)\n    stack.push(2)\n    assert stack.get_min() == 1\n    assert stack.pop() == 2\n    assert stack.pop() == 1\n    assert stack.get_min() == 3\n\n\ndef test_top_does_not_remove():\n    \"\"\"top() shows the last value and leaves it there.\"\"\"\n    stack = MinStack()\n    stack.push(5)\n    stack.push(8)\n    assert stack.top() == 8\n    assert stack.top() == 8\n    assert stack.pop() == 8\n    assert stack.top() == 5\n\n\ndef test_repeated_minimum():\n    \"\"\"Popping one copy of the minimum leaves the other.\"\"\"\n    stack = MinStack()\n    for value in [2, 1, 1]:\n        stack.push(value)\n    stack.pop()\n    assert stack.get_min() == 1\n    stack.pop()\n    assert stack.get_min() == 2\n\n\ndef test_negative_values():\n    \"\"\"Negative values are smaller.\"\"\"\n    stack = MinStack()\n    stack.push(0)\n    stack.push(-4)\n    assert stack.get_min() == -4\n\n\ndef test_reuse_after_empty():\n    \"\"\"A stack emptied and filled again forgets its old minimum.\"\"\"\n    stack = MinStack()\n    stack.push(1)\n    stack.pop()\n    stack.push(9)\n    assert stack.get_min() == 9\n\n\ndef test_many_calls():\n    \"\"\"100,000 pushes, each followed by get_min, then pops back down.\"\"\"\n    stack = MinStack()\n    for value in range(100000, 0, -1):\n        stack.push(value)\n        assert stack.get_min() == value\n    for value in range(1, 100001):\n        assert stack.get_min() == value\n        assert stack.pop() == value",
+      "visible_tests": [
+        "test_example_1"
+      ],
+      "hints": [
+        "Searching the stack for its minimum takes linear time. What could you store at push time so that the minimum is always known?",
+        "The minimum only changes when a value is pushed or popped. Store, with every value, the minimum of the stack at the moment it was pushed.",
+        "Push (value, min(value, minimum below)). pop() and top() read the value of the top entry, get_min() its stored minimum."
+      ],
+      "summary": "Stack that returns its minimum in constant time by storing the running minimum",
+      "source": "built-in"
+    },
+    {
+      "id": "queue-from-stacks",
+      "concepts": [
+        "queues",
+        "stacks"
+      ],
+      "difficulty": "Easy",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Queue from two stacks",
+          "statement": "Write a class `StackQueue`, a first-in first-out queue built from two stacks. A stack\nhere is a list used only at its end: push a value at the end, pop the last value, read\nthe last value.\n\n- `enqueue(value)` adds `value` at the back\n- `dequeue()` removes the front value and returns it\n- `peek()` returns the front value without removing it\n- `size()` returns the number of values\n\nAny sequence of n calls must take O(n) time in total. `dequeue` and `peek` are only\ncalled on a queue that is not empty.",
+          "examples": [
+            {
+              "input": "enqueue(1), enqueue(2), dequeue(), enqueue(3), dequeue(), size()",
+              "output": "1, 2, 1"
+            }
+          ],
+          "constraints": [
+            "Up to 200,000 calls"
+          ]
+        }
+      ],
+      "starter_code": "class StackQueue:\n    def enqueue(self, value):\n        pass\n\n    def dequeue(self):\n        pass\n\n    def peek(self):\n        pass\n\n    def size(self):\n        pass",
+      "reference_solution": "class StackQueue:\n    def __init__(self):\n        self.incoming = []\n        self.outgoing = []\n\n    def enqueue(self, value):\n        self.incoming.append(value)\n\n    def _front(self):\n        if not self.outgoing:\n            while self.incoming:\n                self.outgoing.append(self.incoming.pop())\n        return self.outgoing\n\n    def dequeue(self):\n        return self._front().pop()\n\n    def peek(self):\n        return self._front()[-1]\n\n    def size(self):\n        return len(self.incoming) + len(self.outgoing)",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"Values leave in the order they arrived.\"\"\"\n    queue = StackQueue()\n    queue.enqueue(1)\n    queue.enqueue(2)\n    assert queue.dequeue() == 1\n    queue.enqueue(3)\n    assert queue.dequeue() == 2\n    assert queue.size() == 1\n\n\ndef test_empty_size():\n    \"\"\"A new queue holds nothing.\"\"\"\n    assert StackQueue().size() == 0\n\n\ndef test_peek_does_not_remove():\n    \"\"\"peek() shows the front value and leaves it there.\"\"\"\n    queue = StackQueue()\n    queue.enqueue('a')\n    queue.enqueue('b')\n    assert queue.peek() == 'a'\n    assert queue.size() == 2\n    assert queue.dequeue() == 'a'\n    assert queue.peek() == 'b'\n\n\ndef test_interleaved():\n    \"\"\"Values added after some were taken still wait their turn.\"\"\"\n    queue = StackQueue()\n    out = []\n    for value in range(10):\n        queue.enqueue(value)\n        if value % 3 == 2:\n            out.append(queue.dequeue())\n    while queue.size():\n        out.append(queue.dequeue())\n    assert out == list(range(10))\n\n\ndef test_many_calls():\n    \"\"\"100,000 values pass through, taken in batches.\"\"\"\n    queue = StackQueue()\n    out = []\n    for value in range(100000):\n        queue.enqueue(value)\n        if value % 1000 == 999:\n            for _ in range(500):\n                out.append(queue.dequeue())\n    while queue.size():\n        out.append(queue.dequeue())\n    assert out == list(range(100000))",
+      "visible_tests": [
+        "test_example_1"
+      ],
+      "hints": [
+        "Popping every value from one stack and pushing it onto another reverses their order. How does that help a queue?",
+        "Push new values onto an incoming stack. Take values from an outgoing stack; when it is empty, move everything from incoming into it.",
+        "Each value is moved at most once from incoming to outgoing, so n calls cost O(n) in total although a single dequeue can be slow. size() is the sum of both lengths."
+      ],
+      "summary": "First-in first-out queue from two stacks with amortized constant time per call",
+      "source": "built-in"
+    },
+    {
+      "id": "check-search-tree",
+      "concepts": [
+        "binary-search-trees",
+        "binary-trees"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Is it a binary search tree?",
+          "statement": "A tree node has a `value`, a `left` child and a `right` child; a missing child is\n`null`.\n\nWrite `is_search_tree(root)` that returns `true` when the tree is a binary search tree:\nfor every node, all values in its left subtree are smaller than its value and all values\nin its right subtree are larger. An empty tree, given as `null`, is a search tree.",
+          "examples": [
+            {
+              "input": "root = 2 with left 1 and right 3",
+              "output": "true"
+            },
+            {
+              "input": "root = 5 with left 1 and right 6, where 6 has left 4 and right 7",
+              "output": "false",
+              "explanation": "4 is in the right subtree of 5 but smaller than 5."
+            }
+          ],
+          "constraints": [
+            "0 <= number of nodes <= 50,000",
+            "The tree is at most 20 levels deep",
+            "Values are integers; a repeated value makes the tree not a search tree"
+          ]
+        }
+      ],
+      "starter_code": "class TreeNode:\n    def __init__(self, value, left=None, right=None):\n        self.value = value\n        self.left = left\n        self.right = right\n\n\ndef is_search_tree(root):\n    \"\"\"Return True when the tree under root is a binary search tree.\"\"\"\n    pass",
+      "reference_solution": "class TreeNode:\n    def __init__(self, value, left=None, right=None):\n        self.value = value\n        self.left = left\n        self.right = right\n\n\ndef is_search_tree(root, low=None, high=None):\n    \"\"\"Return True when the tree under root is a binary search tree.\"\"\"\n    if root is None:\n        return True\n    if (low is not None and root.value <= low) or (high is not None and root.value >= high):\n        return False\n    return is_search_tree(root.left, low, root.value) and is_search_tree(\n        root.right, root.value, high\n    )",
+      "tests": "from solution import *\n\nT = TreeNode\n\n\ndef _balanced(values):\n    if not values:\n        return None\n    middle = len(values) // 2\n    return T(values[middle], _balanced(values[:middle]), _balanced(values[middle + 1 :]))\n\n\ndef test_example_1():\n    \"\"\"A root with a smaller left and a larger right child.\"\"\"\n    assert is_search_tree(T(2, T(1), T(3))) is True\n\n\ndef test_example_2():\n    \"\"\"A grandchild on the wrong side of the root.\"\"\"\n    assert is_search_tree(T(5, T(1), T(6, T(4), T(7)))) is False\n\n\ndef test_empty_tree():\n    \"\"\"An empty tree is a search tree.\"\"\"\n    assert is_search_tree(None) is True\n\n\ndef test_single_node():\n    \"\"\"One node is a search tree.\"\"\"\n    assert is_search_tree(T(0)) is True\n\n\ndef test_child_on_wrong_side():\n    \"\"\"A left child larger than its parent.\"\"\"\n    assert is_search_tree(T(2, T(3))) is False\n\n\ndef test_deep_violation_on_the_left():\n    \"\"\"A value deep in the left subtree is larger than the root.\"\"\"\n    assert is_search_tree(T(10, T(5, None, T(8, None, T(12))), T(15))) is False\n\n\ndef test_repeated_value():\n    \"\"\"Equal values are not allowed on either side.\"\"\"\n    assert is_search_tree(T(2, T(2))) is False\n    assert is_search_tree(T(2, None, T(2))) is False\n\n\ndef test_large_tree():\n    \"\"\"A balanced tree of 50,000 nodes, valid and then with one value out of place.\"\"\"\n    values = list(range(0, 100000, 2))\n    root = _balanced(values)\n    assert is_search_tree(root) is True\n    node = root\n    while node.right.right is not None:\n        node = node.right\n    node.right.value = values[len(values) // 2] - 1\n    assert is_search_tree(root) is False",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Is it enough to compare every node with its own children? Look at the second example.",
+        "Each node must lie between bounds set by its ancestors: going left sets an upper bound, going right a lower bound.",
+        "Recurse with (node, low, high). The root has no bounds. A node fails if its value is not strictly between low and high; its left child gets (low, value), its right child (value, high)."
+      ],
+      "summary": "Validate a binary search tree by passing value bounds down from the ancestors",
+      "source": "built-in"
+    },
+    {
+      "id": "merge-sorted-lists",
+      "concepts": [
+        "heaps"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Merge sorted lists",
+          "statement": "Write `merge_sorted(lists)`. `lists` holds k lists of integers, each sorted in ascending\norder. Return one ascending list with every value from all of them, repeats included.\n\nWith n values in total, aim for O(n log k) time.",
+          "examples": [
+            {
+              "input": "lists = [[1, 4, 7], [2, 5], [3, 6, 9]]",
+              "output": "[1, 2, 3, 4, 5, 6, 7, 9]"
+            },
+            {
+              "input": "lists = [[], [1]]",
+              "output": "[1]"
+            }
+          ],
+          "constraints": [
+            "0 <= k <= 2,000",
+            "0 <= n <= 200,000",
+            "Any of the lists may be empty"
+          ]
+        }
+      ],
+      "starter_code": "def merge_sorted(lists):\n    \"\"\"Return one ascending list with all values of the ascending lists.\"\"\"\n    pass",
+      "reference_solution": "import heapq\n\n\ndef merge_sorted(lists):\n    \"\"\"Return one ascending list with all values of the ascending lists.\"\"\"\n    heap = [(values[0], i, 0) for i, values in enumerate(lists) if values]\n    heapq.heapify(heap)\n    merged = []\n    while heap:\n        value, i, j = heapq.heappop(heap)\n        merged.append(value)\n        if j + 1 < len(lists[i]):\n            heapq.heappush(heap, (lists[i][j + 1], i, j + 1))\n    return merged",
+      "tests": "import random\n\nfrom solution import *\n\n\ndef test_example_1():\n    \"\"\"Three lists woven together.\"\"\"\n    assert merge_sorted([[1, 4, 7], [2, 5], [3, 6, 9]]) == [1, 2, 3, 4, 5, 6, 7, 9]\n\n\ndef test_example_2():\n    \"\"\"An empty list next to a list of one.\"\"\"\n    assert merge_sorted([[], [1]]) == [1]\n\n\ndef test_no_lists():\n    \"\"\"Nothing to merge.\"\"\"\n    assert merge_sorted([]) == []\n    assert merge_sorted([[], []]) == []\n\n\ndef test_repeats_are_kept():\n    \"\"\"Equal values from different lists all appear.\"\"\"\n    assert merge_sorted([[1, 1, 2], [1, 2]]) == [1, 1, 1, 2, 2]\n\n\ndef test_negative_values():\n    \"\"\"Negative values come first.\"\"\"\n    assert merge_sorted([[-5, 0], [-7, 3]]) == [-7, -5, 0, 3]\n\n\ndef test_inputs_unchanged():\n    \"\"\"The given lists are not changed.\"\"\"\n    lists = [[1, 3], [2]]\n    merge_sorted(lists)\n    assert lists == [[1, 3], [2]]\n\n\ndef test_many_lists():\n    \"\"\"2,000 lists with 200,000 values in total.\"\"\"\n    rng = random.Random(7)\n    lists = [sorted(rng.randrange(-10**6, 10**6) for _ in range(100)) for _ in range(2000)]\n    expected = sorted(value for values in lists for value in values)\n    assert merge_sorted(lists) == expected",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "The next value of the result is the smallest among the first remaining values of the lists. How can you find that quickly when there are many lists?",
+        "Keep one entry per list in a min-heap: its current value and where it came from. The top of the heap is always the next value.",
+        "Pop the smallest entry, append its value, and push the next value of the same list if it has one. Each of the n values is pushed and popped once, at O(log k) each."
+      ],
+      "summary": "Merge k sorted lists with a min-heap holding the front of each list",
+      "source": "built-in"
+    }
+  ],
+  "questions": [
+    {
+      "id": "q-dynamic-array-append",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "arrays"
+      ],
+      "wordings": [
+        {
+          "text": "A dynamic array doubles its capacity whenever it is full, copying its elements into the new space. What is the cost of one append, averaged over many appends?",
+          "options": [
+            "O(1)",
+            "O(log n)",
+            "O(n)",
+            "O(n log n)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A copy of n elements happens only after n appends since the last one, so the copies add\nup to less than 2n over n appends. The average, the amortized cost, is constant; a single\nappend that triggers a copy costs O(n).",
+      "summary": "Amortized cost of appending to a doubling array",
+      "source": "built-in"
+    },
+    {
+      "id": "q-array-insert-front",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "arrays"
+      ],
+      "wordings": [
+        {
+          "text": "An array holds n elements in consecutive memory. What does inserting a new element at index 0 cost?",
+          "options": [
+            "O(1)",
+            "O(log n)",
+            "O(n)",
+            "O(n²)"
+          ]
+        }
+      ],
+      "answers": [
+        2
+      ],
+      "explanation": "Every existing element moves one place to the right to make room, which is n moves.\nInserting at the end needs no moves; a linked list or a deque inserts at the front in\nO(1).",
+      "summary": "Cost of inserting at the front of an array",
+      "source": "built-in"
+    },
+    {
+      "id": "q-string-build-loop",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "strings"
+      ],
+      "wordings": [
+        {
+          "text": "Strings are immutable. A loop builds a string of n characters by doing `s = s + c` once per character. What does the whole loop cost in the worst case?",
+          "options": [
+            "O(n)",
+            "O(n log n)",
+            "O(n²)",
+            "O(2ⁿ)"
+          ]
+        }
+      ],
+      "answers": [
+        2
+      ],
+      "explanation": "Each step can copy the whole string built so far: 1 + 2 + … + n characters, which is\nO(n²). Collecting the pieces in a list, or a string builder, and joining them once is\nO(n). Some runtimes optimise this case, but it is not guaranteed.",
+      "summary": "Cost of building a string by repeated concatenation",
+      "source": "built-in"
+    },
+    {
+      "id": "q-anagram-checks",
+      "type": "multiple",
+      "difficulty": "Easy",
+      "concepts": [
+        "strings",
+        "hash-maps"
+      ],
+      "wordings": [
+        {
+          "text": "Two strings are anagrams when they hold the same characters with the same counts. Which checks tell correctly whether two strings are anagrams?",
+          "options": [
+            "Sort the characters of both and compare the results",
+            "Count the characters of each in a hash map and compare the counts",
+            "Compare the sets of characters of both",
+            "Compare their lengths and their first and last characters"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1
+      ],
+      "explanation": "Sorting gives O(n log n) and counting O(n); both compare every character with its count.\nSets lose the counts: \"aab\" and \"abb\" have the same set. Lengths and ends say nothing\nabout the middle.",
+      "summary": "Correct ways to check that two strings are anagrams",
+      "source": "built-in"
+    },
+    {
+      "id": "q-list-middle",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "linked-lists"
+      ],
+      "wordings": [
+        {
+          "text": "Two pointers start at the head of a singly linked list. One moves one node per step, the other two nodes per step. Where is the slower pointer when the faster one reaches the end?",
+          "options": [
+            "At the head",
+            "In the middle of the list",
+            "One node before the end",
+            "At the end"
+          ]
+        }
+      ],
+      "answers": [
+        1
+      ],
+      "explanation": "The fast pointer covers twice the distance, so when it has walked the whole list the\nslow one has walked half of it. This finds the middle in one pass without knowing the\nlength.",
+      "summary": "Finding the middle of a linked list with a slow and a fast pointer",
+      "source": "built-in"
+    },
+    {
+      "id": "q-list-cycle",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "linked-lists"
+      ],
+      "wordings": [
+        {
+          "text": "How can you tell whether a singly linked list contains a cycle, using O(1) extra memory?",
+          "options": [
+            "Move a slow and a fast pointer; they meet only if there is a cycle",
+            "Walk until a node's next is null and count the steps",
+            "Store every visited node in a hash set",
+            "Compare every node's value with the value of the head"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "In a cycle the fast pointer gains one node per step on the slow one and must meet it;\nwithout a cycle it reaches null. Walking to null never ends when there is a cycle. A hash\nset works but uses O(n) memory, and values can repeat without a cycle.",
+      "summary": "Detecting a cycle in a linked list in constant memory",
+      "source": "built-in"
+    },
+    {
+      "id": "q-hash-key-rules",
+      "type": "multiple",
+      "difficulty": "Medium",
+      "concepts": [
+        "hash-maps"
+      ],
+      "wordings": [
+        {
+          "text": "What must be true of keys for a hash map to find them reliably?",
+          "options": [
+            "Equal keys have equal hashes",
+            "A key's hash does not change while the key is in the map",
+            "Different keys have different hashes",
+            "Keys are integers"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1
+      ],
+      "explanation": "The map looks in the slot given by the hash, so equal keys must land in the same slot,\nand a key whose hash changes is looked for in the wrong slot. Different keys may share a\nhash: that is a collision, which the map handles. Any type with a hash and equality can\nbe a key.",
+      "summary": "Rules a hash map key must follow",
+      "source": "built-in"
+    },
+    {
+      "id": "q-hash-collisions",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "hash-maps"
+      ],
+      "wordings": [
+        {
+          "text": "A hash map with n keys is unlucky: every key has the same hash. What does a lookup cost in a map that chains colliding keys in a list?",
+          "options": [
+            "O(1)",
+            "O(log n)",
+            "O(n)",
+            "O(n²)"
+          ]
+        }
+      ],
+      "answers": [
+        2
+      ],
+      "explanation": "All keys sit in one chain, which is searched element by element. The O(1) of a hash map\nis the expected cost with a hash function that spreads keys evenly.",
+      "summary": "Lookup cost when every key collides",
+      "source": "built-in"
+    },
+    {
+      "id": "q-stack-order",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "stacks"
+      ],
+      "wordings": [
+        {
+          "text": "You push 1, 2 and 3 onto an empty stack, then pop twice. Which values come out, in order?",
+          "options": [
+            "1, 2",
+            "3, 2",
+            "2, 3",
+            "1, 3"
+          ]
+        }
+      ],
+      "answers": [
+        1
+      ],
+      "explanation": "A stack is last in, first out: 3 was pushed last and comes out first, then 2. A queue\nwould give 1, 2.",
+      "summary": "Order in which a stack returns its values",
+      "source": "built-in"
+    },
+    {
+      "id": "q-stack-uses",
+      "type": "multiple",
+      "difficulty": "Easy",
+      "concepts": [
+        "stacks"
+      ],
+      "wordings": [
+        {
+          "text": "Which tasks does a stack fit naturally?",
+          "options": [
+            "Checking that brackets in a text are correctly nested",
+            "Undoing the most recent edits first",
+            "Serving customers in the order they arrived",
+            "Evaluating an expression in postfix notation, such as 3 4 + 2 ×"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1,
+        3
+      ],
+      "explanation": "Brackets, undo and postfix evaluation all deal first with the most recent item that is\nstill open. Serving in arrival order is first in, first out: a queue.",
+      "summary": "Tasks that suit a stack",
+      "source": "built-in"
+    },
+    {
+      "id": "q-queue-for-bfs",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "queues"
+      ],
+      "wordings": [
+        {
+          "text": "Breadth-first search visits nodes level by level from the start. Which structure holds the nodes waiting to be visited?",
+          "options": [
+            "A stack",
+            "A queue",
+            "A min-heap",
+            "A sorted array"
+          ]
+        }
+      ],
+      "answers": [
+        1
+      ],
+      "explanation": "A queue hands out nodes in the order they were found, so all nodes one step away come\nbefore those two steps away. A stack instead gives depth-first order.",
+      "summary": "Structure that drives breadth-first search",
+      "source": "built-in"
+    },
+    {
+      "id": "q-deque-operations",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "queues"
+      ],
+      "wordings": [
+        {
+          "text": "The maximum of every window of k consecutive values can be found in O(n) by keeping candidate indices in a deque. Which operations must the deque do in O(1)?",
+          "options": [
+            "Add and remove at both ends",
+            "Read any element by index",
+            "Insert a value in sorted position",
+            "Remove an element from the middle"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "New indices join at the back after smaller values are dropped from the back, and indices\nthat leave the window are dropped from the front. A deque does both ends in O(1); the\nother operations are not needed.",
+      "summary": "Operations a deque provides in constant time",
+      "source": "built-in"
+    },
+    {
+      "id": "q-inorder-sorted",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "binary-trees",
+        "binary-search-trees"
+      ],
+      "wordings": [
+        {
+          "text": "Which traversal of a binary search tree visits its values in ascending order?",
+          "options": [
+            "Pre-order",
+            "In-order",
+            "Post-order",
+            "Level order"
+          ]
+        }
+      ],
+      "answers": [
+        1
+      ],
+      "explanation": "In-order visits the left subtree, then the node, then the right subtree. In a search tree\neverything on the left is smaller and everything on the right is larger, so the values\ncome out sorted.",
+      "summary": "Traversal that lists a search tree in order",
+      "source": "built-in"
+    },
+    {
+      "id": "q-tree-height-range",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "binary-trees"
+      ],
+      "wordings": [
+        {
+          "text": "A binary tree has n nodes. Which describes its height, the number of levels?",
+          "options": [
+            "At least about log₂ n and at most n",
+            "Always about log₂ n",
+            "Always n",
+            "At most about √n"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A complete tree packs 2ᵏ nodes into level k, so it needs only about log₂ n levels. A tree\nwhere every node has one child is a chain of n levels. Search and insert cost depends on\nthe height, which is why balanced trees matter.",
+      "summary": "Smallest and largest height of a binary tree",
+      "source": "built-in"
+    },
+    {
+      "id": "q-search-tree-sorted-input",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "binary-search-trees"
+      ],
+      "wordings": [
+        {
+          "text": "Values are inserted one by one into a binary search tree that does not rebalance. Which insertion order makes a search cost O(n)?",
+          "options": [
+            "Ascending order",
+            "Random order",
+            "Middle value first, then the middles of each half",
+            "Any order: search always costs O(log n)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Each new value is larger than all before it and goes to the right of the last one: the\ntree is a chain. Random order gives a height of O(log n) on average, and middle-first\norder gives a balanced tree.",
+      "summary": "Insertion order that degrades a search tree to a list",
+      "source": "built-in"
+    },
+    {
+      "id": "q-search-tree-check-children",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "binary-search-trees"
+      ],
+      "wordings": [
+        {
+          "text": "To check that a binary tree is a search tree, you check that each node's left child is smaller than it and its right child larger. Why is that not enough?",
+          "options": [
+            "A node deeper down can be on the wrong side of an ancestor",
+            "It misses nodes with only one child",
+            "It takes O(n²) time",
+            "It is enough"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "In 5 → right 6 → left 4, each child is on the right side of its parent, yet 4 is in the\nright subtree of 5. Each node must lie between bounds set by all its ancestors.",
+      "summary": "Why comparing with children does not validate a search tree",
+      "source": "built-in"
+    },
+    {
+      "id": "q-heap-costs",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "heaps"
+      ],
+      "wordings": [
+        {
+          "text": "A binary min-heap holds n values. What do reading the minimum and removing the minimum cost?",
+          "options": [
+            "O(1) to read, O(log n) to remove",
+            "O(log n) to read, O(log n) to remove",
+            "O(1) to read, O(1) to remove",
+            "O(1) to read, O(n) to remove"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The minimum is always at the root. Removing it moves the last value to the root and sifts\nit down one level at a time, and the heap has O(log n) levels.",
+      "summary": "Costs of reading and removing the top of a heap",
+      "source": "built-in"
+    },
+    {
+      "id": "q-heap-k-largest",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "heaps"
+      ],
+      "wordings": [
+        {
+          "text": "You need the k largest of n values that arrive one at a time, using O(k) memory. What do you keep?",
+          "options": [
+            "A min-heap of the k largest so far, replacing its top when a larger value arrives",
+            "A max-heap of all values seen",
+            "A sorted array of all values seen",
+            "A queue of the last k values"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The top of the min-heap is the smallest of the current k largest: a new value either\nbeats it and replaces it, in O(log k), or is ignored. Keeping all values needs O(n)\nmemory, and the last k values are not the largest.",
+      "summary": "Keeping the k largest values of a stream",
+      "source": "built-in"
+    },
+    {
+      "id": "q-graph-sparse-memory",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "graph-representations"
+      ],
+      "wordings": [
+        {
+          "text": "A graph has V vertices and E edges, with E much smaller than V². Which representation needs O(V + E) memory?",
+          "options": [
+            "An adjacency list",
+            "An adjacency matrix",
+            "A V × V table of distances",
+            "An incidence matrix of V rows and E columns"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "An adjacency list stores each vertex once and each edge in the lists of its ends. The\nmatrix and the distance table use V² cells whatever the number of edges, and the incidence\nmatrix V × E.",
+      "summary": "Representation that suits a sparse graph",
+      "source": "built-in"
+    },
+    {
+      "id": "q-graph-edge-check",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "graph-representations"
+      ],
+      "wordings": [
+        {
+          "text": "Which representation answers \"is there an edge from u to v?\" in O(1) time?",
+          "options": [
+            "An adjacency matrix",
+            "An adjacency list that keeps each vertex's neighbours in an array",
+            "A single list of all edges",
+            "A list of the vertices in breadth-first order"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The matrix cell at row u, column v holds the answer. An adjacency list scans u's\nneighbours, O(degree of u), and an edge list scans all E edges. Keeping neighbours in a\nhash set instead also answers in O(1) on average.",
+      "summary": "Representation with a constant-time edge check",
+      "source": "built-in"
+    }
+  ]
+}

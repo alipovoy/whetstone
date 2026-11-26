@@ -1,19 +1,31 @@
 import { describe, expect, it } from 'vitest'
 import algorithms from './algorithms.json'
+import { builtInTopics } from '.'
 import { answerErrors, testNames, validateTopicFile, type Question } from './schema'
 
 const clone = () => structuredClone(algorithms) as typeof algorithms
 
-describe('built-in topic', () => {
+const files = Object.entries(
+  import.meta.glob<unknown>('./*.json', { eager: true, import: 'default' }),
+)
+
+describe.each(files)('built-in topic %s', (_, file) => {
   it('is valid', () => {
-    const result = validateTopicFile(algorithms)
+    const result = validateTopicFile(file)
     expect(result.ok ? [] : result.errors).toEqual([])
   })
 
   it('marks every item built-in', () => {
-    const sources = [...algorithms.problems, ...algorithms.questions].map((i) => i.source)
+    const { problems, questions } = file as typeof algorithms
+    const sources = [...problems, ...questions].map((i) => i.source)
     expect(new Set(sources)).toEqual(new Set(['built-in']))
   })
+})
+
+it('gives every built-in topic its own id', () => {
+  const ids = builtInTopics.map((file) => file.topic.id)
+  expect(new Set(ids).size).toBe(ids.length)
+  expect(ids).toHaveLength(files.length)
 })
 
 describe('answerErrors', () => {

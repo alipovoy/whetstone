@@ -1,38 +1,8 @@
 {
   "topic": {
     "id": "algorithms",
-    "name": "Algorithms & data structures",
+    "name": "Algorithms",
     "concepts": [
-      {
-        "id": "two-pointers",
-        "name": "Two pointers",
-        "group": "Arrays and strings"
-      },
-      {
-        "id": "sliding-window",
-        "name": "Sliding window",
-        "group": "Arrays and strings"
-      },
-      {
-        "id": "prefix-sums",
-        "name": "Prefix sums",
-        "group": "Arrays and strings"
-      },
-      {
-        "id": "hash-maps",
-        "name": "Hash maps and sets",
-        "group": "Hashing"
-      },
-      {
-        "id": "stacks",
-        "name": "Stacks",
-        "group": "Stacks and queues"
-      },
-      {
-        "id": "queues",
-        "name": "Queues and deques",
-        "group": "Stacks and queues"
-      },
       {
         "id": "binary-search",
         "name": "Binary search",
@@ -40,1427 +10,902 @@
       },
       {
         "id": "sorting",
-        "name": "Sorting",
+        "name": "Sorting algorithms",
         "group": "Searching and sorting"
       },
       {
-        "id": "linked-lists",
-        "name": "Linked lists",
-        "group": "Linked structures"
+        "id": "two-pointers",
+        "name": "Two pointers",
+        "group": "Array techniques"
       },
       {
-        "id": "trees",
-        "name": "Binary trees",
-        "group": "Trees and graphs"
+        "id": "sliding-window",
+        "name": "Sliding window",
+        "group": "Array techniques"
       },
       {
-        "id": "graphs",
-        "name": "Graph traversal",
-        "group": "Trees and graphs"
+        "id": "prefix-sums",
+        "name": "Prefix sums",
+        "group": "Array techniques"
       },
       {
-        "id": "heaps",
-        "name": "Heaps and priority queues",
-        "group": "Trees and graphs"
+        "id": "recursion",
+        "name": "Recursion and memoization",
+        "group": "Recursion"
+      },
+      {
+        "id": "breadth-first-search",
+        "name": "Breadth-first search",
+        "group": "Graph traversal"
+      },
+      {
+        "id": "depth-first-search",
+        "name": "Depth-first search",
+        "group": "Graph traversal"
       },
       {
         "id": "dynamic-programming",
-        "name": "Dynamic programming",
-        "group": "Techniques"
+        "name": "1-D dynamic programming",
+        "group": "Optimisation"
       },
       {
-        "id": "complexity",
-        "name": "Time and space complexity",
-        "group": "Analysis"
+        "id": "greedy",
+        "name": "Greedy choice",
+        "group": "Optimisation"
       }
     ]
   },
   "problems": [
     {
-      "id": "pair-with-sum",
-      "concepts": ["two-pointers"],
+      "id": "first-position",
+      "concepts": [
+        "binary-search"
+      ],
       "difficulty": "Easy",
       "language": "python",
       "wordings": [
         {
-          "title": "Pair with a given sum",
-          "statement": "Write `pair_with_sum(nums, target)`.\n\n`nums` is a list of integers sorted in ascending order. Return a tuple `(i, j)` with\n`i < j` such that `nums[i] + nums[j] == target`. If several pairs qualify, return any\none of them. If there is none, return `None`.\n\nAim for linear time and constant extra space.",
+          "title": "First position of a value",
+          "statement": "Write `first_index(nums, target)`. `nums` is sorted in ascending order and may repeat\nvalues. Return the smallest index `i` with `nums[i] == target`, or `-1` when `target` is\nnot in `nums`.\n\nUse O(log n) time: read single elements by index, never scan the list.",
           "examples": [
             {
-              "input": "nums = [1, 3, 4, 6, 9], target = 10",
-              "output": "(0, 4)",
-              "explanation": "1 + 9 = 10. (2, 3) is accepted as well, because 4 + 6 = 10."
-            },
-            {
-              "input": "nums = [2, 5, 8], target = 20",
-              "output": "None"
-            }
-          ],
-          "constraints": [
-            "0 <= len(nums) <= 200,000",
-            "nums is sorted in ascending order and may contain repeated values",
-            "An element cannot be paired with itself"
-          ]
-        },
-        {
-          "title": "Two prices for one budget",
-          "statement": "A shop lists its prices in ascending order in `nums`. You want to buy exactly two\ndifferent items and spend exactly `target`.\n\nWrite `pair_with_sum(nums, target)` that returns the positions `(i, j)`, `i < j`, of\ntwo such items, or `None` when no two items cost exactly `target` together. Any valid\npair is accepted.\n\nThe list is already sorted: use that to stay within linear time and constant extra\nspace.",
-          "examples": [
-            {
-              "input": "nums = [1, 3, 4, 6, 9], target = 10",
-              "output": "(0, 4)",
-              "explanation": "1 + 9 = 10. (2, 3) is accepted as well."
-            },
-            {
-              "input": "nums = [2, 5, 8], target = 20",
-              "output": "None"
-            }
-          ],
-          "constraints": [
-            "0 <= len(nums) <= 200,000",
-            "nums is sorted in ascending order and may contain repeated values",
-            "The two items must be at different positions"
-          ]
-        }
-      ],
-      "starter_code": "def pair_with_sum(nums, target):\n    \"\"\"Return (i, j), i < j, with nums[i] + nums[j] == target, or None.\"\"\"\n    pass",
-      "reference_solution": "def pair_with_sum(nums, target):\n    \"\"\"Return (i, j), i < j, with nums[i] + nums[j] == target, or None.\"\"\"\n    left, right = 0, len(nums) - 1\n    while left < right:\n        total = nums[left] + nums[right]\n        if total == target:\n            return (left, right)\n        if total < target:\n            left += 1\n        else:\n            right -= 1\n    return None",
-      "tests": "from solution import *\n\n\ndef _check_pair(nums, target):\n    result = pair_with_sum(list(nums), target)\n    assert result is not None, 'a pair exists but None was returned'\n    i, j = result\n    assert 0 <= i < j < len(nums), f'({i}, {j}) is not a pair of positions with i < j'\n    assert nums[i] + nums[j] == target, f'nums[{i}] + nums[{j}] is not {target}'\n\n\ndef test_example_1():\n    \"\"\"A pair exists: [1, 3, 4, 6, 9], target 10.\"\"\"\n    _check_pair([1, 3, 4, 6, 9], 10)\n\n\ndef test_example_2():\n    \"\"\"No pair: [2, 5, 8], target 20.\"\"\"\n    assert pair_with_sum([2, 5, 8], 20) is None\n\n\ndef test_empty_list():\n    \"\"\"An empty list has no pair.\"\"\"\n    assert pair_with_sum([], 5) is None\n\n\ndef test_single_element():\n    \"\"\"One element cannot form a pair.\"\"\"\n    assert pair_with_sum([5], 5) is None\n\n\ndef test_element_not_paired_with_itself():\n    \"\"\"4 + 4 = 8, but there is only one 4.\"\"\"\n    assert pair_with_sum([4, 5], 8) is None\n\n\ndef test_repeated_values():\n    \"\"\"Two equal values at different positions form a pair.\"\"\"\n    _check_pair([3, 3], 6)\n\n\ndef test_negative_numbers():\n    \"\"\"Negative values and a negative target.\"\"\"\n    _check_pair([-8, -3, 0, 2, 5], -6)\n    assert pair_with_sum([-8, -3, 0, 2, 5], 100) is None\n\n\ndef test_pair_in_the_middle():\n    \"\"\"The pair is far from both ends.\"\"\"\n    _check_pair([1, 2, 10, 11, 30, 40], 21)\n\n\ndef test_large_input_without_pair():\n    \"\"\"200,000 even numbers and an odd target: must finish quickly.\"\"\"\n    assert pair_with_sum(list(range(0, 400000, 2)), 399999) is None",
-      "visible_tests": [
-        "test_example_1",
-        "test_example_2"
-      ],
-      "hints": [
-        "The list is sorted. What do you learn about the smallest and largest remaining values when their sum is too small or too large?",
-        "Keep one index at the start and one at the end. If the sum is too small, the smallest value cannot be part of any pair; if it is too large, the largest cannot.",
-        "Loop while left < right: compute nums[left] + nums[right]; return (left, right) on a match; move left up when the sum is below the target, otherwise move right down. Return None after the loop."
-      ],
-      "summary": "Find two entries of a sorted list adding up to a target with inward-moving indexes",
-      "source": "built-in"
-    },
-    {
-      "id": "longest-unique-substring",
-      "concepts": ["sliding-window", "hash-maps"],
-      "difficulty": "Medium",
-      "language": "python",
-      "wordings": [
-        {
-          "title": "Longest substring without repeats",
-          "statement": "Write `longest_unique(s)` that returns the length of the longest substring of `s` in\nwhich no character occurs twice.\n\nA substring is a contiguous part of the string.",
-          "examples": [
-            {
-              "input": "s = \"abcabcbb\"",
-              "output": "3",
-              "explanation": "\"abc\" is the longest."
-            },
-            {
-              "input": "s = \"bbbbb\"",
+              "input": "nums = [1, 2, 2, 2, 5], target = 2",
               "output": "1"
             },
             {
-              "input": "s = \"pwwkew\"",
-              "output": "3",
-              "explanation": "\"wke\". \"pwke\" does not count: it is not contiguous."
-            }
-          ],
-          "constraints": [
-            "0 <= len(s) <= 200,000",
-            "s may contain any characters, including spaces"
-          ]
-        },
-        {
-          "title": "Longest run of distinct keys",
-          "statement": "A keyboard logger stores the keys pressed as one string `s`. Find the longest\nstretch of consecutive key presses in which every key is different.\n\nWrite `longest_unique(s)` that returns the length of that stretch.",
-          "examples": [
-            {
-              "input": "s = \"abcabcbb\"",
-              "output": "3",
-              "explanation": "\"abc\"."
-            },
-            {
-              "input": "s = \"bbbbb\"",
-              "output": "1"
-            },
-            {
-              "input": "s = \"pwwkew\"",
-              "output": "3",
-              "explanation": "\"wke\"."
-            }
-          ],
-          "constraints": [
-            "0 <= len(s) <= 200,000",
-            "s may contain any characters, including spaces"
-          ]
-        }
-      ],
-      "starter_code": "def longest_unique(s):\n    \"\"\"Return the length of the longest substring of s without a repeated character.\"\"\"\n    pass",
-      "reference_solution": "def longest_unique(s):\n    \"\"\"Return the length of the longest substring of s without a repeated character.\"\"\"\n    last_seen = {}\n    start = 0\n    best = 0\n    for i, ch in enumerate(s):\n        if ch in last_seen and last_seen[ch] >= start:\n            start = last_seen[ch] + 1\n        last_seen[ch] = i\n        best = max(best, i - start + 1)\n    return best",
-      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"\"abcabcbb\" gives 3.\"\"\"\n    assert longest_unique('abcabcbb') == 3\n\n\ndef test_example_2():\n    \"\"\"\"bbbbb\" gives 1.\"\"\"\n    assert longest_unique('bbbbb') == 1\n\n\ndef test_example_3():\n    \"\"\"\"pwwkew\" gives 3.\"\"\"\n    assert longest_unique('pwwkew') == 3\n\n\ndef test_empty_string():\n    \"\"\"An empty string gives 0.\"\"\"\n    assert longest_unique('') == 0\n\n\ndef test_single_character():\n    \"\"\"A single space is a substring of length 1.\"\"\"\n    assert longest_unique(' ') == 1\n\n\ndef test_all_distinct():\n    \"\"\"The whole string qualifies.\"\"\"\n    assert longest_unique('abcdefg') == 7\n\n\ndef test_window_start_never_moves_back():\n    \"\"\"\"abba\": after the second b, the earlier a must not pull the window back.\"\"\"\n    assert longest_unique('abba') == 2\n\n\ndef test_repeat_inside_the_window():\n    \"\"\"\"dvdf\" gives 3 (\"vdf\").\"\"\"\n    assert longest_unique('dvdf') == 3\n\n\ndef test_long_input():\n    \"\"\"200,000 characters: must finish quickly.\"\"\"\n    assert longest_unique('abcdefghij' * 20000) == 10",
-      "visible_tests": [
-        "test_example_1",
-        "test_example_2",
-        "test_example_3"
-      ],
-      "hints": [
-        "Checking every substring is too slow. Can you extend one candidate substring step by step and repair it when a repeat appears?",
-        "Keep a window [start, i] that never contains a repeat. Remember the last position of each character; when the new character was last seen inside the window, move start just past that position.",
-        "Use a dict last_seen. For each index i and character ch: if ch is in last_seen and last_seen[ch] >= start, set start = last_seen[ch] + 1. Then store last_seen[ch] = i and update best with i - start + 1."
-      ],
-      "summary": "Length of the longest substring without a repeated character using a moving window",
-      "source": "built-in"
-    },
-    {
-      "id": "group-anagrams",
-      "concepts": ["hash-maps", "sorting"],
-      "difficulty": "Medium",
-      "language": "python",
-      "wordings": [
-        {
-          "title": "Group anagrams",
-          "statement": "Two words are anagrams when one can be formed by rearranging the letters of the\nother, using every letter exactly once.\n\nWrite `group_anagrams(words)` that returns a list of groups, each group being a list\nof words that are anagrams of each other.\n\n- Groups appear in the order in which their first word appears in `words`.\n- Inside a group, words keep their order from `words`.",
-          "examples": [
-            {
-              "input": "words = [\"eat\", \"tea\", \"tan\", \"ate\", \"nat\", \"bat\"]",
-              "output": "[[\"eat\", \"tea\", \"ate\"], [\"tan\", \"nat\"], [\"bat\"]]"
-            },
-            {
-              "input": "words = []",
-              "output": "[]"
-            }
-          ],
-          "constraints": [
-            "0 <= len(words) <= 50,000",
-            "Words consist of lowercase letters and may be empty or repeated"
-          ]
-        }
-      ],
-      "starter_code": "def group_anagrams(words):\n    \"\"\"Return the words grouped into lists of anagrams, in order of first appearance.\"\"\"\n    pass",
-      "reference_solution": "def group_anagrams(words):\n    \"\"\"Return the words grouped into lists of anagrams, in order of first appearance.\"\"\"\n    groups = {}\n    for word in words:\n        groups.setdefault(''.join(sorted(word)), []).append(word)\n    return list(groups.values())",
-      "tests": "from solution import *\n\n\ndef _groups(words):\n    return [list(group) for group in group_anagrams(list(words))]\n\n\ndef test_example_1():\n    \"\"\"Six words in three groups.\"\"\"\n    assert _groups(['eat', 'tea', 'tan', 'ate', 'nat', 'bat']) == [\n        ['eat', 'tea', 'ate'], ['tan', 'nat'], ['bat']]\n\n\ndef test_example_2():\n    \"\"\"No words, no groups.\"\"\"\n    assert _groups([]) == []\n\n\ndef test_empty_word():\n    \"\"\"The empty word forms a group of its own.\"\"\"\n    assert _groups(['']) == [['']]\n    assert _groups(['', 'a', '']) == [['', ''], ['a']]\n\n\ndef test_repeated_word():\n    \"\"\"A word that occurs twice is listed twice.\"\"\"\n    assert _groups(['ab', 'ba', 'ab']) == [['ab', 'ba', 'ab']]\n\n\ndef test_same_letters_different_counts():\n    \"\"\"\"aab\" and \"abb\" use the same letters but are not anagrams.\"\"\"\n    assert _groups(['aab', 'abb', 'baa']) == [['aab', 'baa'], ['abb']]\n\n\ndef test_no_anagrams():\n    \"\"\"Every word is its own group, in input order.\"\"\"\n    assert _groups(['one', 'two', 'six']) == [['one'], ['two'], ['six']]\n\n\ndef test_many_words():\n    \"\"\"50,000 words: must finish quickly.\"\"\"\n    words = ['abcde', 'edcba', 'xyz', 'zyx', 'q'] * 10000\n    result = _groups(words)\n    assert [len(group) for group in result] == [20000, 20000, 10000]\n    assert result[2][0] == 'q'",
-      "visible_tests": [
-        "test_example_1",
-        "test_example_2"
-      ],
-      "hints": [
-        "What do all anagrams of a word have in common that you could compute from any one of them?",
-        "Turn each word into a canonical form, such as its letters in sorted order, and use it as a dictionary key. Words with the same key belong to the same group.",
-        "Create an empty dict. For each word, compute key = \"\".join(sorted(word)) and append the word to the list stored under that key. A dict keeps insertion order, so list(groups.values()) is already in order of first appearance."
-      ],
-      "summary": "Group words that are anagrams of each other with a dictionary keyed by a canonical form",
-      "source": "built-in"
-    },
-    {
-      "id": "balanced-brackets",
-      "concepts": ["stacks"],
-      "difficulty": "Easy",
-      "language": "python",
-      "wordings": [
-        {
-          "title": "Balanced brackets",
-          "statement": "Write `is_balanced(text)` that returns `True` when the brackets in `text` are\nbalanced, and `False` otherwise.\n\nThe brackets are `()`, `[]` and `{}`. They are balanced when every opening bracket is\nclosed by a bracket of the same kind, and brackets are closed in the reverse of the\norder in which they were opened. All other characters are ignored.",
-          "examples": [
-            {
-              "input": "text = \"([]{})\"",
-              "output": "True"
-            },
-            {
-              "input": "text = \"(]\"",
-              "output": "False"
-            },
-            {
-              "input": "text = \"([)]\"",
-              "output": "False",
-              "explanation": "The square bracket is closed after the round one that surrounds it."
-            }
-          ],
-          "constraints": [
-            "0 <= len(text) <= 100,000",
-            "Brackets may be nested tens of thousands deep: a recursive solution can exceed Python's recursion limit"
-          ]
-        },
-        {
-          "title": "Check the brackets of an expression",
-          "statement": "A code editor wants to warn about broken bracket structure. Write\n`is_balanced(text)` that returns `True` when every `(`, `[` and `{` in `text` has a\nmatching closing bracket of the same kind in the right place, and `False` otherwise.\n\nCharacters that are not brackets do not matter.",
-          "examples": [
-            {
-              "input": "text = \"([]{})\"",
-              "output": "True"
-            },
-            {
-              "input": "text = \"(]\"",
-              "output": "False"
-            },
-            {
-              "input": "text = \"([)]\"",
-              "output": "False"
-            }
-          ],
-          "constraints": [
-            "0 <= len(text) <= 100,000",
-            "Brackets may be nested tens of thousands deep: a recursive solution can exceed Python's recursion limit"
-          ]
-        }
-      ],
-      "starter_code": "def is_balanced(text):\n    \"\"\"Return True when the brackets ()[]{} in text are balanced.\"\"\"\n    pass",
-      "reference_solution": "def is_balanced(text):\n    \"\"\"Return True when the brackets ()[]{} in text are balanced.\"\"\"\n    closing = {')': '(', ']': '[', '}': '{'}\n    stack = []\n    for ch in text:\n        if ch in '([{':\n            stack.append(ch)\n        elif ch in closing:\n            if not stack or stack.pop() != closing[ch]:\n                return False\n    return not stack",
-      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"\"([]{})\" is balanced.\"\"\"\n    assert is_balanced('([]{})') is True\n\n\ndef test_example_2():\n    \"\"\"\"(]\" closes with the wrong kind.\"\"\"\n    assert is_balanced('(]') is False\n\n\ndef test_example_3():\n    \"\"\"\"([)]\" closes in the wrong order.\"\"\"\n    assert is_balanced('([)]') is False\n\n\ndef test_empty_text():\n    \"\"\"No brackets at all is balanced.\"\"\"\n    assert is_balanced('') is True\n\n\ndef test_unclosed_bracket():\n    \"\"\"An opening bracket is left open.\"\"\"\n    assert is_balanced('((') is False\n    assert is_balanced('{[]') is False\n\n\ndef test_closing_without_opening():\n    \"\"\"A closing bracket with nothing open.\"\"\"\n    assert is_balanced(')') is False\n    assert is_balanced('())') is False\n\n\ndef test_other_characters_are_ignored():\n    \"\"\"Letters, digits and spaces do not matter.\"\"\"\n    assert is_balanced('f(a[0], {\"k\": (1, 2)})') is True\n    assert is_balanced('no brackets here') is True\n    assert is_balanced('f(a[0)]') is False\n\n\ndef test_deep_nesting():\n    \"\"\"50,000 levels of nesting.\"\"\"\n    assert is_balanced('(' * 50000 + ')' * 50000) is True\n    assert is_balanced('(' * 50000 + ')' * 49999) is False",
-      "visible_tests": [
-        "test_example_1",
-        "test_example_2",
-        "test_example_3"
-      ],
-      "hints": [
-        "When you meet a closing bracket, which opening bracket must it match: the first one opened or the most recent one still open?",
-        "Keep the brackets that are still open on a stack. A closing bracket must match the top of the stack; anything else means the text is not balanced.",
-        "Push every opening bracket. For a closing bracket: if the stack is empty or the popped bracket is not its partner, return False. At the end return True only when the stack is empty."
-      ],
-      "summary": "Check that round, square and curly brackets in a text are correctly nested with a stack",
-      "source": "built-in"
-    },
-    {
-      "id": "search-rotated",
-      "concepts": ["binary-search"],
-      "difficulty": "Medium",
-      "language": "python",
-      "wordings": [
-        {
-          "title": "Search in a rotated sorted list",
-          "statement": "A list of distinct integers was sorted in ascending order and then rotated: some\nnumber of elements were moved from the front to the back. For example\n`[0, 1, 2, 4, 5, 6, 7]` may have become `[4, 5, 6, 7, 0, 1, 2]`. The list may also\nnot be rotated at all.\n\nWrite `search_rotated(nums, target)` that returns the index of `target` in `nums`,\nor `-1` when it is not there.\n\nThe function must run in `O(log n)` time: read elements only by index, a few at a\ntime. Scanning the list, slicing it, or using `in`, `index` or a loop over all\nelements is not accepted.",
-          "examples": [
-            {
-              "input": "nums = [4, 5, 6, 7, 0, 1, 2], target = 0",
-              "output": "4"
-            },
-            {
-              "input": "nums = [4, 5, 6, 7, 0, 1, 2], target = 3",
+              "input": "nums = [1, 3, 5], target = 4",
               "output": "-1"
+            }
+          ],
+          "constraints": [
+            "0 <= length of nums <= 1,000,000",
+            "nums is sorted in ascending order"
+          ]
+        }
+      ],
+      "starter_code": "def first_index(nums, target):\n    \"\"\"Return the first index of target in the ascending list nums, or -1.\"\"\"\n    pass",
+      "reference_solution": "def first_index(nums, target):\n    \"\"\"Return the first index of target in the ascending list nums, or -1.\"\"\"\n    low, high = 0, len(nums)\n    # The answer, if any, stays in [low, high): everything before low is smaller.\n    while low < high:\n        middle = (low + high) // 2\n        if nums[middle] < target:\n            low = middle + 1\n        else:\n            high = middle\n    return low if low < len(nums) and nums[low] == target else -1",
+      "tests": "from solution import *\n\n\nclass _Watched(list):\n    \"\"\"A list that counts element reads and refuses to be scanned.\"\"\"\n\n    def __init__(self, values):\n        super().__init__(values)\n        self.reads = 0\n\n    def __getitem__(self, key):\n        if isinstance(key, slice):\n            raise AssertionError('slicing copies part of the list: read single elements')\n        self.reads += 1\n        return super().__getitem__(key)\n\n    def _refuse(self, *args, **kwargs):\n        raise AssertionError('scanning the list is linear: read single elements by index')\n\n    __iter__ = __contains__ = __reversed__ = index = count = copy = _refuse\n\n\ndef test_example_1():\n    \"\"\"The first of three equal values.\"\"\"\n    assert first_index([1, 2, 2, 2, 5], 2) == 1\n\n\ndef test_example_2():\n    \"\"\"The target falls between two values.\"\"\"\n    assert first_index([1, 3, 5], 4) == -1\n\n\ndef test_empty_list():\n    \"\"\"Nothing can be found in an empty list.\"\"\"\n    assert first_index([], 3) == -1\n\n\ndef test_outside_the_range():\n    \"\"\"Targets below the first and above the last value.\"\"\"\n    assert first_index([2, 4, 6], 1) == -1\n    assert first_index([2, 4, 6], 7) == -1\n\n\ndef test_ends():\n    \"\"\"The first and the last position.\"\"\"\n    assert first_index([2, 4, 6], 2) == 0\n    assert first_index([2, 4, 6], 6) == 2\n\n\ndef test_all_equal():\n    \"\"\"Every value is the target.\"\"\"\n    assert first_index([7] * 1000, 7) == 0\n\n\ndef test_logarithmic_reads():\n    \"\"\"A million values, searched with a few dozen reads.\"\"\"\n    nums = _Watched(value // 3 for value in range(1000000))\n    assert first_index(nums, 200000) == 600000\n    assert first_index(nums, -1) == -1\n    assert nums.reads <= 100",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Finding some index of the target is ordinary binary search. What do you do when the middle element equals the target, to find the first one?",
+        "Do not stop at a match: keep searching to the left of it. Equivalently, find the first index whose value is not smaller than the target.",
+        "Keep the range [low, high) with low = 0, high = n. If nums[middle] < target, set low = middle + 1, else high = middle. At the end, check that low is inside the list and holds the target."
+      ],
+      "summary": "Find the leftmost occurrence of a value in a sorted list with binary search",
+      "source": "built-in"
+    },
+    {
+      "id": "sorted-squares",
+      "concepts": [
+        "two-pointers"
+      ],
+      "difficulty": "Easy",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Squares of a sorted list",
+          "statement": "Write `sorted_squares(nums)`. `nums` is sorted in ascending order and may hold negative\nvalues. Return the squares of its values in ascending order.\n\nAim for linear time, without sorting.",
+          "examples": [
+            {
+              "input": "nums = [-4, -1, 0, 3, 10]",
+              "output": "[0, 1, 9, 16, 100]"
             },
             {
-              "input": "nums = [1], target = 1",
+              "input": "nums = [-3, -2]",
+              "output": "[4, 9]"
+            }
+          ],
+          "constraints": [
+            "0 <= length of nums <= 200,000",
+            "nums is sorted in ascending order"
+          ]
+        }
+      ],
+      "starter_code": "def sorted_squares(nums):\n    \"\"\"Return the squares of the ascending list nums in ascending order.\"\"\"\n    pass",
+      "reference_solution": "def sorted_squares(nums):\n    \"\"\"Return the squares of the ascending list nums in ascending order.\"\"\"\n    result = [0] * len(nums)\n    left, right = 0, len(nums) - 1\n    for place in range(len(nums) - 1, -1, -1):\n        if abs(nums[left]) > abs(nums[right]):\n            result[place] = nums[left] * nums[left]\n            left += 1\n        else:\n            result[place] = nums[right] * nums[right]\n            right -= 1\n    return result",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"Negative and positive values interleave once squared.\"\"\"\n    assert sorted_squares([-4, -1, 0, 3, 10]) == [0, 1, 9, 16, 100]\n\n\ndef test_example_2():\n    \"\"\"Only negative values: the order turns around.\"\"\"\n    assert sorted_squares([-3, -2]) == [4, 9]\n\n\ndef test_empty_list():\n    \"\"\"No values, no squares.\"\"\"\n    assert sorted_squares([]) == []\n\n\ndef test_only_positive():\n    \"\"\"Positive values keep their order.\"\"\"\n    assert sorted_squares([1, 2, 3]) == [1, 4, 9]\n\n\ndef test_equal_magnitudes():\n    \"\"\"-2 and 2 have the same square.\"\"\"\n    assert sorted_squares([-2, -2, 2]) == [4, 4, 4]\n\n\ndef test_input_unchanged():\n    \"\"\"The given list is not changed.\"\"\"\n    nums = [-1, 2]\n    sorted_squares(nums)\n    assert nums == [-1, 2]\n\n\ndef test_long_list():\n    \"\"\"200,000 values from -100,000 to 99,999.\"\"\"\n    nums = list(range(-100000, 100000))\n    assert sorted_squares(nums) == sorted(value * value for value in nums)",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Where in the list are the largest squares?",
+        "The largest square is at one of the two ends: the most negative or the most positive value. Fill the result from the back.",
+        "Keep a pointer at each end. Compare the absolute values, write the larger square at the last free place of the result and move that pointer inwards."
+      ],
+      "summary": "Merge squares of a sorted list from both ends with two pointers",
+      "source": "built-in"
+    },
+    {
+      "id": "shortest-window",
+      "concepts": [
+        "sliding-window"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Shortest stretch reaching a sum",
+          "statement": "Write `shortest_window(nums, target)`. `nums` holds positive integers. Return the length\nof the shortest contiguous stretch of `nums` whose sum is at least `target`, or `0` when\nno stretch reaches it.\n\nAim for linear time.",
+          "examples": [
+            {
+              "input": "nums = [2, 3, 1, 2, 4, 3], target = 7",
+              "output": "2",
+              "explanation": "[4, 3] sums to 7."
+            },
+            {
+              "input": "nums = [1, 1, 1], target = 5",
               "output": "0"
             }
           ],
           "constraints": [
-            "0 <= len(nums) <= 1,000,000",
-            "All values in nums are distinct"
+            "0 <= length of nums <= 200,000",
+            "1 <= nums[i] <= 10,000",
+            "1 <= target <= 10⁹"
           ]
         }
       ],
-      "starter_code": "def search_rotated(nums, target):\n    \"\"\"Return the index of target in the rotated sorted list nums, or -1.\"\"\"\n    pass",
-      "reference_solution": "def search_rotated(nums, target):\n    \"\"\"Return the index of target in the rotated sorted list nums, or -1.\"\"\"\n    left, right = 0, len(nums) - 1\n    while left <= right:\n        mid = (left + right) // 2\n        if nums[mid] == target:\n            return mid\n        if nums[left] <= nums[mid]:\n            # The left half is sorted.\n            if nums[left] <= target < nums[mid]:\n                right = mid - 1\n            else:\n                left = mid + 1\n        else:\n            # The right half is sorted.\n            if nums[mid] < target <= nums[right]:\n                left = mid + 1\n            else:\n                right = mid - 1\n    return -1",
-      "tests": "from solution import *\n\n\nclass _Watched(list):\n    \"\"\"A list that counts element reads and refuses to be scanned.\"\"\"\n\n    def __init__(self, values):\n        super().__init__(values)\n        self.reads = 0\n\n    def __getitem__(self, key):\n        if isinstance(key, slice):\n            raise AssertionError('slicing copies part of the list: read single elements by index')\n        self.reads += 1\n        return super().__getitem__(key)\n\n    def _refuse(self, *args, **kwargs):\n        raise AssertionError('scanning the list is linear: read single elements by index')\n\n    __iter__ = __contains__ = __reversed__ = index = count = copy = _refuse\n\n\ndef test_example_1():\n    \"\"\"The target is in the rotated part.\"\"\"\n    assert search_rotated([4, 5, 6, 7, 0, 1, 2], 0) == 4\n\n\ndef test_example_2():\n    \"\"\"The target is not in the list.\"\"\"\n    assert search_rotated([4, 5, 6, 7, 0, 1, 2], 3) == -1\n\n\ndef test_example_3():\n    \"\"\"A list of one element.\"\"\"\n    assert search_rotated([1], 1) == 0\n\n\ndef test_empty_list():\n    \"\"\"Nothing can be found in an empty list.\"\"\"\n    assert search_rotated([], 1) == -1\n\n\ndef test_single_element_missing():\n    \"\"\"One element that is not the target.\"\"\"\n    assert search_rotated([1], 0) == -1\n\n\ndef test_not_rotated():\n    \"\"\"A sorted list that was not rotated.\"\"\"\n    assert search_rotated([1, 2, 3, 4, 5], 4) == 3\n    assert search_rotated([1, 2, 3, 4, 5], 6) == -1\n\n\ndef test_two_elements():\n    \"\"\"The smallest rotated list.\"\"\"\n    assert search_rotated([3, 1], 1) == 1\n    assert search_rotated([3, 1], 3) == 0\n    assert search_rotated([3, 1], 2) == -1\n\n\ndef test_every_rotation_and_position():\n    \"\"\"Every element is found in every rotation of a ten-element list.\"\"\"\n    base = list(range(0, 20, 2))\n    for shift in range(len(base)):\n        nums = base[shift:] + base[:shift]\n        for index, value in enumerate(nums):\n            assert search_rotated(nums, value) == index, f'{value} in {nums}'\n        for missing in (-1, 5, 21):\n            assert search_rotated(nums, missing) == -1, f'{missing} in {nums}'\n\n\ndef test_logarithmic_number_of_reads():\n    \"\"\"A million elements are searched with a few hundred reads at most, without scanning.\"\"\"\n    size = 1000000\n    shift = 345678\n    values = list(range(shift, size)) + list(range(shift))\n    for target, expected in ((0, size - shift), (size - 1, size - shift - 1), (shift, 0), (-5, -1)):\n        nums = _Watched(values)\n        assert search_rotated(nums, target) == expected\n        assert nums.reads <= 300, f'{nums.reads} element reads: too many for a binary search'",
-      "visible_tests": [
-        "test_example_1",
-        "test_example_2",
-        "test_example_3"
-      ],
-      "hints": [
-        "Cut the list at any index: at least one of the two halves is still sorted. How can you tell which one by looking at its two end values?",
-        "Run a binary search. At each step find the sorted half by comparing nums[left] with nums[mid]. The target is inside a sorted half exactly when it lies between that half's end values; otherwise it must be in the other half.",
-        "Loop while left <= right with mid = (left + right) // 2. Return mid on a match. If nums[left] <= nums[mid], the left half is sorted: go left when nums[left] <= target < nums[mid], else right. Otherwise the right half is sorted: go right when nums[mid] < target <= nums[right], else left. Return -1 after the loop."
-      ],
-      "summary": "Locate a value in a rotated sorted list of distinct numbers in logarithmic time",
-      "source": "built-in"
-    },
-    {
-      "id": "count-islands",
-      "concepts": ["graphs"],
-      "difficulty": "Medium",
-      "language": "python",
-      "wordings": [
-        {
-          "title": "Count the islands",
-          "statement": "`grid` is a list of rows, and each row is a list of `0` (water) and `1` (land). An\nisland is a group of land cells connected horizontally or vertically. Cells that\ntouch only diagonally are not connected.\n\nWrite `count_islands(grid)` that returns the number of islands.",
-          "examples": [
-            {
-              "input": "grid = [[1, 1, 0, 0],\n        [1, 0, 0, 1],\n        [0, 0, 1, 1]]",
-              "output": "2"
-            },
-            {
-              "input": "grid = [[1, 0],\n        [0, 1]]",
-              "output": "2",
-              "explanation": "The two land cells touch only diagonally."
-            }
-          ],
-          "constraints": [
-            "The grid has up to 200 rows and 200 columns and may be empty",
-            "All rows have the same length",
-            "A single island may cover the whole grid: a recursive solution can exceed Python's recursion limit"
-          ]
-        },
-        {
-          "title": "Count the connected regions",
-          "statement": "A sensor image is stored as `grid`, a list of rows of `0` and `1`. A region is a set\nof cells holding `1` that can be reached from one another by moving up, down, left\nor right through cells holding `1`. Diagonal moves do not count.\n\nWrite `count_islands(grid)` that returns the number of regions.",
-          "examples": [
-            {
-              "input": "grid = [[1, 1, 0, 0],\n        [1, 0, 0, 1],\n        [0, 0, 1, 1]]",
-              "output": "2"
-            },
-            {
-              "input": "grid = [[1, 0],\n        [0, 1]]",
-              "output": "2"
-            }
-          ],
-          "constraints": [
-            "The grid has up to 200 rows and 200 columns and may be empty",
-            "All rows have the same length",
-            "One region may cover the whole grid: a recursive solution can exceed Python's recursion limit"
-          ]
-        }
-      ],
-      "starter_code": "def count_islands(grid):\n    \"\"\"Return the number of groups of 1-cells connected horizontally or vertically.\"\"\"\n    pass",
-      "reference_solution": "def count_islands(grid):\n    \"\"\"Return the number of groups of 1-cells connected horizontally or vertically.\"\"\"\n    if not grid or not grid[0]:\n        return 0\n    rows, cols = len(grid), len(grid[0])\n    seen = set()\n    islands = 0\n    for r in range(rows):\n        for c in range(cols):\n            if grid[r][c] != 1 or (r, c) in seen:\n                continue\n            islands += 1\n            seen.add((r, c))\n            stack = [(r, c)]\n            while stack:\n                cr, cc = stack.pop()\n                for nr, nc in ((cr + 1, cc), (cr - 1, cc), (cr, cc + 1), (cr, cc - 1)):\n                    if (0 <= nr < rows and 0 <= nc < cols\n                            and grid[nr][nc] == 1 and (nr, nc) not in seen):\n                        seen.add((nr, nc))\n                        stack.append((nr, nc))\n    return islands",
-      "tests": "from solution import *\n\n\ndef _count(rows):\n    return count_islands([list(row) for row in rows])\n\n\ndef test_example_1():\n    \"\"\"Two islands of three cells each.\"\"\"\n    assert _count([[1, 1, 0, 0],\n                   [1, 0, 0, 1],\n                   [0, 0, 1, 1]]) == 2\n\n\ndef test_example_2():\n    \"\"\"Diagonal neighbours are separate islands.\"\"\"\n    assert _count([[1, 0],\n                   [0, 1]]) == 2\n\n\ndef test_empty_grid():\n    \"\"\"No rows, or rows without cells.\"\"\"\n    assert _count([]) == 0\n    assert _count([[]]) == 0\n\n\ndef test_only_water():\n    \"\"\"No land, no islands.\"\"\"\n    assert _count([[0, 0], [0, 0]]) == 0\n\n\ndef test_single_cell():\n    \"\"\"One cell of land, and one of water.\"\"\"\n    assert _count([[1]]) == 1\n    assert _count([[0]]) == 0\n\n\ndef test_single_row_and_column():\n    \"\"\"Grids that are one cell wide.\"\"\"\n    assert _count([[1, 0, 1, 1, 0, 1]]) == 3\n    assert _count([[1], [1], [0], [1]]) == 2\n\n\ndef test_winding_island():\n    \"\"\"One island that winds through the grid.\"\"\"\n    assert _count([[1, 1, 1, 1, 1],\n                   [0, 0, 0, 0, 1],\n                   [1, 1, 1, 0, 1],\n                   [1, 0, 1, 0, 1],\n                   [1, 0, 1, 1, 1]]) == 1\n\n\ndef test_checkerboard():\n    \"\"\"Every land cell is its own island.\"\"\"\n    board = [[(r + c) % 2 for c in range(6)] for r in range(6)]\n    assert _count(board) == 18\n\n\ndef test_whole_grid_is_one_island():\n    \"\"\"200 by 200 cells of land form one island.\"\"\"\n    assert _count([[1] * 200 for _ in range(200)]) == 1",
+      "starter_code": "def shortest_window(nums, target):\n    \"\"\"Return the length of the shortest stretch of nums with sum >= target, or 0.\"\"\"\n    pass",
+      "reference_solution": "def shortest_window(nums, target):\n    \"\"\"Return the length of the shortest stretch of nums with sum >= target, or 0.\"\"\"\n    best = len(nums) + 1\n    total = 0\n    left = 0\n    for right, value in enumerate(nums):\n        total += value\n        while total >= target:\n            best = min(best, right - left + 1)\n            total -= nums[left]\n            left += 1\n    return best if best <= len(nums) else 0",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"Two values at the end reach the target.\"\"\"\n    assert shortest_window([2, 3, 1, 2, 4, 3], 7) == 2\n\n\ndef test_example_2():\n    \"\"\"The whole list is too small.\"\"\"\n    assert shortest_window([1, 1, 1], 5) == 0\n\n\ndef test_empty_list():\n    \"\"\"No values reach any target.\"\"\"\n    assert shortest_window([], 1) == 0\n\n\ndef test_single_value_is_enough():\n    \"\"\"One large value is a stretch of length 1.\"\"\"\n    assert shortest_window([1, 9, 1], 8) == 1\n\n\ndef test_whole_list():\n    \"\"\"Only the whole list reaches the target.\"\"\"\n    assert shortest_window([1, 2, 3], 6) == 3\n\n\ndef test_exactly_the_target():\n    \"\"\"A sum equal to the target counts.\"\"\"\n    assert shortest_window([5, 1, 4], 5) == 1\n\n\ndef test_long_list():\n    \"\"\"200,000 values; the best stretch is near the end.\"\"\"\n    nums = [1] * 199990 + [10000] * 10\n    assert shortest_window(nums, 50000) == 5\n    assert shortest_window(nums, 100005) == 15",
       "visible_tests": [
         "test_example_1",
         "test_example_2"
       ],
       "hints": [
-        "Think of the land cells as nodes of a graph with edges between neighbours. What does one island correspond to in that graph?",
-        "Scan every cell. Each time you find a land cell you have not visited, you have found a new island: count it, then visit every cell reachable from it so that none of them is counted again.",
-        "Keep a set of visited cells. For each unvisited land cell: add 1 to the count, put the cell on a stack (or queue), and repeatedly take a cell and add its unvisited land neighbours (up, down, left, right, inside the grid), marking them visited when they are added. Use an explicit stack or queue instead of recursion."
+        "Checking every start and end is quadratic. With only positive values, what happens to the sum when a stretch grows or shrinks?",
+        "Growing a stretch raises its sum and shrinking lowers it. Move the right end forward, and while the sum reaches the target, record the length and move the left end.",
+        "Keep total, left and best. For each right: add nums[right]; while total >= target: best = min(best, right - left + 1), subtract nums[left], left += 1. Each end moves at most n times."
       ],
-      "summary": "Count connected groups of land cells in a grid by flood fill over neighbouring cells",
+      "summary": "Shortest contiguous stretch with a sum of at least the target, by a sliding window",
       "source": "built-in"
     },
     {
-      "id": "min-coins",
-      "concepts": ["dynamic-programming"],
+      "id": "count-sum-stretches",
+      "concepts": [
+        "prefix-sums"
+      ],
       "difficulty": "Medium",
       "language": "python",
       "wordings": [
         {
-          "title": "Fewest coins for an amount",
-          "statement": "You have an unlimited supply of coins of each denomination in `coins`.\n\nWrite `min_coins(coins, amount)` that returns the smallest number of coins that add\nup to exactly `amount`, or `-1` when the amount cannot be made.",
+          "title": "Count stretches with a given sum",
+          "statement": "Write `count_stretches(nums, k)` that returns how many contiguous, non-empty stretches of\n`nums` sum to exactly `k`. `nums` may hold negative values and zeros.\n\nAim for linear time.",
           "examples": [
             {
-              "input": "coins = [1, 2, 5], amount = 11",
-              "output": "3",
-              "explanation": "5 + 5 + 1."
-            },
-            {
-              "input": "coins = [2], amount = 3",
-              "output": "-1"
-            },
-            {
-              "input": "coins = [1, 3, 4], amount = 6",
+              "input": "nums = [1, 1, 1], k = 2",
               "output": "2",
-              "explanation": "3 + 3. Taking the largest coin first gives 4 + 1 + 1, which is worse."
+              "explanation": "The first two and the last two values."
+            },
+            {
+              "input": "nums = [1, -1, 0], k = 0",
+              "output": "3",
+              "explanation": "[1, -1], [0] and [1, -1, 0]."
             }
           ],
           "constraints": [
-            "1 <= len(coins) <= 12, all denominations are distinct positive integers in any order",
-            "0 <= amount <= 10,000",
-            "A recursive solution, even with memoisation, can exceed Python's recursion limit for large amounts: fill the table from small amounts upwards"
-          ]
-        },
-        {
-          "title": "Smallest number of stamps",
-          "statement": "A post office sells stamps of the values listed in `coins`, as many of each as you\nlike. A letter needs stamps worth exactly `amount`.\n\nWrite `min_coins(coins, amount)` that returns the smallest number of stamps that\ngives exactly that value, or `-1` when no combination does.",
-          "examples": [
-            {
-              "input": "coins = [1, 2, 5], amount = 11",
-              "output": "3",
-              "explanation": "5 + 5 + 1."
-            },
-            {
-              "input": "coins = [2], amount = 3",
-              "output": "-1"
-            },
-            {
-              "input": "coins = [1, 3, 4], amount = 6",
-              "output": "2",
-              "explanation": "3 + 3."
-            }
-          ],
-          "constraints": [
-            "1 <= len(coins) <= 12, all values are distinct positive integers in any order",
-            "0 <= amount <= 10,000",
-            "A recursive solution, even with memoisation, can exceed Python's recursion limit for large amounts: fill the table from small amounts upwards"
+            "0 <= length of nums <= 100,000",
+            "-1,000 <= nums[i] <= 1,000"
           ]
         }
       ],
-      "starter_code": "def min_coins(coins, amount):\n    \"\"\"Return the fewest coins that add up to amount, or -1 when it cannot be made.\"\"\"\n    pass",
-      "reference_solution": "def min_coins(coins, amount):\n    \"\"\"Return the fewest coins that add up to amount, or -1 when it cannot be made.\"\"\"\n    unreachable = amount + 1\n    best = [0] + [unreachable] * amount\n    for value in range(1, amount + 1):\n        for coin in coins:\n            if coin <= value and best[value - coin] + 1 < best[value]:\n                best[value] = best[value - coin] + 1\n    return best[amount] if best[amount] != unreachable else -1",
-      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"11 from 1, 2 and 5 takes three coins.\"\"\"\n    assert min_coins([1, 2, 5], 11) == 3\n\n\ndef test_example_2():\n    \"\"\"3 cannot be made from coins of 2.\"\"\"\n    assert min_coins([2], 3) == -1\n\n\ndef test_example_3():\n    \"\"\"Largest coin first is not always best: 6 from 1, 3 and 4.\"\"\"\n    assert min_coins([1, 3, 4], 6) == 2\n\n\ndef test_zero_amount():\n    \"\"\"Nothing to pay takes no coins.\"\"\"\n    assert min_coins([1, 2, 5], 0) == 0\n    assert min_coins([7], 0) == 0\n\n\ndef test_only_ones():\n    \"\"\"Seven coins of 1.\"\"\"\n    assert min_coins([1], 7) == 7\n\n\ndef test_amount_smaller_than_every_coin():\n    \"\"\"No coin fits.\"\"\"\n    assert min_coins([5, 10], 3) == -1\n\n\ndef test_coins_in_any_order():\n    \"\"\"The denominations are not sorted.\"\"\"\n    assert min_coins([5, 1, 2], 11) == 3\n    assert min_coins([4, 1, 3], 6) == 2\n\n\ndef test_exact_single_coin():\n    \"\"\"One coin is enough.\"\"\"\n    assert min_coins([2, 9, 13], 13) == 1\n\n\ndef test_large_denominations():\n    \"\"\"A known hard case: 6249 from 186, 419, 83 and 408.\"\"\"\n    assert min_coins([186, 419, 83, 408], 6249) == 20\n\n\ndef test_large_amount():\n    \"\"\"10,000 from 1, 2 and 5: must finish quickly.\"\"\"\n    assert min_coins([1, 2, 5], 10000) == 2000\n    assert min_coins([3, 7], 9998) == 1430",
-      "visible_tests": [
-        "test_example_1",
-        "test_example_2",
-        "test_example_3"
-      ],
-      "hints": [
-        "Suppose you already knew the fewest coins for every amount smaller than the one asked. How would the last coin you add connect the answer to those smaller answers?",
-        "Let best[a] be the fewest coins for amount a. The last coin c leaves amount a - c, so best[a] = 1 + the smallest best[a - c] over all coins c <= a. Start from best[0] = 0.",
-        "Create a list best of size amount + 1 filled with a value meaning \"unreachable\" (amount + 1 works), and set best[0] = 0. For each value from 1 to amount and each coin <= value, set best[value] = min(best[value], best[value - coin] + 1). Return best[amount], or -1 if it is still unreachable."
-      ],
-      "summary": "Fewest coins of given denominations that make an amount, built up from smaller amounts",
-      "source": "built-in"
-    },
-    {
-      "id": "merge-intervals",
-      "concepts": ["sorting"],
-      "difficulty": "Medium",
-      "language": "python",
-      "wordings": [
-        {
-          "title": "Merge overlapping intervals",
-          "statement": "Each interval is a list `[start, end]` with `start <= end`.\n\nWrite `merge_intervals(intervals)` that merges all intervals that overlap or touch\nand returns the result as a new list of `[start, end]` lists, sorted by start.\n`[1, 2]` and `[2, 3]` touch, so they merge into `[1, 3]`.\n\nDo not change the list you are given or the intervals in it.",
-          "examples": [
-            {
-              "input": "intervals = [[1, 3], [2, 6], [8, 10], [15, 18]]",
-              "output": "[[1, 6], [8, 10], [15, 18]]"
-            },
-            {
-              "input": "intervals = [[1, 2], [2, 3]]",
-              "output": "[[1, 3]]"
-            }
-          ],
-          "constraints": [
-            "0 <= len(intervals) <= 100,000",
-            "Intervals come in any order"
-          ]
-        },
-        {
-          "title": "Combine busy times",
-          "statement": "A calendar holds meetings as `[start, end]` lists with `start <= end`, in no\nparticular order. Meetings may overlap.\n\nWrite `merge_intervals(intervals)` that returns the busy periods: a new list of\n`[start, end]` lists, sorted by start, in which meetings that overlap or follow each\nother without a gap are combined into one period. `[1, 2]` and `[2, 3]` become\n`[1, 3]`.\n\nDo not change the list you are given or the meetings in it.",
-          "examples": [
-            {
-              "input": "intervals = [[1, 3], [2, 6], [8, 10], [15, 18]]",
-              "output": "[[1, 6], [8, 10], [15, 18]]"
-            },
-            {
-              "input": "intervals = [[1, 2], [2, 3]]",
-              "output": "[[1, 3]]"
-            }
-          ],
-          "constraints": [
-            "0 <= len(intervals) <= 100,000",
-            "Meetings come in any order"
-          ]
-        }
-      ],
-      "starter_code": "def merge_intervals(intervals):\n    \"\"\"Return the intervals merged where they overlap or touch, sorted by start.\"\"\"\n    pass",
-      "reference_solution": "def merge_intervals(intervals):\n    \"\"\"Return the intervals merged where they overlap or touch, sorted by start.\"\"\"\n    merged = []\n    for start, end in sorted(intervals):\n        if merged and start <= merged[-1][1]:\n            merged[-1][1] = max(merged[-1][1], end)\n        else:\n            merged.append([start, end])\n    return merged",
-      "tests": "from solution import *\n\n\ndef _merge(intervals):\n    return [list(interval) for interval in merge_intervals([list(i) for i in intervals])]\n\n\ndef test_example_1():\n    \"\"\"Two of four intervals overlap.\"\"\"\n    assert _merge([[1, 3], [2, 6], [8, 10], [15, 18]]) == [[1, 6], [8, 10], [15, 18]]\n\n\ndef test_example_2():\n    \"\"\"Touching intervals merge.\"\"\"\n    assert _merge([[1, 2], [2, 3]]) == [[1, 3]]\n\n\ndef test_no_intervals():\n    \"\"\"An empty list stays empty.\"\"\"\n    assert _merge([]) == []\n\n\ndef test_single_interval():\n    \"\"\"One interval is returned as it is.\"\"\"\n    assert _merge([[4, 9]]) == [[4, 9]]\n\n\ndef test_interval_inside_another():\n    \"\"\"A contained interval must not shorten the outer one.\"\"\"\n    assert _merge([[1, 10], [2, 3]]) == [[1, 10]]\n    assert _merge([[1, 10], [2, 3], [4, 12]]) == [[1, 12]]\n\n\ndef test_unsorted_input():\n    \"\"\"The input comes in any order.\"\"\"\n    assert _merge([[8, 10], [1, 3], [15, 18], [2, 6]]) == [[1, 6], [8, 10], [15, 18]]\n\n\ndef test_chain_merges_into_one():\n    \"\"\"Each interval overlaps the next.\"\"\"\n    assert _merge([[5, 7], [1, 2], [2, 4], [6, 9], [3, 5]]) == [[1, 9]]\n\n\ndef test_no_overlap():\n    \"\"\"Separate intervals are only sorted.\"\"\"\n    assert _merge([[5, 6], [1, 2], [3, 4]]) == [[1, 2], [3, 4], [5, 6]]\n\n\ndef test_equal_and_empty_intervals():\n    \"\"\"Repeated intervals and intervals of zero length.\"\"\"\n    assert _merge([[2, 2], [2, 2], [1, 1]]) == [[1, 1], [2, 2]]\n    assert _merge([[-5, -1], [-3, 0]]) == [[-5, 0]]\n\n\ndef test_input_is_not_changed():\n    \"\"\"The list given and its intervals stay as they were.\"\"\"\n    intervals = [[3, 5], [1, 4]]\n    merge_intervals(intervals)\n    assert intervals == [[3, 5], [1, 4]]\n\n\ndef test_many_intervals():\n    \"\"\"100,000 intervals: must finish quickly.\"\"\"\n    intervals = [[i * 3, i * 3 + 1] for i in range(100000)]\n    intervals.reverse()\n    assert len(_merge(intervals)) == 100000\n    assert _merge([[i, i + 1] for i in range(100000)]) == [[0, 100000]]",
+      "starter_code": "def count_stretches(nums, k):\n    \"\"\"Return the number of contiguous stretches of nums that sum to k.\"\"\"\n    pass",
+      "reference_solution": "def count_stretches(nums, k):\n    \"\"\"Return the number of contiguous stretches of nums that sum to k.\"\"\"\n    seen = {0: 1}\n    total = 0\n    count = 0\n    for value in nums:\n        total += value\n        count += seen.get(total - k, 0)\n        seen[total] = seen.get(total, 0) + 1\n    return count",
+      "tests": "import random\n\nfrom solution import *\n\n\ndef _slow(nums, k):\n    count = 0\n    for start in range(len(nums)):\n        total = 0\n        for value in nums[start:]:\n            total += value\n            count += total == k\n    return count\n\n\ndef test_example_1():\n    \"\"\"Two overlapping stretches.\"\"\"\n    assert count_stretches([1, 1, 1], 2) == 2\n\n\ndef test_example_2():\n    \"\"\"Zero sums, with a negative value.\"\"\"\n    assert count_stretches([1, -1, 0], 0) == 3\n\n\ndef test_empty_list():\n    \"\"\"An empty list has no stretches.\"\"\"\n    assert count_stretches([], 0) == 0\n\n\ndef test_no_match():\n    \"\"\"No stretch sums to k.\"\"\"\n    assert count_stretches([1, 2, 3], 7) == 0\n\n\ndef test_all_zeros():\n    \"\"\"Every one of the 10 stretches of four zeros sums to 0.\"\"\"\n    assert count_stretches([0, 0, 0, 0], 0) == 10\n\n\ndef test_small_random_lists():\n    \"\"\"Random short lists, compared with checking every stretch.\"\"\"\n    rng = random.Random(3)\n    for _ in range(200):\n        nums = [rng.randint(-3, 3) for _ in range(rng.randint(0, 12))]\n        k = rng.randint(-4, 4)\n        assert count_stretches(nums, k) == _slow(nums, k)\n\n\ndef test_long_list():\n    \"\"\"100,000 values.\"\"\"\n    nums = [1, -1] * 50000\n    assert count_stretches(nums, 0) == 50000 * 50000",
       "visible_tests": [
         "test_example_1",
         "test_example_2"
       ],
       "hints": [
-        "Comparing every interval with every other is slow and awkward. In what order would overlapping intervals end up next to each other?",
-        "Sort the intervals by start. Then walk through them once, keeping the merged interval you are currently building: the next interval either overlaps it (its start is not beyond the current end) or starts a new one.",
-        "Loop over sorted(intervals). If the result is not empty and start <= the end of the last merged interval, set that end to max(that end, end); otherwise append a new list [start, end]. Appending new lists, not the originals, keeps the input unchanged."
+        "The sum of a stretch from i to j is the running sum at j minus the running sum just before i. How does that turn the question into a lookup?",
+        "A stretch ending here sums to k exactly when an earlier running sum equals the current running sum minus k. Count earlier running sums in a hash map.",
+        "Start with {0: 1} for the empty prefix. For each value: total += value; add seen[total - k] to the count; then increment seen[total]. A sliding window fails here, because negative values break its monotonic sum."
       ],
-      "summary": "Merge overlapping ranges after ordering them by their start value",
+      "summary": "Count stretches summing to k with running sums kept in a hash map",
+      "source": "built-in"
+    },
+    {
+      "id": "climb-stairs",
+      "concepts": [
+        "recursion",
+        "dynamic-programming"
+      ],
+      "difficulty": "Easy",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Ways up the stairs",
+          "statement": "You climb a staircase of `n` steps, taking 1, 2 or 3 steps at a time. Write\n`count_ways(n)` that returns the number of different orders of moves that reach the top.\nFor `n = 0` there is one way: do nothing.\n\nEach call must be fast, also for `n = 60`.",
+          "examples": [
+            {
+              "input": "n = 3",
+              "output": "4",
+              "explanation": "1+1+1, 1+2, 2+1 and 3."
+            },
+            {
+              "input": "n = 4",
+              "output": "7"
+            }
+          ],
+          "constraints": [
+            "0 <= n <= 60"
+          ]
+        }
+      ],
+      "starter_code": "def count_ways(n):\n    \"\"\"Return the number of ways to climb n steps taking 1, 2 or 3 at a time.\"\"\"\n    pass",
+      "reference_solution": "def count_ways(n):\n    \"\"\"Return the number of ways to climb n steps taking 1, 2 or 3 at a time.\"\"\"\n    # Ways to reach the last three steps below the current one.\n    a, b, c = 0, 0, 1\n    for _ in range(n):\n        a, b, c = b, c, a + b + c\n    return c",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"Four ways up three steps.\"\"\"\n    assert count_ways(3) == 4\n\n\ndef test_example_2():\n    \"\"\"Seven ways up four steps.\"\"\"\n    assert count_ways(4) == 7\n\n\ndef test_no_steps():\n    \"\"\"One way to climb nothing.\"\"\"\n    assert count_ways(0) == 1\n\n\ndef test_small():\n    \"\"\"One and two steps.\"\"\"\n    assert count_ways(1) == 1\n    assert count_ways(2) == 2\n\n\ndef test_ten():\n    \"\"\"Ten steps.\"\"\"\n    assert count_ways(10) == 274\n\n\ndef test_sixty_quickly():\n    \"\"\"Sixty steps, many times: plain recursion is far too slow.\"\"\"\n    for _ in range(1000):\n        assert count_ways(60) == 4680045560037375",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Think about the last move. Where could you stand just before it?",
+        "The last move is 1, 2 or 3 steps, so ways(n) = ways(n - 1) + ways(n - 2) + ways(n - 3), with ways(0) = 1 and no ways for negative n. Plain recursion repeats the same calls exponentially often.",
+        "Remember each result (memoization), or build up from 0 keeping only the last three values: O(n) time and O(1) memory."
+      ],
+      "summary": "Count ways to climb stairs in steps of 1, 2 or 3 with memoized recursion",
+      "source": "built-in"
+    },
+    {
+      "id": "grid-shortest-path",
+      "concepts": [
+        "breadth-first-search"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Shortest path through a grid",
+          "statement": "`grid` is a list of equal-length strings: `\".\"` is an open cell and `\"#\"` a wall. You\nstart at the top-left cell and move up, down, left or right to open cells.\n\nWrite `shortest_path(grid)` that returns the fewest moves to reach the bottom-right\ncell, or `-1` when it cannot be reached. If either corner is a wall, return `-1`.",
+          "examples": [
+            {
+              "input": "grid = [\"..#\", \"#..\", \"#..\"]",
+              "output": "4"
+            },
+            {
+              "input": "grid = [\".#\", \"#.\"]",
+              "output": "-1"
+            }
+          ],
+          "constraints": [
+            "1 <= rows, columns <= 300",
+            "Every string has the same length"
+          ]
+        }
+      ],
+      "starter_code": "def shortest_path(grid):\n    \"\"\"Return the fewest moves from the top-left to the bottom-right cell, or -1.\"\"\"\n    pass",
+      "reference_solution": "from collections import deque\n\n\ndef shortest_path(grid):\n    \"\"\"Return the fewest moves from the top-left to the bottom-right cell, or -1.\"\"\"\n    rows, columns = len(grid), len(grid[0])\n    if grid[0][0] == '#' or grid[-1][-1] == '#':\n        return -1\n    distance = {(0, 0): 0}\n    queue = deque([(0, 0)])\n    while queue:\n        row, column = queue.popleft()\n        if (row, column) == (rows - 1, columns - 1):\n            return distance[row, column]\n        for r, c in (row + 1, column), (row - 1, column), (row, column + 1), (row, column - 1):\n            if 0 <= r < rows and 0 <= c < columns and grid[r][c] == '.' and (r, c) not in distance:\n                distance[r, c] = distance[row, column] + 1\n                queue.append((r, c))\n    return -1",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"A path around the walls.\"\"\"\n    assert shortest_path(['..#', '#..', '#..']) == 4\n\n\ndef test_example_2():\n    \"\"\"The walls cut the grid in two.\"\"\"\n    assert shortest_path(['.#', '#.']) == -1\n\n\ndef test_single_cell():\n    \"\"\"Start and end are the same cell.\"\"\"\n    assert shortest_path(['.']) == 0\n\n\ndef test_wall_in_a_corner():\n    \"\"\"A walled start or end cannot be used.\"\"\"\n    assert shortest_path(['#.', '..']) == -1\n    assert shortest_path(['..', '.#']) == -1\n\n\ndef test_detour():\n    \"\"\"The direct way is blocked; the path goes around.\"\"\"\n    grid = [\n        '.....',\n        '####.',\n        '.....',\n        '.####',\n        '.....',\n    ]\n    assert shortest_path(grid) == 16\n\n\ndef test_one_row():\n    \"\"\"A corridor.\"\"\"\n    assert shortest_path(['......']) == 5\n\n\ndef test_large_open_grid():\n    \"\"\"300 × 300 cells with scattered walls.\"\"\"\n    grid = [\n        ''.join('#' if (r * 7 + c * 13) % 11 == 0 and 0 < r < 299 else '.' for c in range(300))\n        for r in range(300)\n    ]\n    assert shortest_path(grid) == 598",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Every move costs the same. Which search finds the fewest moves first?",
+        "Breadth-first search from the start reaches cells in order of distance. Keep a queue of cells to visit and the distance of each cell you have reached.",
+        "Mark a cell as reached when you add it to the queue, not when you take it out, so no cell is queued twice. Return its distance when you take out the bottom-right cell."
+      ],
+      "summary": "Fewest moves through a grid with walls using breadth-first search",
+      "source": "built-in"
+    },
+    {
+      "id": "count-groups",
+      "concepts": [
+        "depth-first-search"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Count connected groups",
+          "statement": "A network has `n` nodes numbered `0` to `n - 1`. `links` lists pairs `[a, b]`: nodes `a`\nand `b` are connected, in both directions. Write `count_groups(n, links)` that returns\nthe number of groups, where a group is a set of nodes that can all reach each other\nthrough links.\n\nSome groups are long chains: avoid recursion as deep as the number of nodes.",
+          "examples": [
+            {
+              "input": "n = 5, links = [[0, 1], [1, 2], [3, 4]]",
+              "output": "2"
+            },
+            {
+              "input": "n = 3, links = []",
+              "output": "3"
+            }
+          ],
+          "constraints": [
+            "1 <= n <= 100,000",
+            "0 <= number of links <= 200,000",
+            "A link may repeat or join a node to itself"
+          ]
+        }
+      ],
+      "starter_code": "def count_groups(n, links):\n    \"\"\"Return the number of connected groups among nodes 0 to n - 1.\"\"\"\n    pass",
+      "reference_solution": "def count_groups(n, links):\n    \"\"\"Return the number of connected groups among nodes 0 to n - 1.\"\"\"\n    neighbours = [[] for _ in range(n)]\n    for a, b in links:\n        neighbours[a].append(b)\n        neighbours[b].append(a)\n    seen = [False] * n\n    groups = 0\n    for start in range(n):\n        if seen[start]:\n            continue\n        groups += 1\n        seen[start] = True\n        stack = [start]\n        while stack:\n            for other in neighbours[stack.pop()]:\n                if not seen[other]:\n                    seen[other] = True\n                    stack.append(other)\n    return groups",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"A group of three and a group of two.\"\"\"\n    assert count_groups(5, [[0, 1], [1, 2], [3, 4]]) == 2\n\n\ndef test_example_2():\n    \"\"\"No links: every node is its own group.\"\"\"\n    assert count_groups(3, []) == 3\n\n\ndef test_one_node():\n    \"\"\"A single node is one group.\"\"\"\n    assert count_groups(1, []) == 1\n\n\ndef test_cycle():\n    \"\"\"A ring of links is still one group.\"\"\"\n    assert count_groups(4, [[0, 1], [1, 2], [2, 3], [3, 0]]) == 1\n\n\ndef test_repeats_and_loops():\n    \"\"\"Repeated links and a node linked to itself.\"\"\"\n    assert count_groups(3, [[0, 1], [1, 0], [2, 2]]) == 2\n\n\ndef test_long_chain():\n    \"\"\"100,000 nodes in one chain.\"\"\"\n    links = [[i, i + 1] for i in range(99999)]\n    assert count_groups(100000, links) == 1\n\n\ndef test_many_pairs():\n    \"\"\"50,000 separate pairs.\"\"\"\n    links = [[i, i + 1] for i in range(0, 100000, 2)]\n    assert count_groups(100000, links) == 50000",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Starting from one node, how do you find everything in its group?",
+        "Build a neighbour list per node. Go through the nodes; each one not yet seen starts a new group, and a depth-first search from it marks the whole group as seen.",
+        "Use an explicit stack instead of recursion: push the start, pop a node, push its unseen neighbours after marking them. Every node and link is handled once: O(n + links)."
+      ],
+      "summary": "Count the connected groups of a graph with an iterative depth-first search",
+      "source": "built-in"
+    },
+    {
+      "id": "reach-the-end",
+      "concepts": [
+        "greedy"
+      ],
+      "difficulty": "Medium",
+      "language": "python",
+      "wordings": [
+        {
+          "title": "Reach the last position",
+          "statement": "You stand at index 0 of `jumps`. From index `i` you may jump forward by any distance from\n1 to `jumps[i]`. Write `can_reach_end(jumps)` that returns `true` when you can reach the\nlast index.\n\nAim for linear time.",
+          "examples": [
+            {
+              "input": "jumps = [2, 3, 1, 1, 4]",
+              "output": "true",
+              "explanation": "Jump 1 to index 1, then 3 to the end."
+            },
+            {
+              "input": "jumps = [3, 2, 1, 0, 4]",
+              "output": "false",
+              "explanation": "Every way lands on index 3, which allows no jump."
+            }
+          ],
+          "constraints": [
+            "1 <= length of jumps <= 200,000",
+            "0 <= jumps[i] <= 100,000"
+          ]
+        }
+      ],
+      "starter_code": "def can_reach_end(jumps):\n    \"\"\"Return True when the last index of jumps can be reached from index 0.\"\"\"\n    pass",
+      "reference_solution": "def can_reach_end(jumps):\n    \"\"\"Return True when the last index of jumps can be reached from index 0.\"\"\"\n    furthest = 0\n    for i, jump in enumerate(jumps):\n        if i > furthest:\n            return False\n        furthest = max(furthest, i + jump)\n    return True",
+      "tests": "from solution import *\n\n\ndef test_example_1():\n    \"\"\"A short jump first, then a long one.\"\"\"\n    assert can_reach_end([2, 3, 1, 1, 4]) is True\n\n\ndef test_example_2():\n    \"\"\"A zero that every path lands on.\"\"\"\n    assert can_reach_end([3, 2, 1, 0, 4]) is False\n\n\ndef test_single_position():\n    \"\"\"You already stand at the end.\"\"\"\n    assert can_reach_end([0]) is True\n\n\ndef test_stuck_at_start():\n    \"\"\"No jump at all from the first index.\"\"\"\n    assert can_reach_end([0, 1]) is False\n\n\ndef test_jump_over_zero():\n    \"\"\"A zero that can be jumped over.\"\"\"\n    assert can_reach_end([2, 0, 1]) is True\n\n\ndef test_long_list():\n    \"\"\"200,000 positions.\"\"\"\n    assert can_reach_end([1] * 200000) is True\n    assert can_reach_end([1] * 100000 + [0] + [1] * 99999) is False\n    assert can_reach_end([200000] + [0] * 199999) is True",
+      "visible_tests": [
+        "test_example_1",
+        "test_example_2"
+      ],
+      "hints": [
+        "Instead of trying every path, what single number tells you how far you can get so far?",
+        "Track the furthest index reachable from any index you can reach. Walking left to right, every index up to it is reachable.",
+        "For each i: if i is beyond the furthest reachable index, return false; otherwise furthest = max(furthest, i + jumps[i]). If the walk finishes, the end is reachable."
+      ],
+      "summary": "Decide whether the end of a jump list is reachable by tracking the furthest reach",
       "source": "built-in"
     }
   ],
   "questions": [
     {
-      "id": "q-two-pointers-precondition",
+      "id": "q-binary-search-requires",
       "type": "single",
       "difficulty": "Easy",
-      "concepts": ["two-pointers"],
+      "concepts": [
+        "binary-search"
+      ],
       "wordings": [
         {
-          "text": "You look for two numbers with a given sum by moving one index from the start of a list and one from the end towards each other. What must be true of the list for this to work?",
+          "text": "What must be true of a list for binary search to find a value in it?",
           "options": [
-            "It has no repeated values",
             "It is sorted",
-            "It has an even number of elements",
-            "It holds only positive numbers"
-          ]
-        },
-        {
-          "text": "Which property of a list makes the \"one index from each end, move inwards\" search for a pair with a given sum correct?",
-          "options": [
             "It has no repeated values",
-            "It is sorted",
-            "It has an even number of elements",
-            "It holds only positive numbers"
-          ]
-        }
-      ],
-      "answers": [
-        1
-      ],
-      "explanation": "The moves rely on order: a larger sum needs a larger left value, a smaller sum a smaller right value. Repeats, odd lengths and negative numbers are all fine.",
-      "summary": "Precondition of the inward two-pointer pair search",
-      "source": "built-in"
-    },
-    {
-      "id": "q-two-pointers-move",
-      "type": "single",
-      "difficulty": "Easy",
-      "concepts": ["two-pointers"],
-      "wordings": [
-        {
-          "text": "In the inward two-pointer search on an ascending list, the sum of the two current values is smaller than the target. What is the correct next step?",
-          "options": [
-            "Move the left index one step to the right",
-            "Move the right index one step to the left",
-            "Move both indexes one step inwards",
-            "Restart both indexes from the middle"
+            "Its length is a power of two",
+            "It holds only positive values"
           ]
         }
       ],
       "answers": [
         0
       ],
-      "explanation": "The sum must grow. The right value is already the largest still available, so the only way to grow is a larger left value. Moving both could skip the answer.",
-      "summary": "Which pointer moves when the pair sum is below the target",
+      "explanation": "Each step compares with the middle and drops the half that cannot hold the value, which\nis only safe when the list is sorted. Repeats, any length and any values are fine.",
+      "summary": "Precondition of binary search",
       "source": "built-in"
     },
     {
-      "id": "q-sliding-window-cost",
+      "id": "q-binary-search-bounds",
       "type": "single",
       "difficulty": "Medium",
-      "concepts": ["sliding-window"],
+      "concepts": [
+        "binary-search"
+      ],
       "wordings": [
         {
-          "text": "A sliding window over n elements has a left end and a right end, and neither ever moves backwards. How much work do the two ends do in total?",
+          "text": "A binary search keeps `low` and `high` as the inclusive range still to search:\n\n```\nwhile low <= high:\n    middle = (low + high) / 2, rounded down\n    if a[middle] < target: low = middle\n    else if a[middle] > target: high = middle - 1\n    else: return middle\n```\n\nWhat goes wrong with `low = middle`, compared with `low = middle + 1`?",
           "options": [
-            "O(n log n)",
-            "O(n²)",
-            "O(n)",
-            "O(1)"
-          ]
-        },
-        {
-          "text": "In a sliding-window algorithm the right end advances in an outer loop and the left end advances in an inner loop, never moving back. What is the total number of moves over n elements?",
-          "options": [
-            "O(n log n)",
-            "O(n²)",
-            "O(n)",
-            "O(1)"
+            "The loop can run forever once low and middle are equal",
+            "It returns an index that does not hold the target",
+            "It becomes linear time",
+            "Nothing: both versions are correct"
           ]
         }
       ],
       "answers": [
-        2
+        0
       ],
-      "explanation": "Each end advances at most n times, so together they make at most 2n moves, even though there is a loop inside a loop.",
-      "summary": "Total cost of a window whose two ends only move forward",
+      "explanation": "When high = low + 1, middle rounds down to low; if a[low] < target, low stays the same and\nthe range never shrinks. Every step must remove middle from the range.",
+      "summary": "Off-by-one bound that makes binary search loop forever",
       "source": "built-in"
     },
     {
-      "id": "q-sliding-window-fit",
-      "type": "multiple",
-      "difficulty": "Medium",
-      "concepts": ["sliding-window"],
+      "id": "q-sort-stable",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "sorting"
+      ],
       "wordings": [
         {
-          "text": "Which of these problems are a natural fit for a sliding window?",
+          "text": "What does it mean that a sorting algorithm is stable?",
+          "options": [
+            "Elements with equal keys keep their original relative order",
+            "It always takes O(n log n) time",
+            "It sorts in place, without extra memory",
+            "It gives the same result when run twice"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Stability matters when sorting by several keys in turn: sort by the second key, then\nstably by the first, and ties on the first stay ordered by the second. Merge sort is\nstable; a typical quicksort or heapsort is not.",
+      "summary": "Definition of a stable sort",
+      "source": "built-in"
+    },
+    {
+      "id": "q-sort-beat-n-log-n",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "sorting"
+      ],
+      "wordings": [
+        {
+          "text": "Sorting by comparing elements needs Ω(n log n) comparisons in the worst case. Which sort can run faster than that?",
+          "options": [
+            "Counting sort, when the keys are integers from a small range",
+            "Quicksort with a random pivot",
+            "Merge sort on a linked list",
+            "Heapsort"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Counting sort does not compare elements: it counts each key in O(n + k) for k possible\nkeys. The other three compare elements and are bound by n log n; random pivots only make\nthe quadratic worst case unlikely.",
+      "summary": "Sort that beats the comparison lower bound",
+      "source": "built-in"
+    },
+    {
+      "id": "q-pair-pointer-move",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "two-pointers"
+      ],
+      "wordings": [
+        {
+          "text": "To find two values with a given sum in a sorted list, one pointer starts at the first value and one at the last. The two values add up to less than the target. What do you do?",
+          "options": [
+            "Move the left pointer one place right",
+            "Move the right pointer one place left",
+            "Move both pointers inwards",
+            "Restart with the left pointer at the next value"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The sum must grow, and only moving the left pointer to a larger value can do that. The\nleft value cannot pair with anything: even the largest remaining value was too small for\nit.",
+      "summary": "Which pointer moves when the pair sum is too small",
+      "source": "built-in"
+    },
+    {
+      "id": "q-two-pointers-dedupe",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "two-pointers"
+      ],
+      "wordings": [
+        {
+          "text": "Duplicates are removed from a sorted array in place: a read pointer walks every element and a write pointer marks where the next new value goes. What does this cost?",
+          "options": [
+            "O(n) time and O(1) extra memory",
+            "O(n log n) time and O(1) extra memory",
+            "O(n) time and O(n) extra memory",
+            "O(n²) time and O(1) extra memory"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Each pointer moves only forward, at most n times, and only two indices are stored. In a\nsorted array, a value is new when it differs from the last value written.",
+      "summary": "Cost of in-place deduplication with a read and a write pointer",
+      "source": "built-in"
+    },
+    {
+      "id": "q-sliding-window-fits",
+      "type": "multiple",
+      "difficulty": "Medium",
+      "concepts": [
+        "sliding-window"
+      ],
+      "wordings": [
+        {
+          "text": "Which problems suit a sliding window over the input?",
           "options": [
             "The longest substring without a repeated character",
-            "The longest increasing subsequence, whose elements need not be adjacent",
-            "The largest sum of any k consecutive elements",
-            "Whether a linked list contains a cycle",
-            "The shortest run of consecutive positive numbers with a sum of at least S"
+            "The largest sum of k consecutive values",
+            "The number of pairs with a given sum in an unsorted list",
+            "The median of the whole list"
           ]
         }
       ],
       "answers": [
         0,
-        2,
-        4
+        1
       ],
-      "explanation": "A window needs a contiguous range whose validity changes predictably as it grows or shrinks. A subsequence is not contiguous, and cycle detection uses slow and fast pointers, not a window.",
+      "explanation": "Both are about contiguous stretches whose state can be updated as an end moves forward:\na set of characters, a running sum. Pairs need not be adjacent, and the median is about\nthe whole list, not a stretch.",
       "summary": "Recognising problems that suit a sliding window",
       "source": "built-in"
     },
     {
-      "id": "q-sliding-window-negatives",
+      "id": "q-window-negative-values",
       "type": "single",
-      "difficulty": "Hard",
-      "concepts": ["sliding-window"],
+      "difficulty": "Medium",
+      "concepts": [
+        "sliding-window",
+        "prefix-sums"
+      ],
       "wordings": [
         {
-          "text": "For positive numbers, the shortest subarray with a sum of at least S can be found by growing a window and shrinking it while the sum is large enough. Why does this stop working when negative numbers are allowed?",
+          "text": "A window that grows on the right and shrinks on the left finds the shortest stretch with sum at least a target when all values are positive. Why can it fail when some values are negative?",
           "options": [
-            "Growing the window no longer always raises the sum, and shrinking it no longer always lowers it",
-            "A window cannot hold negative numbers",
-            "The running sum can overflow",
-            "The numbers would have to be sorted first"
+            "Adding a value can lower the sum, so shrinking from the left is no longer safe",
+            "Negative values make the window quadratic",
+            "The sum can overflow",
+            "It does not fail: the method works for any values"
           ]
         }
       ],
       "answers": [
         0
       ],
-      "explanation": "The method relies on monotonic behaviour: a longer window has a larger sum. With negative numbers a longer window can have a smaller sum, so the decision to shrink or grow is no longer safe.",
-      "summary": "Why the shrinking window for a minimum-length sum fails with negative numbers",
+      "explanation": "The method relies on the sum growing with the window. A negative value breaks that: a\nlonger stretch can have a smaller sum, so the window may drop a start that a later,\nshorter stretch needed. Prefix sums with a sorted structure or a deque solve the general\ncase.",
+      "summary": "Why a shrinking window fails with negative values",
       "source": "built-in"
     },
     {
-      "id": "q-prefix-sums-range",
-      "type": "single",
-      "difficulty": "Medium",
-      "concepts": ["prefix-sums"],
-      "wordings": [
-        {
-          "text": "prefix[i] holds the sum of the first i elements of nums, so prefix[0] is 0. Which expression gives the sum of nums[l] through nums[r], both included?",
-          "options": [
-            "prefix[r] - prefix[l]",
-            "prefix[r] - prefix[l - 1]",
-            "prefix[r + 1] - prefix[l + 1]",
-            "prefix[r + 1] - prefix[l]"
-          ]
-        }
-      ],
-      "answers": [
-        3
-      ],
-      "explanation": "prefix[r + 1] covers elements 0..r and prefix[l] covers 0..l-1; the difference is exactly l..r.",
-      "summary": "Range sum formula from a prefix array",
-      "source": "built-in"
-    },
-    {
-      "id": "q-hash-maps-lookup",
+      "id": "q-prefix-range-sum",
       "type": "single",
       "difficulty": "Easy",
-      "concepts": ["hash-maps"],
+      "concepts": [
+        "prefix-sums"
+      ],
       "wordings": [
         {
-          "text": "What is the average time of looking up a key in a Python dict with n entries?",
+          "text": "P is the prefix-sum array of a: P[0] = 0 and P[i + 1] = P[i] + a[i]. Which gives the sum of a[i] through a[j], both included?",
           "options": [
-            "O(log n)",
-            "O(1)",
-            "O(n)",
-            "O(n log n)"
-          ]
-        }
-      ],
-      "answers": [
-        1
-      ],
-      "explanation": "A dict is a hash table: the hash of the key leads almost directly to its slot. Only heavy collisions make it slower.",
-      "summary": "Average cost of a dictionary lookup",
-      "source": "built-in"
-    },
-    {
-      "id": "q-hash-maps-keys",
-      "type": "multiple",
-      "difficulty": "Easy",
-      "concepts": ["hash-maps"],
-      "wordings": [
-        {
-          "text": "Which of these can be used as a key of a Python dict?",
-          "options": [
-            "A list of integers",
-            "A tuple of integers",
-            "A string",
-            "A set of strings",
-            "A frozenset of strings"
-          ]
-        },
-        {
-          "text": "Which of these objects are hashable, so that they can be stored in a Python set?",
-          "options": [
-            "A list of integers",
-            "A tuple of integers",
-            "A string",
-            "A set of strings",
-            "A frozenset of strings"
-          ]
-        }
-      ],
-      "answers": [
-        1,
-        2,
-        4
-      ],
-      "explanation": "Keys must be hashable, which in practice means immutable. Lists and sets can change, so they are not hashable; tuples of hashable items, strings and frozensets are.",
-      "summary": "Which Python objects are hashable and can be dictionary keys",
-      "source": "built-in"
-    },
-    {
-      "id": "q-hash-maps-worst-case",
-      "type": "single",
-      "difficulty": "Hard",
-      "concepts": ["hash-maps", "complexity"],
-      "wordings": [
-        {
-          "text": "What is the worst-case time of a lookup in a hash table with n entries when most keys collide?",
-          "options": [
-            "O(1)",
-            "O(log n)",
-            "O(n²)",
-            "O(n)"
-          ]
-        }
-      ],
-      "answers": [
-        3
-      ],
-      "explanation": "With many collisions a lookup has to check many entries one by one, up to all n. The O(1) figure is an average that assumes hashes spread the keys well.",
-      "summary": "Worst-case lookup in a hash table under heavy collisions",
-      "source": "built-in"
-    },
-    {
-      "id": "q-stacks-order",
-      "type": "single",
-      "difficulty": "Easy",
-      "concepts": ["stacks"],
-      "wordings": [
-        {
-          "text": "In which order does a stack give back the elements put on it?",
-          "options": [
-            "First in, first out",
-            "Smallest first",
-            "Last in, first out",
-            "In no defined order"
-          ]
-        }
-      ],
-      "answers": [
-        2
-      ],
-      "explanation": "A stack only adds and removes at the top, so the most recent element comes off first.",
-      "summary": "Order in which a stack returns its elements",
-      "source": "built-in"
-    },
-    {
-      "id": "q-stacks-next-greater",
-      "type": "single",
-      "difficulty": "Hard",
-      "concepts": ["stacks"],
-      "wordings": [
-        {
-          "text": "For every element of a list you need the next element to its right that is larger. Which structure gives all answers in O(n) in total?",
-          "options": [
-            "A min-heap of all the elements",
-            "A stack of the elements still waiting for their answer, which stays in decreasing order",
-            "A queue of the elements in their original order",
-            "A sorted copy of the list"
-          ]
-        }
-      ],
-      "answers": [
-        1
-      ],
-      "explanation": "Each new element answers every smaller element on top of the stack, pops them, and is then pushed. Every element is pushed and popped once, so the total is O(n).",
-      "summary": "Structure for the next greater element of every position in linear time",
-      "source": "built-in"
-    },
-    {
-      "id": "q-queues-deque",
-      "type": "single",
-      "difficulty": "Easy",
-      "concepts": ["queues"],
-      "wordings": [
-        {
-          "text": "Why is collections.deque preferred over a list for a first-in, first-out queue in Python?",
-          "options": [
-            "A deque always uses less memory than a list",
-            "A list cannot hold elements of different types",
-            "A deque keeps its elements sorted",
-            "list.pop(0) shifts every remaining element and costs O(n); deque.popleft() costs O(1)"
-          ]
-        },
-        {
-          "text": "What makes a list a poor choice for a FIFO queue in Python, compared with collections.deque?",
-          "options": [
-            "A deque always uses less memory than a list",
-            "A list cannot hold elements of different types",
-            "A deque keeps its elements sorted",
-            "list.pop(0) shifts every remaining element and costs O(n); deque.popleft() costs O(1)"
-          ]
-        }
-      ],
-      "answers": [
-        3
-      ],
-      "explanation": "Removing from the front of a list moves all the other elements down. A deque is built for adding and removing at both ends in constant time.",
-      "summary": "Why a deque is used instead of a list for a queue in Python",
-      "source": "built-in"
-    },
-    {
-      "id": "q-queues-window-maximum",
-      "type": "single",
-      "difficulty": "Hard",
-      "concepts": ["queues", "sliding-window"],
-      "wordings": [
-        {
-          "text": "You need the maximum of every window of k consecutive elements, in O(n) in total. Which structure makes this possible?",
-          "options": [
-            "A max-heap that is rebuilt for every window",
-            "A sorted copy of each window",
-            "A deque of positions whose values stay in decreasing order",
-            "A stack of all elements seen so far"
-          ]
-        }
-      ],
-      "answers": [
-        2
-      ],
-      "explanation": "New elements remove smaller ones from the back, and positions that left the window are removed from the front. The front is always the maximum, and every position enters and leaves once.",
-      "summary": "Structure for the maximum of every window of size k in linear time",
-      "source": "built-in"
-    },
-    {
-      "id": "q-binary-search-steps",
-      "type": "single",
-      "difficulty": "Easy",
-      "concepts": ["binary-search", "complexity"],
-      "wordings": [
-        {
-          "text": "About how many elements does a binary search look at, at most, in a sorted list of 1,000,000 elements?",
-          "options": [
-            "About 100",
-            "About 20",
-            "About 1,000",
-            "About 500,000"
-          ]
-        },
-        {
-          "text": "A sorted list holds a million elements. Roughly how many comparisons does a binary search need in the worst case?",
-          "options": [
-            "About 100",
-            "About 20",
-            "About 1,000",
-            "About 500,000"
-          ]
-        }
-      ],
-      "answers": [
-        1
-      ],
-      "explanation": "Each step halves the range, and 2 to the power 20 is just over a million.",
-      "summary": "Number of steps of a binary search over a million elements",
-      "source": "built-in"
-    },
-    {
-      "id": "q-binary-search-infinite-loop",
-      "type": "single",
-      "difficulty": "Hard",
-      "concepts": ["binary-search"],
-      "wordings": [
-        {
-          "text": "A binary search runs `while lo < hi:` with `mid = (lo + hi) // 2`. Which update can make it loop forever?",
-          "options": [
-            "lo = mid",
-            "lo = mid + 1",
-            "hi = mid",
-            "hi = mid - 1"
+            "P[j + 1] - P[i]",
+            "P[j] - P[i]",
+            "P[j] - P[i - 1]",
+            "P[j + 1] - P[i + 1]"
           ]
         }
       ],
       "answers": [
         0
       ],
-      "explanation": "When hi is lo + 1, mid equals lo, so `lo = mid` changes nothing. `hi = mid` is safe because mid is always below hi.",
-      "summary": "Which bound update makes a binary search loop forever",
+      "explanation": "P[j + 1] is the sum of a[0..j] and P[i] the sum of a[0..i - 1]; their difference leaves\na[i..j]. After O(n) set-up, every range sum costs O(1).",
+      "summary": "Range sum formula from a prefix-sum array",
       "source": "built-in"
     },
     {
-      "id": "q-binary-search-applicability",
-      "type": "multiple",
+      "id": "q-prefix-count-lookup",
+      "type": "single",
       "difficulty": "Medium",
-      "concepts": ["binary-search"],
+      "concepts": [
+        "prefix-sums"
+      ],
       "wordings": [
         {
-          "text": "In which of these situations can binary search be used?",
+          "text": "To count the stretches of an array that sum to k in one pass, you keep the running sum s. What do you look up at each position?",
           "options": [
-            "Finding the most frequent value in an unsorted list",
-            "Finding a value in a sorted list",
-            "Finding the smallest capacity that passes a check, when every larger capacity passes too",
-            "Finding a value in an unsorted list",
-            "Finding the smallest element of a rotated sorted list of distinct values"
+            "How many earlier running sums equal s - k",
+            "Whether s equals k",
+            "How many earlier values equal k",
+            "The largest earlier running sum"
           ]
         }
       ],
       "answers": [
-        1,
-        2,
-        4
+        0
       ],
-      "explanation": "Binary search needs a yes/no test that splits the candidates into a \"no\" part followed by a \"yes\" part. Sorted order, a monotonic feasibility check and the rotation point all provide that; an unsorted list does not.",
-      "summary": "Situations in which binary search applies, including search on the answer",
+      "explanation": "A stretch ending here sums to k exactly when the running sum before its start is s - k.\nCounting earlier running sums in a hash map, starting with one empty prefix of sum 0,\ngives O(n) and works with negative values too.",
+      "summary": "What to look up when counting stretches with a given sum",
       "source": "built-in"
     },
     {
-      "id": "q-sorting-python-worst-case",
+      "id": "q-memoization-fibonacci",
       "type": "single",
-      "difficulty": "Medium",
-      "concepts": ["sorting", "complexity"],
+      "difficulty": "Easy",
+      "concepts": [
+        "recursion",
+        "dynamic-programming"
+      ],
       "wordings": [
         {
-          "text": "What is the worst-case time of sorting n elements with Python's built-in sorted()?",
+          "text": "fib(n) = fib(n - 1) + fib(n - 2), with fib(0) = 0 and fib(1) = 1. Plain recursion takes exponential time. What does it take when every result is remembered (memoized)?",
           "options": [
             "O(n)",
-            "O(n²)",
             "O(n log n)",
-            "O(log n)"
+            "O(n²)",
+            "Still exponential"
           ]
         }
       ],
       "answers": [
-        2
+        0
       ],
-      "explanation": "Python uses Timsort, a merge-based sort with an O(n log n) worst case. No comparison sort can do better in general.",
-      "summary": "Worst-case running time of the built-in sort",
+      "explanation": "With memoization each fib(k) for k ≤ n is computed once, and each costs O(1) beyond its\ntwo remembered calls. The call depth, and the memory, is O(n) as well.",
+      "summary": "Effect of memoization on recursive Fibonacci",
       "source": "built-in"
     },
     {
-      "id": "q-sorting-stable",
+      "id": "q-recursion-base-case",
       "type": "single",
       "difficulty": "Easy",
-      "concepts": ["sorting"],
+      "concepts": [
+        "recursion"
+      ],
       "wordings": [
         {
-          "text": "What does it mean for a sorting algorithm to be stable?",
+          "text": "A recursive function has no base case that its calls can reach. What happens when it runs?",
           "options": [
-            "It takes the same time on every input",
-            "Elements that compare as equal keep their original relative order",
-            "It needs no memory beyond the input",
-            "It gives the same result on every run"
+            "It keeps calling itself until the call stack runs out",
+            "It returns the default value",
+            "It is turned into a loop automatically",
+            "It returns after n calls"
           ]
         }
       ],
       "answers": [
-        1
+        0
       ],
-      "explanation": "Stability matters when sorting by one field after another: sorting by name and then stably by age keeps equal ages in name order.",
-      "summary": "Meaning of a stable sort",
+      "explanation": "Each call waits for the next, so frames pile up until the runtime stops with a stack\noverflow or a recursion limit error. Every recursive call must move towards a base case.",
+      "summary": "Recursion without a reachable base case",
       "source": "built-in"
     },
     {
-      "id": "q-sorting-python-facts",
-      "type": "multiple",
-      "difficulty": "Medium",
-      "concepts": ["sorting"],
+      "id": "q-bfs-finds",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "breadth-first-search"
+      ],
       "wordings": [
         {
-          "text": "Which statements about sorting in Python are true?",
+          "text": "Breadth-first search from a start node finds shortest paths of which kind?",
           "options": [
-            "list.sort() sorts the list in place and returns None",
-            "The key function is called once for every comparison",
-            "The built-in sort is stable",
-            "A list that is already sorted takes about n comparisons",
-            "The worst case of the built-in sort is quadratic"
+            "Paths with the fewest edges",
+            "Paths with the smallest total weight in a weighted graph",
+            "The longest paths without repeated nodes",
+            "Paths in alphabetical order of nodes"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "It reaches all nodes one edge away, then two, and so on, so the first time it reaches a\nnode is by fewest edges. For weighted edges use Dijkstra's algorithm.",
+      "summary": "Kind of shortest path breadth-first search finds",
+      "source": "built-in"
+    },
+    {
+      "id": "q-bfs-mark-when",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "breadth-first-search"
+      ],
+      "wordings": [
+        {
+          "text": "A breadth-first search marks a node as visited only when it takes the node out of the queue, not when it adds it. What happens?",
+          "options": [
+            "A node can be queued many times, wasting time and memory",
+            "It finds wrong distances",
+            "It never stops",
+            "It turns into a depth-first search"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Several neighbours can each add the same unmarked node before it is taken out. The first\ncopy out still has the right distance, but the queue can grow far beyond the number of\nnodes. Mark nodes when you add them.",
+      "summary": "Why breadth-first search marks nodes when it queues them",
+      "source": "built-in"
+    },
+    {
+      "id": "q-dfs-directed-cycle",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "depth-first-search"
+      ],
+      "wordings": [
+        {
+          "text": "During a depth-first search of a directed graph, which event shows that the graph has a cycle?",
+          "options": [
+            "Reaching a node that is still on the current path",
+            "Reaching a node that was fully explored earlier",
+            "Reaching a node with no outgoing edges",
+            "Finishing the search with nodes left unvisited"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A node on the current path leads to the node you are at, and the edge you followed leads\nback to it: a cycle. A fully explored node may just be reached by two paths, which is\nnot a cycle in a directed graph. Track three states: new, on the path, done.",
+      "summary": "Detecting a cycle in a directed graph with depth-first search",
+      "source": "built-in"
+    },
+    {
+      "id": "q-dfs-uses",
+      "type": "multiple",
+      "difficulty": "Easy",
+      "concepts": [
+        "depth-first-search"
+      ],
+      "wordings": [
+        {
+          "text": "Which tasks does depth-first search do directly?",
+          "options": [
+            "Counting the connected groups of an undirected graph",
+            "Ordering tasks so that each comes after its prerequisites",
+            "Finding the path with the fewest edges between two nodes",
+            "Visiting nodes in order of their distance from the start"
           ]
         }
       ],
       "answers": [
         0,
-        2,
-        3
+        1
       ],
-      "explanation": "The key function is called once per element, and its results are reused. Timsort detects existing runs, so sorted input is handled in linear time; its worst case is O(n log n).",
-      "summary": "Properties of list.sort and sorted in Python",
+      "explanation": "Each search from an unvisited node covers one group, and listing nodes as they finish, in\nreverse, gives a topological order. Fewest edges and distance order are what\nbreadth-first search gives; depth-first search can reach a node by a long path first.",
+      "summary": "Tasks that depth-first search solves",
       "source": "built-in"
     },
     {
-      "id": "q-linked-lists-insert",
-      "type": "single",
-      "difficulty": "Easy",
-      "concepts": ["linked-lists"],
-      "wordings": [
-        {
-          "text": "You hold a reference to a node of a singly linked list with n nodes. What is the cost of inserting a new node right after it?",
-          "options": [
-            "O(log n)",
-            "O(n)",
-            "O(n log n)",
-            "O(1)"
-          ]
-        }
-      ],
-      "answers": [
-        3
-      ],
-      "explanation": "Only two links change: the new node points to the old successor, and the given node points to the new node. Nothing has to be moved.",
-      "summary": "Cost of inserting after a known node of a singly linked list",
-      "source": "built-in"
-    },
-    {
-      "id": "q-linked-lists-cycle",
-      "type": "single",
-      "difficulty": "Hard",
-      "concepts": ["linked-lists", "two-pointers"],
-      "wordings": [
-        {
-          "text": "One pointer moves one node per step and another moves two. Why does this detect a cycle in a linked list?",
-          "options": [
-            "The fast pointer reaches the end of the list twice",
-            "The slow pointer counts the nodes and notices a repeat",
-            "Once both are inside the cycle, the fast pointer gains one node per step on the slow one, so it must catch up with it",
-            "The values stored in the nodes start to repeat"
-          ]
-        },
-        {
-          "text": "In the slow-and-fast pointer method for finding a cycle in a linked list, what guarantees that the two pointers meet when a cycle exists?",
-          "options": [
-            "The fast pointer reaches the end of the list twice",
-            "The slow pointer counts the nodes and notices a repeat",
-            "Once both are inside the cycle, the fast pointer gains one node per step on the slow one, so it must catch up with it",
-            "The values stored in the nodes start to repeat"
-          ]
-        }
-      ],
-      "answers": [
-        2
-      ],
-      "explanation": "Inside a cycle the gap between the pointers shrinks by one each step until it is zero. Without a cycle the fast pointer simply reaches the end.",
-      "summary": "Why slow and fast pointers must meet inside a cycle",
-      "source": "built-in"
-    },
-    {
-      "id": "q-trees-inorder",
-      "type": "single",
-      "difficulty": "Easy",
-      "concepts": ["trees"],
-      "wordings": [
-        {
-          "text": "Which traversal of a binary search tree visits the keys in ascending order?",
-          "options": [
-            "In-order",
-            "Pre-order",
-            "Post-order",
-            "Level-order"
-          ]
-        }
-      ],
-      "answers": [
-        0
-      ],
-      "explanation": "In-order visits the left subtree, then the node, then the right subtree. In a binary search tree everything on the left is smaller and everything on the right is larger.",
-      "summary": "Traversal that lists the keys of a binary search tree in order",
-      "source": "built-in"
-    },
-    {
-      "id": "q-trees-bst-worst-case",
-      "type": "single",
-      "difficulty": "Medium",
-      "concepts": ["trees", "complexity"],
-      "wordings": [
-        {
-          "text": "What is the worst-case time of searching a binary search tree with n nodes that is not kept balanced?",
-          "options": [
-            "O(log n)",
-            "O(1)",
-            "O(n log n)",
-            "O(n)"
-          ]
-        },
-        {
-          "text": "Keys are inserted into a plain binary search tree in ascending order. How long does a search take afterwards, in the worst case?",
-          "options": [
-            "O(log n)",
-            "O(1)",
-            "O(n log n)",
-            "O(n)"
-          ]
-        }
-      ],
-      "answers": [
-        3
-      ],
-      "explanation": "Inserting keys in sorted order produces a chain: a tree of height n. Search follows one path from the root, so its cost is the height.",
-      "summary": "Worst-case search time in an unbalanced binary search tree",
-      "source": "built-in"
-    },
-    {
-      "id": "q-trees-depth-first",
+      "id": "q-dp-conditions",
       "type": "multiple",
       "difficulty": "Medium",
-      "concepts": ["trees"],
+      "concepts": [
+        "dynamic-programming"
+      ],
       "wordings": [
         {
-          "text": "Which of these traversals of a binary tree are depth-first?",
+          "text": "Which properties of a problem make dynamic programming a good fit?",
           "options": [
-            "Level-order",
-            "Pre-order",
-            "In-order",
-            "Post-order"
+            "The same subproblems come up many times",
+            "An optimal solution is built from optimal solutions of subproblems",
+            "The input is sorted",
+            "Taking the locally best choice at each step is always optimal"
           ]
         }
       ],
       "answers": [
-        1,
-        2,
-        3
+        0,
+        1
       ],
-      "explanation": "Pre-order, in-order and post-order all go down a branch before coming back; they differ only in when the node itself is visited. Level-order goes across the tree level by level: breadth-first.",
-      "summary": "Telling depth-first traversals from breadth-first",
+      "explanation": "Overlapping subproblems make storing results pay off, and optimal substructure makes\ncombining them correct. Sorted input is unrelated, and when the locally best choice is\nalways optimal a greedy algorithm is enough.",
+      "summary": "Properties that call for dynamic programming",
       "source": "built-in"
     },
     {
-      "id": "q-graphs-shortest-unweighted",
+      "id": "q-coins-greedy-fails",
       "type": "single",
-      "difficulty": "Easy",
-      "concepts": ["graphs"],
+      "difficulty": "Medium",
+      "concepts": [
+        "dynamic-programming",
+        "greedy"
+      ],
       "wordings": [
         {
-          "text": "Which traversal finds a path with the fewest edges between two nodes of an unweighted graph?",
+          "text": "Coins are worth 1, 3 and 4. Taking the largest coin that fits pays 6 as 4 + 1 + 1. What is the fewest number of coins for 6?",
           "options": [
-            "Depth-first search",
-            "Breadth-first search",
-            "Topological sort",
-            "Binary search"
+            "1",
+            "2",
+            "3",
+            "4"
           ]
         }
       ],
       "answers": [
         1
       ],
-      "explanation": "Breadth-first search reaches nodes in order of their distance from the start, so the first time it reaches the goal it has used the fewest edges.",
-      "summary": "Traversal that finds the path with the fewest edges",
+      "explanation": "3 + 3 uses two coins, so the greedy choice of 4 is not optimal for these coins. Dynamic\nprogramming over amounts, best(a) = 1 + min of best(a - coin), finds it.",
+      "summary": "A coin set where the greedy choice is not optimal",
       "source": "built-in"
     },
     {
-      "id": "q-graphs-traversal-cost",
+      "id": "q-greedy-meetings",
       "type": "single",
       "difficulty": "Medium",
-      "concepts": ["graphs", "complexity"],
+      "concepts": [
+        "greedy"
+      ],
       "wordings": [
         {
-          "text": "A graph with V nodes and E edges is stored as adjacency lists. What is the tightest bound on the time of a breadth-first or depth-first search over the whole graph?",
+          "text": "You choose as many non-overlapping meetings as possible from a list. Which greedy rule always gives the maximum?",
           "options": [
-            "O(V + E)",
-            "O(V · E)",
-            "O(V²) in every case",
-            "O(E log V)"
+            "Take the meeting that ends first, then repeat with the ones that start after it",
+            "Take the meeting that starts first",
+            "Take the shortest meeting",
+            "Take the meeting that overlaps the fewest others"
           ]
         }
       ],
       "answers": [
         0
       ],
-      "explanation": "Every node is taken once and every adjacency list is read once, which adds up to the nodes plus the edges.",
-      "summary": "Cost of a full traversal over an adjacency list",
+      "explanation": "Ending first leaves the most time for the rest, and any optimal choice can swap its first\nmeeting for the earliest-ending one. Earliest start, shortest duration and fewest\noverlaps each have counterexamples.",
+      "summary": "Greedy rule for the most non-overlapping meetings",
       "source": "built-in"
     },
     {
-      "id": "q-heaps-min-operations",
+      "id": "q-greedy-proof",
       "type": "single",
       "difficulty": "Medium",
-      "concepts": ["heaps", "complexity"],
+      "concepts": [
+        "greedy"
+      ],
       "wordings": [
         {
-          "text": "In a binary min-heap with n elements, what do reading the smallest element and removing it cost?",
+          "text": "What must you show to prove that a greedy algorithm is correct?",
           "options": [
-            "O(log n) for both",
-            "O(1) for both",
-            "O(1) to read, O(log n) to remove",
-            "O(n) to read, O(1) to remove"
-          ]
-        }
-      ],
-      "answers": [
-        2
-      ],
-      "explanation": "The smallest element sits at the root. Removing it moves the last element to the root and sinks it down one level at a time, and the heap has about log n levels.",
-      "summary": "Cost of reading and removing the smallest element of a binary heap",
-      "source": "built-in"
-    },
-    {
-      "id": "q-heaps-top-k",
-      "type": "single",
-      "difficulty": "Medium",
-      "concepts": ["heaps", "complexity"],
-      "wordings": [
-        {
-          "text": "You find the k largest of n numbers by keeping a min-heap of at most k elements. What is the running time?",
-          "options": [
-            "O(n log n)",
-            "O(n log k)",
-            "O(k log n)",
-            "O(n · k)"
-          ]
-        },
-        {
-          "text": "A stream of n numbers is passed through a min-heap that never holds more than k elements, to keep the k largest. How long does that take?",
-          "options": [
-            "O(n log n)",
-            "O(n log k)",
-            "O(k log n)",
-            "O(n · k)"
-          ]
-        }
-      ],
-      "answers": [
-        1
-      ],
-      "explanation": "Each of the n numbers causes at most one push and one pop on a heap of at most k elements, and each of those costs O(log k).",
-      "summary": "Cost of selecting the k largest values with a heap of size k",
-      "source": "built-in"
-    },
-    {
-      "id": "q-heaps-heapify",
-      "type": "single",
-      "difficulty": "Hard",
-      "concepts": ["heaps", "complexity"],
-      "wordings": [
-        {
-          "text": "What does it cost to turn a list of n unordered items into a heap with heapify?",
-          "options": [
-            "O(n)",
-            "O(n log n)",
-            "O(log n)",
-            "O(n²)"
+            "Some optimal solution starts with the greedy choice, and what is left is a smaller problem of the same kind",
+            "It runs in linear time",
+            "It is correct on the examples",
+            "Every subproblem is solved only once"
           ]
         }
       ],
       "answers": [
         0
       ],
-      "explanation": "Heapify sinks nodes starting from the bottom. Most nodes are near the bottom and move very little, and the total adds up to O(n), which is less than n separate pushes.",
-      "summary": "Cost of building a heap from unordered items",
-      "source": "built-in"
-    },
-    {
-      "id": "q-dp-properties",
-      "type": "single",
-      "difficulty": "Medium",
-      "concepts": ["dynamic-programming"],
-      "wordings": [
-        {
-          "text": "Which two properties make a problem suitable for dynamic programming?",
-          "options": [
-            "Sorted input and distinct values",
-            "A greedy choice and random access",
-            "Constant memory and a single pass",
-            "Overlapping subproblems and optimal substructure"
-          ]
-        }
-      ],
-      "answers": [
-        3
-      ],
-      "explanation": "The answer must be built from answers to smaller subproblems (optimal substructure), and the same subproblems must come up repeatedly (overlap), so that storing them saves work.",
-      "summary": "The two properties a problem needs for dynamic programming",
-      "source": "built-in"
-    },
-    {
-      "id": "q-dp-stairs",
-      "type": "single",
-      "difficulty": "Easy",
-      "concepts": ["dynamic-programming"],
-      "wordings": [
-        {
-          "text": "You climb n stairs taking one or two stairs at a time. Which recurrence gives the number of different ways?",
-          "options": [
-            "ways(n) = 2 · ways(n - 1)",
-            "ways(n) = ways(n - 1) + 1",
-            "ways(n) = ways(n - 1) + ways(n - 2)",
-            "ways(n) = ways(n // 2) + 1"
-          ]
-        }
-      ],
-      "answers": [
-        2
-      ],
-      "explanation": "The last move is either one stair, coming from n - 1, or two stairs, coming from n - 2. The two cases do not overlap, so their counts add up.",
-      "summary": "Recurrence for counting ways to climb stairs one or two at a time",
-      "source": "built-in"
-    },
-    {
-      "id": "q-dp-memo-vs-table",
-      "type": "multiple",
-      "difficulty": "Hard",
-      "concepts": ["dynamic-programming"],
-      "wordings": [
-        {
-          "text": "Which statements about memoisation (top-down) and tabulation (bottom-up) are true?",
-          "options": [
-            "Memoisation needs no extra memory",
-            "Memoisation computes only the subproblems that are actually reached",
-            "Tabulation avoids deep recursion",
-            "Tabulation works only when there is a single parameter",
-            "When every subproblem is needed, both have the same order of running time"
-          ]
-        }
-      ],
-      "answers": [
-        1,
-        2,
-        4
-      ],
-      "explanation": "Both store one result per subproblem. Memoisation follows the recursion and may skip unreachable states; tabulation fills a table in a fixed order with loops, in any number of dimensions.",
-      "summary": "Comparing top-down memoisation with bottom-up tabulation",
-      "source": "built-in"
-    },
-    {
-      "id": "q-complexity-triangular-loop",
-      "type": "single",
-      "difficulty": "Medium",
-      "concepts": ["complexity"],
-      "wordings": [
-        {
-          "text": "What is the running time of this code?\n\n```python\nfor i in range(n):\n    for j in range(i):\n        total += 1\n```",
-          "options": [
-            "O(n)",
-            "O(n log n)",
-            "O(2ⁿ)",
-            "O(n²)"
-          ]
-        }
-      ],
-      "answers": [
-        3
-      ],
-      "explanation": "The inner loop runs 0 + 1 + … + (n − 1) times, which is n(n − 1)/2: half of n², and constant factors do not change the order.",
-      "summary": "Running time of a loop nested inside another with a dependent bound",
-      "source": "built-in"
-    },
-    {
-      "id": "q-complexity-amortised-append",
-      "type": "single",
-      "difficulty": "Medium",
-      "concepts": ["complexity"],
-      "wordings": [
-        {
-          "text": "Appending to a Python list takes amortised O(1) time. What does \"amortised\" mean here?",
-          "options": [
-            "Every single append takes exactly the same constant time",
-            "Appending takes O(log n) time",
-            "Most appends are O(1); an occasional one costs O(n) to move the elements, but averaged over many appends the cost per append is constant",
-            "The elements of a list never have to be moved"
-          ]
-        },
-        {
-          "text": "What does it mean that list.append runs in amortised constant time?",
-          "options": [
-            "Every single append takes exactly the same constant time",
-            "Appending takes O(log n) time",
-            "Most appends are O(1); an occasional one costs O(n) to move the elements, but averaged over many appends the cost per append is constant",
-            "The elements of a list never have to be moved"
-          ]
-        }
-      ],
-      "answers": [
-        2
-      ],
-      "explanation": "A list reserves spare room and grows by a proportion when it runs out. The rare expensive growth steps are paid for by the many cheap appends between them.",
-      "summary": "Meaning of amortised constant time for list append",
-      "source": "built-in"
-    },
-    {
-      "id": "q-complexity-list-operations",
-      "type": "multiple",
-      "difficulty": "Medium",
-      "concepts": ["complexity"],
-      "wordings": [
-        {
-          "text": "Which of these operations take O(n) time on a Python list of n elements?",
-          "options": [
-            "lst.append(x)",
-            "x in lst",
-            "lst[i]",
-            "lst.insert(0, x)",
-            "lst.pop(0)"
-          ]
-        }
-      ],
-      "answers": [
-        1,
-        3,
-        4
-      ],
-      "explanation": "Membership has to compare elements one by one, and inserting or removing at the front shifts all the others. Indexing and appending at the end are constant time.",
-      "summary": "Which list operations take linear time",
+      "explanation": "That is the greedy-choice property together with optimal substructure; it is often shown\nby an exchange argument. Speed and examples prove nothing, and solving subproblems once is\nabout dynamic programming.",
+      "summary": "What a greedy correctness proof shows",
       "source": "built-in"
     }
   ]

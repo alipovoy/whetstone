@@ -1,7 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { readFileSync } from 'node:fs'
-
-const builtIn: string = JSON.parse(readFileSync('src/content/algorithms.json', 'utf8')).topic.name
+import { builtInTopics } from './content.ts'
 
 function savedAnswers(page: Page): Promise<number> {
   return page.evaluate(
@@ -61,7 +59,9 @@ test('take a ten-question quiz on two topics, reload and resume it, read the res
   await page.getByRole('link', { name: 'Quizzes' }).click()
   // Only the two new topics: they hold exactly ten questions, so both are in the quiz.
   const topics = page.getByRole('group', { name: 'Topics' })
-  await topics.getByRole('button', { name: builtIn }).click()
+  for (const { topic } of builtInTopics) {
+    await topics.getByRole('button', { name: topic.name }).click()
+  }
   await expect(topics.getByRole('button', { name: /Strings/ })).toHaveAttribute(
     'aria-pressed',
     'true',

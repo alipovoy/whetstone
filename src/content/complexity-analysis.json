@@ -1,0 +1,500 @@
+{
+  "topic": {
+    "id": "complexity-analysis",
+    "name": "Complexity analysis",
+    "concepts": [
+      {
+        "id": "growth-rates",
+        "name": "Growth rates",
+        "group": "Big O"
+      },
+      {
+        "id": "cases",
+        "name": "Best, worst and expected case",
+        "group": "Big O"
+      },
+      {
+        "id": "space",
+        "name": "Space complexity",
+        "group": "Big O"
+      },
+      {
+        "id": "loops",
+        "name": "Loops and nested calls",
+        "group": "Analysis"
+      },
+      {
+        "id": "recursive-runtimes",
+        "name": "Recursive runtimes",
+        "group": "Analysis"
+      },
+      {
+        "id": "amortized-cost",
+        "name": "Amortized cost",
+        "group": "Analysis"
+      },
+      {
+        "id": "operation-costs",
+        "name": "Costs of common operations",
+        "group": "Reference"
+      }
+    ]
+  },
+  "problems": [],
+  "questions": [
+    {
+      "id": "q-fastest-growth",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "growth-rates"
+      ],
+      "wordings": [
+        {
+          "text": "Which of these grows fastest as n becomes large?",
+          "options": [
+            "n³",
+            "2ⁿ",
+            "n² log n",
+            "n log n"
+          ]
+        }
+      ],
+      "answers": [
+        1
+      ],
+      "explanation": "Any exponential eventually overtakes any polynomial: at n = 20, 2ⁿ is about a million and\nn³ is 8,000. Among the others, n³ > n² log n > n log n.",
+      "summary": "Exponential against polynomial growth",
+      "source": "built-in"
+    },
+    {
+      "id": "q-drop-constants",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "growth-rates"
+      ],
+      "wordings": [
+        {
+          "text": "What is 3n² + 100n + 5 in big O notation?",
+          "options": [
+            "O(n²)",
+            "O(3n²)",
+            "O(n² + n)",
+            "O(100n)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Big O keeps the fastest-growing term and drops constant factors: for large n, n² dominates\n100n and 5. O(3n²) and O(n² + n) mean the same set but are not simplified.",
+      "summary": "Simplifying a polynomial in big O",
+      "source": "built-in"
+    },
+    {
+      "id": "q-two-inputs",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "growth-rates",
+        "loops"
+      ],
+      "wordings": [
+        {
+          "text": "A function loops once over an array a of length A, and after that once over an array b of length B. What is its runtime?",
+          "options": [
+            "O(A + B)",
+            "O(A · B)",
+            "O(A)",
+            "O(A²)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The loops run one after the other, so their costs add. They would multiply if the loop\nover b ran inside the loop over a. With two independent inputs, keep both sizes.",
+      "summary": "Runtime of two loops over different inputs",
+      "source": "built-in"
+    },
+    {
+      "id": "q-quicksort-worst",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "cases"
+      ],
+      "wordings": [
+        {
+          "text": "Quicksort always takes the first element as its pivot. On which input is it slowest?",
+          "options": [
+            "An already sorted list",
+            "A list in random order",
+            "A list with all values different",
+            "A list of even length"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "On sorted input the first element is the smallest, so each split leaves n - 1 elements\non one side: O(n²). On random input the splits are balanced on average: O(n log n).\nA random pivot makes the worst case unlikely for any input.",
+      "summary": "Worst case of quicksort with a fixed pivot",
+      "source": "built-in"
+    },
+    {
+      "id": "q-hash-expected-case",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "cases"
+      ],
+      "wordings": [
+        {
+          "text": "A hash map lookup is called O(1). Which case does that describe?",
+          "options": [
+            "The expected case, with a hash function that spreads keys well",
+            "The worst case for any keys",
+            "The best case only",
+            "Every lookup, whatever the hash function"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "On average each slot holds few keys. In the worst case all keys collide and a lookup\nscans O(n) of them; a good hash function makes that unlikely.",
+      "summary": "Which case the constant-time hash lookup refers to",
+      "source": "built-in"
+    },
+    {
+      "id": "q-recursion-stack-space",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "space",
+        "recursive-runtimes"
+      ],
+      "wordings": [
+        {
+          "text": "sum(a, n) returns a[n - 1] + sum(a, n - 1), and 0 when n is 0. How much extra memory does sum(a, n) use?",
+          "options": [
+            "O(n)",
+            "O(1)",
+            "O(log n)",
+            "O(n²)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Every call waits for the next one, so n frames are on the call stack at the deepest\npoint. A loop with one running total needs O(1).",
+      "summary": "Call stack memory of linear recursion",
+      "source": "built-in"
+    },
+    {
+      "id": "q-in-place-reverse",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "space"
+      ],
+      "wordings": [
+        {
+          "text": "An array is reversed in place by swapping the first and last elements, then the second and second-to-last, and so on. How much extra memory does it use?",
+          "options": [
+            "O(1)",
+            "O(log n)",
+            "O(n)",
+            "O(n²)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Only two indices and one value for the swap are stored, whatever the size of the array.\nThe input itself is not counted as extra memory.",
+      "summary": "Extra memory of an in-place reverse",
+      "source": "built-in"
+    },
+    {
+      "id": "q-triangle-loop",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "loops"
+      ],
+      "wordings": [
+        {
+          "text": "What is the runtime of this loop?\n\n```\nfor i from 0 to n - 1:\n    for j from i + 1 to n - 1:\n        constant work\n```",
+          "options": [
+            "O(n)",
+            "O(n log n)",
+            "O(n²)",
+            "O(n³)"
+          ]
+        }
+      ],
+      "answers": [
+        2
+      ],
+      "explanation": "The inner loop runs n - 1, n - 2, …, 0 times, n(n - 1)/2 in total. Halving the work of a\nfull n × n loop does not change the class.",
+      "summary": "Runtime of a loop over all pairs",
+      "source": "built-in"
+    },
+    {
+      "id": "q-halving-loop",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "loops"
+      ],
+      "wordings": [
+        {
+          "text": "What is the runtime of this loop?\n\n```\nwhile n > 1:\n    n = n / 2, rounded down\n```",
+          "options": [
+            "O(log n)",
+            "O(n)",
+            "O(√n)",
+            "O(1)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Halving reaches 1 after about log₂ n steps. Any loop that divides its range by a constant\nfactor each time is logarithmic, as in binary search.",
+      "summary": "Runtime of a halving loop",
+      "source": "built-in"
+    },
+    {
+      "id": "q-doubling-inner-loop",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "loops"
+      ],
+      "wordings": [
+        {
+          "text": "What is the runtime of this loop?\n\n```\nfor i from 1 to n:\n    j = 1\n    while j < n:\n        j = j * 2\n```",
+          "options": [
+            "O(n log n)",
+            "O(n)",
+            "O(n²)",
+            "O(log n)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "The inner loop doubles j until it reaches n, about log₂ n steps, and does not depend on\ni. It runs n times: O(n log n).",
+      "summary": "Runtime of a logarithmic loop inside a linear one",
+      "source": "built-in"
+    },
+    {
+      "id": "q-two-recursive-calls",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "recursive-runtimes"
+      ],
+      "wordings": [
+        {
+          "text": "f(n) returns f(n - 1) + f(n - 1), and 1 when n is 0. What is the runtime of f(n)?",
+          "options": [
+            "O(2ⁿ)",
+            "O(n)",
+            "O(n²)",
+            "O(n log n)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Each call makes two more, so level k of the call tree has 2ᵏ calls and there are n\nlevels. A rule of thumb: branches to the power of depth. Computing f(n - 1) once and\ndoubling it is O(n).",
+      "summary": "Runtime of a function with two recursive calls",
+      "source": "built-in"
+    },
+    {
+      "id": "q-merge-sort-recurrence",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "recursive-runtimes"
+      ],
+      "wordings": [
+        {
+          "text": "Merge sort splits the input in half, sorts both halves recursively and merges them in linear time: T(n) = 2T(n/2) + O(n). What is T(n)?",
+          "options": [
+            "O(n log n)",
+            "O(n)",
+            "O(n²)",
+            "O(log n)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Each of the log₂ n levels of halving does O(n) merging in total. Binary search, one half\nwith constant work, is T(n) = T(n/2) + O(1) = O(log n).",
+      "summary": "Solving the merge sort recurrence",
+      "source": "built-in"
+    },
+    {
+      "id": "q-recursion-tree-depth",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "recursive-runtimes"
+      ],
+      "wordings": [
+        {
+          "text": "A recursive function makes one call on an input of half the size and does constant work besides. What is its runtime?",
+          "options": [
+            "O(log n)",
+            "O(n)",
+            "O(n log n)",
+            "O(1)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "T(n) = T(n/2) + O(1): there are about log₂ n calls, each doing constant work. Binary\nsearch has this shape.",
+      "summary": "Runtime of recursion that halves its input",
+      "source": "built-in"
+    },
+    {
+      "id": "q-amortized-fixed-growth",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "amortized-cost"
+      ],
+      "wordings": [
+        {
+          "text": "A dynamic array grows by a fixed 10 slots when it is full, copying all its elements. What do n appends cost in total?",
+          "options": [
+            "O(n²)",
+            "O(n)",
+            "O(n log n)",
+            "O(10n)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "A copy happens every 10 appends and copies all elements so far: 10 + 20 + 30 + … up to n,\nabout n²/20. Growing by a constant factor, such as doubling, keeps the total at O(n).",
+      "summary": "Why arrays grow by a factor and not a fixed amount",
+      "source": "built-in"
+    },
+    {
+      "id": "q-amortized-meaning",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "amortized-cost"
+      ],
+      "wordings": [
+        {
+          "text": "What does it mean that an operation costs O(1) amortized?",
+          "options": [
+            "Any sequence of n operations costs O(n) in total, though a single one may cost more",
+            "Every single operation costs O(1)",
+            "It costs O(1) on average over random inputs",
+            "It costs O(1) with high probability"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Amortized cost spreads the rare expensive operations, such as an array resize, over the\ncheap ones. It is a guarantee for every sequence, unlike expected cost, which averages\nover chance.",
+      "summary": "Meaning of amortized constant cost",
+      "source": "built-in"
+    },
+    {
+      "id": "q-sorted-array-insert",
+      "type": "single",
+      "difficulty": "Easy",
+      "concepts": [
+        "operation-costs"
+      ],
+      "wordings": [
+        {
+          "text": "What does inserting a value into a sorted array of n elements cost, keeping it sorted?",
+          "options": [
+            "O(n)",
+            "O(log n)",
+            "O(1)",
+            "O(n log n)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Binary search finds the place in O(log n), but the elements after it must shift one place\neach, O(n). A balanced search tree inserts in O(log n).",
+      "summary": "Cost of a sorted insert into an array",
+      "source": "built-in"
+    },
+    {
+      "id": "q-build-heap",
+      "type": "single",
+      "difficulty": "Medium",
+      "concepts": [
+        "operation-costs"
+      ],
+      "wordings": [
+        {
+          "text": "What does it cost to turn an unordered array of n values into a binary heap in place, by sifting down from the last parent to the root?",
+          "options": [
+            "O(n)",
+            "O(n log n)",
+            "O(log n)",
+            "O(n²)"
+          ]
+        }
+      ],
+      "answers": [
+        0
+      ],
+      "explanation": "Most nodes are near the bottom and sift down only a little: half of them not at all, a\nquarter one level, and so on, which sums to O(n). Pushing the n values one by one costs\nO(n log n).",
+      "summary": "Cost of building a heap from an array",
+      "source": "built-in"
+    },
+    {
+      "id": "q-logarithmic-operations",
+      "type": "multiple",
+      "difficulty": "Medium",
+      "concepts": [
+        "operation-costs"
+      ],
+      "wordings": [
+        {
+          "text": "Which of these cost O(log n) for a structure of n elements?",
+          "options": [
+            "Searching a balanced binary search tree",
+            "Adding a value to a binary heap",
+            "Looking up a key in a hash map, on average",
+            "Reading an array element by index",
+            "Adding a node at the head of a linked list"
+          ]
+        }
+      ],
+      "answers": [
+        0,
+        1
+      ],
+      "explanation": "Both walk one path of a tree of height O(log n). A hash lookup on average, an array read\nand a head insert are O(1).",
+      "summary": "Operations that cost logarithmic time",
+      "source": "built-in"
+    }
+  ]
+}

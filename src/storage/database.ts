@@ -1,12 +1,13 @@
 import { openDB, type DBSchema, type IDBPDatabase, type IDBPObjectStore } from 'idb'
 import type { z } from 'zod'
-import { builtInTopic } from '@/content'
+import { builtInTopics } from '@/content'
 import { AttemptSchema, type Attempt } from '@/core/attempt'
 import { QuizSchema, type Quiz } from '@/core/quiz'
 import { topicFromFile, TopicRecordSchema, type TopicRecord } from '@/core/topics'
 
 export const DATABASE_NAME = 'whetstone'
-const DATABASE_VERSION = 6
+const DATABASE_VERSION = 7
+const PLACEHOLDER_ID = 'algorithms'
 
 interface Schema extends DBSchema {
   attempts: { key: string; value: unknown }
@@ -31,18 +32,14 @@ export async function openDatabase(name = DATABASE_NAME): Promise<Database> {
   let connection: Connection | undefined
   const db = await openDB<Schema>(name, DATABASE_VERSION, {
     // Each database version adds its stores; later steps append a branch, never edit one.
+    // Earlier branches no longer handle the placeholder topic, which version 7 replaces.
     upgrade(database, oldVersion, _newVersion, transaction) {
       if (oldVersion < 1) database.createObjectStore('attempts', { keyPath: 'id' })
-      if (oldVersion < 2) {
-        // Seeded once, with the database: a built-in topic the user deleted stays deleted.
-        const topics = database.createObjectStore('topics', { keyPath: 'id' })
-        void topics.put(topicFromFile(builtInTopic, Date.now()))
-      }
+      if (oldVersion < 2) database.createObjectStore('topics', { keyPath: 'id' })
       // Changes to stored records run one after another, each reading what the last one wrote.
       // A failed change aborts the upgrade, so it runs again on the next open.
       let changes = Promise.resolve()
       const topics = () => transaction.objectStore('topics')
-      if (oldVersion < 3) changes = changes.then(() => addBuiltInQuestions(topics()))
       if (oldVersion < 4) database.createObjectStore('quizzes', { keyPath: 'id' })
       if (oldVersion < 5) changes = changes.then(() => addQuestionDifficulty(topics()))
       if (oldVersion < 6) {
@@ -51,6 +48,9 @@ export async function openDatabase(name = DATABASE_NAME): Promise<Database> {
         if (oldVersion >= 1) void transaction.objectStore('attempts').clear()
         if (oldVersion >= 4) void transaction.objectStore('quizzes').clear()
       }
+      // Built-in topics are added once, by the version that brings them: one the user deleted
+      // stays deleted.
+      if (oldVersion < 7) changes = changes.then(() => replacePlaceholder(topics()))
       changes.catch(() => transaction.abort())
     },
     // A newer version of the app opened in another tab: let its upgrade through.
@@ -67,63 +67,45 @@ export async function openDatabase(name = DATABASE_NAME): Promise<Database> {
   }
 }
 
-// The built-in topic stored before questions existed gets them once; a deleted one stays deleted.
-async function addBuiltInQuestions(
+// The first built-in topic was a placeholder: it is replaced, with its items, by the built-in set.
+async function replacePlaceholder(
   topics: IDBPObjectStore<Schema, StoreName[], 'topics', 'versionchange'>,
 ) {
-  const stored = (await topics.get(builtInTopic.topic.id)) as
-    { questions?: { id: string }[] } | undefined
-  if (!stored) return
-  const questions = stored.questions ?? []
-  const have = new Set(questions.map((q) => q.id))
-  const missing = builtInTopic.questions.filter((q) => !have.has(q.id))
-  if (missing.length) await topics.put({ ...stored, questions: [...questions, ...missing] })
+  await topics.delete(PLACEHOLDER_ID)
+  const now = Date.now()
+  for (const file of builtInTopics) await topics.put(topicFromFile(file, now))
 }
 
-// Questions became graded by difficulty: built-in ones take theirs, all others start as Easy.
+// Questions became graded by difficulty: stored ones start as Easy.
 async function addQuestionDifficulty(
   topics: IDBPObjectStore<Schema, StoreName[], 'topics', 'versionchange'>,
 ) {
-  const builtIn = new Map(builtInTopic.questions.map((q) => [q.id, q.difficulty]))
   for (const stored of (await topics.getAll()) as StoredTopic[]) {
     // A record of another shape is left for the schema to skip, not allowed to fail the upgrade.
     if (!Array.isArray(stored?.questions)) continue
     const missing = (q: unknown): q is Record<string, unknown> =>
       typeof q === 'object' && q !== null && !('difficulty' in q)
     if (!stored.questions.some(missing)) continue
-    const own = stored.id === builtInTopic.topic.id ? builtIn : new Map<unknown, string>()
-    const questions = stored.questions.map((q) =>
-      missing(q) ? { ...q, difficulty: own.get(q.id) ?? 'Easy' } : q,
-    )
+    const questions = stored.questions.map((q) => (missing(q) ? { ...q, difficulty: 'Easy' } : q))
     await topics.put({ ...stored, questions })
   }
 }
 
-// Items got a list of concepts: built-in ones take the built-in list, all others a list of one.
+// Items got a list of concepts: a list of their one concept.
 async function listConcepts(
   topics: IDBPObjectStore<Schema, StoreName[], 'topics', 'versionchange'>,
 ) {
-  const builtIn = new Map(
-    [...builtInTopic.problems, ...builtInTopic.questions].map((item) => [item.id, item.concepts]),
-  )
-  const single = (item: unknown): item is { id?: unknown; concept: unknown } =>
+  const single = (item: unknown): item is { concept: unknown } =>
     typeof item === 'object' && item !== null && 'concept' in item
   for (const stored of (await topics.getAll()) as StoredTopic[]) {
     // A record of another shape is left for the schema to skip, not allowed to fail the upgrade.
     if (typeof stored !== 'object' || stored === null) continue
-    const own = stored.id === builtInTopic.topic.id ? builtIn : new Map<unknown, string[]>()
-    const known = new Set(Array.isArray(stored.concepts) ? stored.concepts.map((c) => c?.id) : [])
-    // An unedited built-in item, whose concept is still the first of the built-in list, takes
-    // that list as far as the topic still has those concepts.
     const listed = (items: unknown) =>
       Array.isArray(items)
         ? items.map((item: unknown) => {
             if (!single(item)) return item
             const { concept, ...rest } = item
-            const builtInList = own.get(rest.id) ?? []
-            const unedited = builtInList.length > 0 && builtInList[0] === concept
-            const concepts = unedited ? builtInList.filter((c) => known.has(c)) : [concept]
-            return { ...rest, concepts }
+            return { ...rest, concepts: [concept] }
           })
         : items
     const lists = [stored.problems, stored.questions]
@@ -138,7 +120,6 @@ async function listConcepts(
 
 interface StoredTopic {
   id: string
-  concepts?: { id?: unknown }[]
   problems?: unknown
   questions?: unknown
 }

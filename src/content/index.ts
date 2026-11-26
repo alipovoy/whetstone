@@ -1,4 +1,7 @@
 import algorithms from './algorithms.json'
+import bitsAndMath from './bits-and-math.json'
+import complexityAnalysis from './complexity-analysis.json'
+import dataStructures from './data-structures.json'
 import { validateTopicFile, type TopicFile } from './schema'
 
 function load(input: unknown): TopicFile {
@@ -7,4 +10,9 @@ function load(input: unknown): TopicFile {
   return result.file
 }
 
-export const builtInTopic: TopicFile = load(algorithms)
+export const builtInTopics: TopicFile[] = [
+  dataStructures,
+  algorithms,
+  complexityAnalysis,
+  bitsAndMath,
+].map(load)

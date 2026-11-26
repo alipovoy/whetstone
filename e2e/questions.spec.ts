@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { builtInTopics } from './content.ts'
 
 interface BuiltInQuestion {
   type: string
@@ -83,9 +84,10 @@ test('add a question from a chat answer, checked first', async ({ page, context 
 test('filter the quiz questions, read one with its answers, delete it', async ({ page }) => {
   await page.goto('./#/settings/questions')
   const rows = page.getByRole('region', { name: 'Questions' }).locator(':scope > ul > li')
+  const all = builtInTopics.flatMap((t) => t.questions)
   const count = (type: string, of?: string) =>
-    builtIn.filter((q) => q.type === type && (!of || q.concepts.includes(of))).length
-  await expect(rows).toHaveCount(builtIn.length)
+    all.filter((q) => q.type === type && (!of || q.concepts.includes(of))).length
+  await expect(rows).toHaveCount(all.length)
 
   await page.getByLabel('Type').selectOption({ label: 'Multiple choice' })
   await expect(rows).toHaveCount(count('multiple'))
@@ -99,7 +101,7 @@ test('filter the quiz questions, read one with its answers, delete it', async ({
   const { summary } = sample
   await page.getByRole('link', { name: summary, exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: summary })).toBeVisible()
-  const options = page.getByRole('tabpanel').getByRole('list', { name: 'Options' })
+  const options = page.getByRole('list', { name: 'Options' })
   await expect(options.locator('li[data-correct]')).toHaveCount(1)
   await expect(page.getByRole('region', { name: 'Explanation' })).toBeVisible()
 
